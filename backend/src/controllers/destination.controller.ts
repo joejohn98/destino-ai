@@ -133,3 +133,39 @@ export const getContinentStats: RequestHandler = catchAsync(
     });
   }
 );
+
+/**
+ * GET /api/destinations/continents/:continent/countries
+ * Countries within a specific continent with destination count and average rating.
+ */
+export const getCountriesByContinent: RequestHandler = catchAsync(
+  async (req, res) => {
+    const rawContinent = String(req.params.continent || "");
+    const { continent, countries } =
+      await destinationService.getCountriesByContinent(rawContinent);
+
+    res.status(200).json({
+      status: "success",
+      continent,
+      results: countries.length,
+      data: countries,
+    });
+  }
+);
+
+/**
+ * GET /api/destinations/:name
+ * Get a single destination by name (or slug).
+ * MUST be registered last in destination.routes.ts!
+ */
+export const getDestinationByName: RequestHandler = catchAsync(
+  async (req, res) => {
+    const rawName = String(req.params.name || "");
+    const destination = await destinationService.getDestinationByName(rawName);
+
+    res.status(200).json({
+      status: "success",
+      data: destination,
+    });
+  }
+);
