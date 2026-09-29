@@ -40,9 +40,13 @@ const userSchema = new mongoose.Schema<IUser>(
     password: {
       type: String,
       required: function (this: IUser) {
-        return this.authProviders.length === 0;
+        return !this.authProviders || this.authProviders.length === 0;
       },
-      authProviders: [
+      minlength: [8, "Password must be at least 8 characters"],
+      select: false,
+    },
+    authProviders: {
+      type: [
         {
           provider: {
             type: String,
@@ -55,8 +59,7 @@ const userSchema = new mongoose.Schema<IUser>(
           },
         },
       ],
-      minlength: [8, "Password must be at least 8 characters"],
-      select: false,
+      default: [],
     },
     role: {
       type: String,
@@ -86,12 +89,12 @@ const userSchema = new mongoose.Schema<IUser>(
   },
   {
     timestamps: true,
-  },
+  }
 );
 
 userSchema.index(
   { "authProviders.provider": 1, "authProviders.providerId": 1 },
-  { unique: true },
+  { unique: true }
 );
 
 // Pre-save hook: hash password
@@ -102,7 +105,7 @@ userSchema.pre("save", async function (this: IUser) {
 
 // Method to compare password
 userSchema.methods.comparePassword = async function (
-  candidatePassword: string,
+  candidatePassword: string
 ): Promise<boolean> {
   if (!this.password) return false;
   return await bcrypt.compare(candidatePassword, this.password!);
