@@ -84,9 +84,32 @@ const getDestinationsByLocation = async (rawLocation: string): Promise<any[]> =>
     .lean();
 };
 
+const getDestinationsByRating = async (): Promise<any[]> => {
+  return Destination.find()
+    .sort({ averageRating: -1 })
+    .select("-reviews -__v")
+    .lean();
+};
+
+
+const getDestinationsByMinRating = async (rawMinRating: string): Promise<any[]> => {
+  const minRating = parseFloat(rawMinRating);
+  if (isNaN(minRating) || minRating < 0 || minRating > 5) {
+    throw new AppError("minRating must be a number between 0 and 5", 400);
+  }
+
+  return Destination.find({
+    averageRating: { $gte: minRating },
+  })
+    .select("-reviews -__v")
+    .lean();
+};
+
 
 export default {
   getPaginatedDestinations,
   searchDestinations,
   getDestinationsByLocation,
+  getDestinationsByRating,
+  getDestinationsByMinRating,
 };
