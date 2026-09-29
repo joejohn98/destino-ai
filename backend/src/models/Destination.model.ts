@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from "mongoose";
+import slugify from "slugify";
 
 export const CATEGORIES = [
   "beach",
@@ -181,6 +182,33 @@ destinationSchema.pre("save", function (this: IDestination) {
     this.averageRating = Math.round((total / this.reviews.length) * 10) / 10;
   } else {
     this.averageRating = 0;
+  }
+});
+
+// Pre-save hook: auto-generate slug from name
+destinationSchema.pre("validate", function () {
+  if (this.isModified("name") || !this.slug) {
+    this.slug = slugify(this.name, { lower: true, strict: true });
+  }
+});
+
+// Pre-findOneAndUpdate hook: regenerate slug if name is being updated
+destinationSchema.pre("findOneAndUpdate", function () {
+  const update = this.getUpdate() as {
+    name?: string;
+    slug?: string;
+    $set?: { name?: string; slug?: string };
+  };
+
+  if (update.name) {
+    update.slug = slugify(update.name, { lower: true, strict: true });
+  }
+
+  if (update.$set?.name) {
+    update.$set.slug = slugify(update.$set.name, {
+      lower: true,
+      strict: true,
+    });
   }
 });
 
