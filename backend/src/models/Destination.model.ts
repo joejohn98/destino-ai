@@ -38,7 +38,7 @@ export interface IDestination extends Document {
 }
 
 
-const destinationSchema = new Schema<IDestination>(
+const destinationSchema = new mongoose.Schema<IDestination>(
   {
     name: {
       type: String,
@@ -63,7 +63,7 @@ const destinationSchema = new Schema<IDestination>(
         trim: true,
       },
       country: {
-        type: Schema.Types.ObjectId,
+        type: mongoose.Schema.Types.ObjectId,
         ref: "Country",
         required: [true, "Country reference is required"],
       },
