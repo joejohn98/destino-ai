@@ -1,4 +1,4 @@
-import { Destination } from "../models/Destination.model";
+import { Category, Destination } from "../models/Destination.model";
 import { Country } from "../models/Country.model";
 import { AppError } from "../utils/AppError";
 
@@ -17,6 +17,11 @@ export interface PaginatedResult {
   currentPage: number;
 }
 
+export interface ContinentStat {
+  continent: string;
+  countryCount: number;
+  destinationCount: number;
+}
 
 
 const getPaginatedDestinations = async (
@@ -105,6 +110,72 @@ const getDestinationsByMinRating = async (rawMinRating: string): Promise<any[]> 
     .lean();
 };
 
+const getDestinationsByCategory = async (
+  rawCategory: string
+): Promise<{ category: Category; destinations: any[] }> => {
+  const category = rawCategory.toLowerCase() as Category;
+  const validCategories = [
+    "beach",
+    "mountain",
+    "city",
+    "historical",
+    "adventure",
+    "wildlife",
+  ];
+
+  if (!validCategories.includes(category)) {
+    throw new AppError(
+      `Invalid category. Valid categories are: ${validCategories.join(", ")}`,
+      400
+    );
+  }
+
+  const destinations = await Destination.find({ category })
+    .select("-reviews -__v")
+    .lean();
+
+  return { category, destinations };
+};
+
+const getContinentStats = async (): Promise<ContinentStat[]> => {
+  return Destination.aggregate([
+    {
+      $lookup: {
+        from: "countries",
+        localField: "location.country",
+        foreignField: "_id",
+        as: "countryDoc",
+      },
+    },
+    { $unwind: "$countryDoc" },
+    {
+      $lookup: {
+        from: "continents",
+        localField: "countryDoc.continent",
+        foreignField: "_id",
+        as: "continentDoc",
+      },
+    },
+    { $unwind: "$continentDoc" },
+    {
+      $group: {
+        _id: "$continentDoc.name",
+        countrySet: { $addToSet: "$countryDoc._id" },
+        destinationCount: { $sum: 1 },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        continent: "$_id",
+        countryCount: { $size: "$countrySet" },
+        destinationCount: 1,
+      },
+    },
+    { $sort: { continent: 1 } },
+  ]);
+};
+
 
 export default {
   getPaginatedDestinations,
@@ -112,4 +183,6 @@ export default {
   getDestinationsByLocation,
   getDestinationsByRating,
   getDestinationsByMinRating,
+  getDestinationsByCategory,
+  getContinentStats,
 };

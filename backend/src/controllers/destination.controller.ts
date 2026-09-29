@@ -98,3 +98,38 @@ export const getDestinationsByMinRating: RequestHandler = catchAsync(
   }
 );
 
+
+/**
+ * GET /api/destinations/category/:category
+ * Destinations filtered by category.
+ */
+export const getDestinationsByCategory: RequestHandler = catchAsync(
+  async (req, res) => {
+    const rawCat = String(req.params.category || "");
+    const { category, destinations } =
+      await destinationService.getDestinationsByCategory(rawCat);
+
+    res.status(200).json({
+      status: "success",
+      category,
+      results: destinations.length,
+      data: destinations,
+    });
+  }
+);
+
+/**
+ * GET /api/destinations/continents
+ * All continents that have at least one destination, with stats.
+ */
+export const getContinentStats: RequestHandler = catchAsync(
+  async (req, res) => {
+    const stats = await destinationService.getContinentStats();
+
+    res.status(200).json({
+      status: "success",
+      results: stats.length,
+      data: stats,
+    });
+  }
+);
