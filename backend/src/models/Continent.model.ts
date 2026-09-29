@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema } from "mongoose";
+import mongoose, { Document } from "mongoose";
 import slugify from "slugify";
 
 export interface IContinent extends Document {
@@ -9,7 +9,7 @@ export interface IContinent extends Document {
   updatedAt: Date;
 }
 
-const continentSchema = new Schema<IContinent>(
+const continentSchema = new mongoose.Schema<IContinent>(
   {
     name: {
       type: String,
