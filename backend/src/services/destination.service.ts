@@ -67,8 +67,26 @@ const searchDestinations = async (q: string): Promise<any[]> => {
     .lean();
 };
 
+const getDestinationsByLocation = async (rawLocation: string): Promise<any[]> => {
+  const locParam = decodeURIComponent(rawLocation).trim();
+  const regex = new RegExp(escapeRegex(locParam), "i");
+
+  const matchingCountries = await Country.find({ name: regex }).select("_id").lean();
+  const countryIds = matchingCountries.map((c) => c._id);
+
+  const $or: any[] = [{ "location.city": regex }];
+  if (countryIds.length > 0) {
+    $or.push({ "location.country": { $in: countryIds } });
+  }
+
+  return Destination.find({ $or })
+    .select("-reviews -__v")
+    .lean();
+};
+
 
 export default {
   getPaginatedDestinations,
   searchDestinations,
+  getDestinationsByLocation,
 };

@@ -44,3 +44,22 @@ export const searchDestinations: RequestHandler = catchAsync(
   }
 );
 
+/**
+ * GET /api/destinations/location/:location
+ * Destinations filtered by city or country (case-insensitive).
+ */
+export const getDestinationsByLocation: RequestHandler = catchAsync(
+  async (req, res) => {
+    const rawLoc = String(req.params.location || "");
+    const destinations = await destinationService.getDestinationsByLocation(
+      rawLoc
+    );
+
+    res.status(200).json({
+      status: "success",
+      results: destinations.length,
+      data: destinations,
+    });
+  }
+);
+
