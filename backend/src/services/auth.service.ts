@@ -45,13 +45,13 @@ const login = async (email: string, password: string, res: Response) => {
   const user = await User.findOne({ email }).select("+password");
 
   if (!user) {
-    throw new AppError("User not found", 404);
+    throw new AppError("Invalid email or password", 401);
   }
 
   // Check if password is correct
   const isMatch = await user.comparePassword(password);
   if (!isMatch) {
-    throw new AppError("Invalid credentials", 401);
+    throw new AppError("Invalid email or password", 401);
   }
 
   // Create token
@@ -65,8 +65,22 @@ const login = async (email: string, password: string, res: Response) => {
   };
 };
 
+const logout = async (res: Response) => {
+  res.cookie("token", "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    expires: new Date(0),
+  });
+
+  return {
+    message: "Logged out successfully",
+  };
+};
+
 export default {
   register,
   login,
+  logout,
 };
 

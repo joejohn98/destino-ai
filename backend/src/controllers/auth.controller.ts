@@ -15,7 +15,7 @@ export const register: RequestHandler = catchAsync(async (req, res) => {
     email,
     username,
     password,
-    res
+    res,
   );
 
   res.status(201).json({
@@ -31,16 +31,27 @@ export const register: RequestHandler = catchAsync(async (req, res) => {
 export const login: RequestHandler = catchAsync(async (req, res) => {
   const { email, password } = req.body;
 
-  const user = await authService.login(email, password, res);
+  if (!email || !password) {
+    throw new AppError("Please provide email and password", 400);
+  }
+
+  const { user, token } = await authService.login(email, password, res);
 
   res.status(200).json({
     status: "success",
     message: "User logged in successfully",
     data: {
       user,
-      token: user.token,
+      token
     },
   });
 });
 
+export const logout: RequestHandler = catchAsync(async (_req, res) => {
+  const { message } = await authService.logout(res);
 
+  res.status(200).json({
+    status: "success",
+    message,
+  });
+});
