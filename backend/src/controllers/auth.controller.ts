@@ -28,4 +28,19 @@ export const register: RequestHandler = catchAsync(async (req, res) => {
   });
 });
 
+export const login: RequestHandler = catchAsync(async (req, res) => {
+  const { email, password } = req.body;
+
+  const user = await authService.login(email, password, res);
+
+  res.status(200).json({
+    status: "success",
+    message: "User logged in successfully",
+    data: {
+      user,
+      token: user.token,
+    },
+  });
+});
+
 
