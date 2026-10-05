@@ -30,13 +30,12 @@ const register = async (
   // Save user to database before issuing token and setting cookie
   await newUser.save();
 
-  const token = createSendToken(newUser, res);
+  const _token = createSendToken(newUser, res);
 
   const { password: _, __v, ...userData } = newUser.toObject();
 
   return {
     user: userData,
-    token,
   };
 };
 
@@ -55,13 +54,12 @@ const login = async (email: string, password: string, res: Response) => {
   }
 
   // Create token
-  const token = createSendToken(user, res);
+  const _token = createSendToken(user, res);
 
   const { password: _, __v, ...userData } = user.toObject();
 
   return {
     user: userData,
-    token,
   };
 };
 
