@@ -4,6 +4,7 @@ import slugify from "slugify";
 export interface IContinent extends Document {
   name: string;
   slug: string;
+  description?: string;
   image: string;
   createdAt: Date;
   updatedAt: Date;
@@ -23,6 +24,11 @@ const continentSchema = new mongoose.Schema<IContinent>(
       unique: true,
       lowercase: true,
       trim: true,
+    },
+    description: {
+      type: String,
+      trim: true,
+      default: undefined
     },
     image: {
       type: String,
