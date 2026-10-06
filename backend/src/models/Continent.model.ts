@@ -6,8 +6,8 @@ export interface IContinent extends Document {
   name: string;
   slug: string;
   description?: string;
-  countries?: ICountry[]
-  image: string;
+  countries?: ICountry[];
+  imageUrl: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -30,14 +30,15 @@ const continentSchema = new mongoose.Schema<IContinent>(
     description: {
       type: String,
       trim: true,
-      default: undefined
+      default: undefined,
     },
-    image: {
+    imageUrl: {
       type: String,
       required: [true, "Image URL is required"],
       trim: true,
     },
   },
+
   {
     timestamps: true,
      toJSON: { virtuals: true },

@@ -25,7 +25,7 @@ export interface IDestination extends Document {
     country: mongoose.Types.ObjectId;
   };
   category: Category;
-  images: string[];
+  imageUrls: string[];
   bestTimeToVisit?: string;
   openingHours?: string;
   ticketPrice?: string;
@@ -77,10 +77,11 @@ const destinationSchema = new mongoose.Schema<IDestination>(
         message: `Category must be one of: ${CATEGORIES.join(", ")}`,
       },
     },
-    images: {
+    imageUrls: {
       type: [String],
       default: [],
     },
+
     openingHours: {
       type: String,
       trim: true,

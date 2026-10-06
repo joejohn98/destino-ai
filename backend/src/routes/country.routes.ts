@@ -7,15 +7,18 @@ import {
     updateCountry,
 } from "../controllers/country.controller";
 
+import { uploadSingle } from "../middleware/upload.middleware";
+
 const router = Router();
 
 router.get("/", getAllCountries);
 
 router.get("/:slug", getCountry);
 
-router.post("/", createCountry);
+router.post("/", uploadSingle("image"), createCountry);
 
-router.put("/:id", updateCountry);
+router.put("/:id", uploadSingle("image"), updateCountry);
+
 
 router.delete("/:id", deleteCountry);
 

@@ -10,7 +10,7 @@ export interface IUser extends Document {
     providerId: string;
   }[];
   role: "user" | "admin";
-  avatar?: string;
+  avatarUrl?: string;
   isActive: boolean;
   bio?: string;
   favoriteDestinations: mongoose.Types.ObjectId[];
@@ -66,11 +66,12 @@ const userSchema = new mongoose.Schema<IUser>(
       enum: ["user", "admin"],
       default: "user",
     },
-    avatar: {
+    avatarUrl: {
       type: String,
       trim: true,
       default: undefined,
     },
+
     isActive: {
       type: Boolean,
       default: true,
@@ -94,8 +95,9 @@ const userSchema = new mongoose.Schema<IUser>(
 
 userSchema.index(
   { "authProviders.provider": 1, "authProviders.providerId": 1 },
-  { unique: true }
+  { unique: true, sparse: true }
 );
+
 
 // Pre-save hook: hash password
 userSchema.pre("save", async function (this: IUser) {

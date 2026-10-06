@@ -5,7 +5,7 @@ import { IDestination } from "./Destination.model";
 export interface ICountry extends Document {
   name: string;
   slug: string;
-  image: string;
+  imageUrl: string;
   description: string | undefined;
   continent: mongoose.Types.ObjectId;
   destinations?: IDestination[];
@@ -28,11 +28,12 @@ const countrySchema = new mongoose.Schema<ICountry>(
       lowercase: true,
       trim: true,
     },
-    image: {
+    imageUrl: {
       type: String,
       required: [true, "Image URL is required"],
       trim: true,
     },
+
     description: {
       type: String,
       trim: true,
