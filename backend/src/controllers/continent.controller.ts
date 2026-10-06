@@ -1,7 +1,9 @@
 import type { Request, Response, RequestHandler } from "express";
+
 import { catchAsync } from "../utils/catchAsync";
 import continentService from "../services/continent.service";
 import { AppError } from "../utils/AppError";
+import { isValidObjectId } from "../utils/validation";
 
 export const getAllContinents: RequestHandler = catchAsync(
   async (req: Request, res: Response) => {
@@ -66,9 +68,11 @@ export const updateContinent: RequestHandler = catchAsync(
     if (!name && !description && !image)
       throw new AppError("Nothing to update", 400);
 
-    const slug = req.params.slug as string;
+    const id = req.params.id as string;
 
-    const continent = await continentService.updateContinent(slug, {
+    if (!isValidObjectId(id)) throw new AppError("Invalid Continent ID", 400);
+
+    const continent = await continentService.updateContinent(id, {
       name,
       description,
       image,
@@ -86,11 +90,13 @@ export const updateContinent: RequestHandler = catchAsync(
 
 export const deleteContinent: RequestHandler = catchAsync(
   async (req: Request, res: Response) => {
-    const slug = req.params.slug as string;
+    const id = req.params.id as string;
 
-    const _continent = await continentService.deleteContinent(slug);
+    if (!isValidObjectId(id)) throw new AppError("Invalid Continent ID", 400);
 
-    res.status(200).json({
+    await continentService.deleteContinent(id);
+
+    res.status(204).json({
       status: "success",
       message: "Continent deleted successfully",
     });

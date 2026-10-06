@@ -14,8 +14,8 @@ router.get("/:slug", getContinent);
 
 router.post("/", createContinent);
 
-router.put("/:slug", updateContinent);
+router.put("/:id", updateContinent);
 
-router.delete("/:slug", deleteContinent);
+router.delete("/:id", deleteContinent);
 
 export const continentRoutes = router;

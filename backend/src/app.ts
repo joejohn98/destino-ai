@@ -5,6 +5,7 @@ import "./models";
 import destinationRouter from "./routes/destination.routes";
 import { authRoutes } from "./routes/auth.routes";
 import { continentRoutes } from "./routes/continent.routes";
+import { countryRoutes } from "./routes/country.routes";
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.use("/api/destinations", destinationRouter);
 
 // Admin routes
 app.use("/api/admin/continents", continentRoutes)
+app.use("/api/admin/countries", countryRoutes)
 
 
 app.get("/", (req: Request, res: Response) => {

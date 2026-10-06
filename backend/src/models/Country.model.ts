@@ -6,6 +6,7 @@ export interface ICountry extends Document {
   name: string;
   slug: string;
   image: string;
+  description: string | undefined;
   continent: mongoose.Types.ObjectId;
   destinations?: IDestination[];
   destinationCount?: number;
@@ -31,6 +32,11 @@ const countrySchema = new mongoose.Schema<ICountry>(
       type: String,
       required: [true, "Image URL is required"],
       trim: true,
+    },
+    description: {
+      type: String,
+      trim: true,
+      default: undefined
     },
     continent: {
       type: mongoose.Schema.Types.ObjectId,
