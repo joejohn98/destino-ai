@@ -1,11 +1,14 @@
 import mongoose, { Document } from "mongoose";
 import slugify from "slugify";
+import { IDestination } from "./Destination.model";
 
 export interface ICountry extends Document {
   name: string;
   slug: string;
   image: string;
   continent: mongoose.Types.ObjectId;
+  destinations?: IDestination[];
+  destinationCount?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -37,8 +40,17 @@ const countrySchema = new mongoose.Schema<ICountry>(
   },
   {
     timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   },
 );
+
+// Virtual populate destinations for Country
+countrySchema.virtual("destinations", {
+  ref: "Destination",
+  localField: "_id",
+  foreignField: "location.country",
+});
 
 // Create an index on the continent field for faster queries
 countrySchema.index({ continent: 1 });

@@ -1,10 +1,12 @@
 import mongoose, { Document } from "mongoose";
 import slugify from "slugify";
+import { ICountry } from "./Country.model";
 
 export interface IContinent extends Document {
   name: string;
   slug: string;
   description?: string;
+  countries?: ICountry[]
   image: string;
   createdAt: Date;
   updatedAt: Date;
@@ -38,6 +40,8 @@ const continentSchema = new mongoose.Schema<IContinent>(
   },
   {
     timestamps: true,
+     toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   },
 );
 
@@ -47,6 +51,20 @@ continentSchema.pre("validate", function () {
     this.slug = slugify(this.name, { lower: true, strict: true });
   }
 });
+
+// Virtual populate countries
+continentSchema.virtual("countries", {
+  ref: "Country",        
+  localField: "_id",   
+  foreignField: "continent",
+});
+
+// Virtual populate destinations
+continentSchema.virtual("destinations", {
+  ref: "Destination",
+  localField: "_id",
+  foreignField: "location.country",
+})
 
 export const Continent = mongoose.model<IContinent>(
   "Continent",

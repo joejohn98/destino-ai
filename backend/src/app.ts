@@ -4,6 +4,7 @@ import morgan from "morgan";
 import "./models";
 import destinationRouter from "./routes/destination.routes";
 import { authRoutes } from "./routes/auth.routes";
+import { continentRoutes } from "./routes/continent.routes";
 
 const app = express();
 
@@ -14,6 +15,9 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/destinations", destinationRouter);
+
+// Admin routes
+app.use("/api/admin/continents", continentRoutes)
 
 
 app.get("/", (req: Request, res: Response) => {
