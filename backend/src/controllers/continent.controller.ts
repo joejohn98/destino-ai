@@ -63,12 +63,12 @@ export const createContinent: RequestHandler = catchAsync(
 
 export const updateContinent: RequestHandler = catchAsync(
   async (req: Request, res: Response) => {
+    const id = req.params.id as string;
+
     const { name, description, image } = req.body;
 
     if (!name && !description && !image)
       throw new AppError("Nothing to update", 400);
-
-    const id = req.params.id as string;
 
     if (!isValidObjectId(id)) throw new AppError("Invalid Continent ID", 400);
 

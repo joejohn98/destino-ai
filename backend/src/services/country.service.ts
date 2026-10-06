@@ -1,4 +1,4 @@
-import { Country, Destination, Review } from "../models";
+import { Continent, Country, Destination, Review } from "../models";
 import { AppError } from "../utils/AppError";
 
 interface CreateCountryInput {
@@ -10,7 +10,7 @@ interface CreateCountryInput {
 
 const getAllCountries = async () => {
   const countries = await Country.find()
-    .select("-_v")
+    .select("-__v")
     .populate({
       path: "continent",
       select: "_id name",
@@ -40,11 +40,16 @@ const getCountry = async (slug: string) => {
 
 const createCountry = async (countryData: {
   name: string;
-  description: string;
+  description?: string;
   image: string;
   continent: string;
 }) => {
-  const { name } = countryData;
+  const { name, continent } = countryData;
+
+  const existingContinent = await Continent.findById(continent);
+  if (!existingContinent) {
+    throw new AppError("Continent not found with that ID", 404);
+  }
 
   const existingCountry = await Country.findOne({ name });
 
@@ -72,9 +77,18 @@ const updateCountry = async (id: string, updateData: CreateCountryInput) => {
     }
   }
 
+  // Validate continent if updating continent
+  if (updateData.continent) {
+    const existingContinent = await Continent.findById(updateData.continent);
+    if (!existingContinent) {
+      throw new AppError("Continent not found with that ID", 404);
+    }
+    country.continent = updateData.continent as any;
+  }
+
   // Update fields
   if (updateData.name) country.name = updateData.name;
-  if (updateData.description) country.description = updateData.description;
+  if (updateData.description !== undefined) country.description = updateData.description;
   if (updateData.image) country.image = updateData.image;
 
   // Save changes

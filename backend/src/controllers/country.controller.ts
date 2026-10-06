@@ -29,7 +29,12 @@ export const getCountry: RequestHandler = catchAsync(async (req, res) => {
 export const createCountry: RequestHandler = catchAsync(async (req, res) => {
   const { name, description, image, continent } = req.body;
 
-  if (!name || !image) throw new AppError("Missing required fields", 400);
+  if (!name || !image || !continent) {
+    throw new AppError(
+      "Missing required fields (name, image, and continent are required)",
+      400,
+    );
+  }
 
   const country = await countryService.createCountry({
     name,
