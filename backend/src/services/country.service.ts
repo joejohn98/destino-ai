@@ -88,7 +88,8 @@ const updateCountry = async (id: string, updateData: CreateCountryInput) => {
 
   // Update fields
   if (updateData.name) country.name = updateData.name;
-  if (updateData.description !== undefined) country.description = updateData.description;
+  if (updateData.description !== undefined)
+    country.description = updateData.description;
   if (updateData.image) country.image = updateData.image;
 
   // Save changes
@@ -98,8 +99,6 @@ const updateCountry = async (id: string, updateData: CreateCountryInput) => {
 };
 
 const deleteCountry = async (id: string) => {
-
-
   // Find country by ID
   const country = await Country.findById(id);
   if (!country) {
