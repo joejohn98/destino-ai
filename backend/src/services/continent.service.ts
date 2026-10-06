@@ -1,4 +1,11 @@
-import { Continent, IContinent, ICountry } from "../models";
+import {
+  Continent,
+  Country,
+  Destination,
+  IContinent,
+  ICountry,
+  Review,
+} from "../models";
 import { AppError } from "../utils/AppError";
 
 export interface CreateContinentInput {
@@ -78,13 +85,94 @@ const getContinent = async (slug: string) => {
 };
 
 const createContinent = async (continentData: CreateContinentInput) => {
+  const { name } = continentData;
+
+  // Check if continent with this name already exists
+  const existingContinent = await Continent.findOne({ name });
+  if (existingContinent) {
+    throw new AppError(`Continent "${name}" already exists`, 400);
+  }
+
+  // Create new continent
   const newContinent = await Continent.create(continentData);
 
   return newContinent;
+};
+
+const updateContinent = async (
+  slug: string,
+  updateData: CreateContinentInput,
+) => {
+  // Find continent by slug
+  const continent = await Continent.findOne({ slug });
+  if (!continent) {
+    throw new AppError("No continent found with that slug", 404);
+  }
+
+  // Check if another continent has the same name (if name is being updated)
+  if (updateData.name && updateData.name !== continent.name) {
+    const existingContinent = await Continent.findOne({
+      name: updateData.name,
+    });
+    if (existingContinent) {
+      throw new AppError(
+        "Another continent with this name already exists",
+        400,
+      );
+    }
+  }
+
+  // Update fields
+  if (updateData.name) continent.name = updateData.name;
+  if (updateData.description) continent.description = updateData.description;
+  if (updateData.image) continent.image = updateData.image;
+
+  // Save changes
+  await continent.save();
+
+  return continent;
+};
+
+const deleteContinent = async (slug: string) => {
+  const continent = await Continent.findOne({ slug });
+  if (!continent) {
+    throw new AppError("No continent found with that slug", 404);
+  }
+
+  // 1. Find all countries in this continent
+  const countries = await Country.find({ continent: continent._id })
+    .select("_id")
+    .lean();
+  const countryIds = countries.map((c) => c._id);
+
+  // 2. Find all destinations in those countries
+  const destinations = await Destination.find({
+    "location.country": { $in: countryIds },
+  })
+    .select("_id")
+    .lean();
+  const destinationIds = destinations.map((d) => d._id);
+
+  // 3. Cascade delete reviews, destinations, and countries
+  if (destinationIds.length > 0) {
+    await Review.deleteMany({ destination: { $in: destinationIds } });
+    await Destination.deleteMany({ _id: { $in: destinationIds } });
+  }
+
+  if (countryIds.length > 0) {
+    await Country.deleteMany({ _id: { $in: countryIds } });
+  }
+
+  // 4. Delete the continent itself
+  await Continent.findByIdAndDelete(continent._id);
+
+  return continent;
 };
 
 export default {
   getAllContinents,
   getContinent,
   createContinent,
+  updateContinent,
+  deleteContinent,
 };
