@@ -47,7 +47,7 @@ const continentSchema = new mongoose.Schema<IContinent>(
 
 // Pre-save hook: auto-generate slug from name
 continentSchema.pre("validate", function () {
-  if (!this.slug) {
+  if (this.isModified("name") || !this.slug) {
     this.slug = slugify(this.name, { lower: true, strict: true });
   }
 });
