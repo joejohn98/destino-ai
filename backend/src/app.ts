@@ -18,8 +18,9 @@ app.use("/api/auth", authRoutes);
 app.use("/api/destinations", destinationRouter);
 
 // Admin routes
-app.use("/api/admin/continents", continentRoutes)
-app.use("/api/admin/countries", countryRoutes)
+app.use("/api/admin/continents", continentRoutes);
+app.use("/api/admin/countries", countryRoutes);
+
 
 
 app.get("/", (req: Request, res: Response) => {
