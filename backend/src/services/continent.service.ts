@@ -99,31 +99,24 @@ const createContinent = async (continentData: CreateContinentInput) => {
   return newContinent;
 };
 
-const updateContinent = async (
-  slug: string,
-  updateData: CreateContinentInput,
-) => {
-  // Find continent by slug
-  const continent = await Continent.findOne({ slug });
-  if (!continent) {
-    throw new AppError("No continent found with that slug", 404);
-  }
-
-  // Check if another continent has the same name (if name is being updated)
-  if (updateData.name && updateData.name !== continent.name) {
-    const existingContinent = await Continent.findOne({
-      name: updateData.name,
-    });
-    if (existingContinent) {
-      throw new AppError(
-        "Another continent with this name already exists",
-        400,
-      );
+const updateContinent = async (id: string, updateData: CreateContinentInput) => {
+    // Find continent by slug
+    const continent = await Continent.findById(id);
+    if (!continent) {
+        throw new AppError("No continent found with that ID", 404);
     }
-  }
+    // Check if another continent has the same name (if name is being updated)
+    if (updateData.name && updateData.name !== continent.name) {
+        const existingContinent = await Continent.findOne({
+            name: updateData.name,
+        });
+        if (existingContinent) {
+            throw new AppError("Another continent with this name already exists",400);
+        }
+    }
 
   // Update fields
-  if (updateData.name) continent.name = updateData.name;
+    if (updateData.name) continent.name = updateData.name;
   if (updateData.description) continent.description = updateData.description;
   if (updateData.image) continent.image = updateData.image;
 
@@ -133,10 +126,10 @@ const updateContinent = async (
   return continent;
 };
 
-const deleteContinent = async (slug: string) => {
-  const continent = await Continent.findOne({ slug });
+const deleteContinent = async (id: string) => {
+  const continent = await Continent.findById(id);
   if (!continent) {
-    throw new AppError("No continent found with that slug", 404);
+    throw new AppError("No continent found with that ID", 404);
   }
 
   // 1. Find all countries in this continent
