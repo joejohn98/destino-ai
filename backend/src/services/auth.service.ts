@@ -4,10 +4,12 @@ import { Response } from "express";
 import { createSendToken } from "../utils/utils";
 
 const register = async (
+  firstName: string,
+  lastName: string,
   email: string,
   username: string,
   password: string,
-  res: Response
+  res: Response,
 ) => {
   // Check if user with email or username already exists
   const existingUser = await User.findOne({
@@ -22,6 +24,8 @@ const register = async (
   }
 
   const newUser = new User({
+    firstName,
+    lastName,
     email,
     username,
     password,
@@ -81,4 +85,3 @@ export default {
   login,
   logout,
 };
-

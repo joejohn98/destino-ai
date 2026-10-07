@@ -5,13 +5,18 @@ import { AppError } from "../utils/AppError";
 import authService from "../services/auth.service";
 
 export const register: RequestHandler = catchAsync(async (req, res) => {
-  const { email, username, password } = req.body;
+  const { firstName, lastName, email, username, password } = req.body;
 
-  if (!email || !username || !password) {
-    throw new AppError("Please provide email, username, and password", 400);
+  if (!firstName || !lastName || !email || !username || !password) {
+    throw new AppError(
+      "Please provide first name, last name, email, username, and password",
+      400,
+    );
   }
 
   const { user } = await authService.register(
+    firstName,
+    lastName,
     email,
     username,
     password,

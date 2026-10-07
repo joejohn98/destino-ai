@@ -2,6 +2,8 @@ import mongoose, { Document } from "mongoose";
 import bcrypt from "bcryptjs";
 
 export interface IUser extends Document {
+  firstName: string;
+  lastName: string;
   username: string;
   email: string;
   password?: string;
@@ -21,6 +23,17 @@ export interface IUser extends Document {
 
 const userSchema = new mongoose.Schema<IUser>(
   {
+    firstName: {
+      type: String,
+      required: [true, "First name is required"],
+      trim: true,
+    },
+    lastName: {
+      type: String,
+      required: [true, "Last name is required"],
+      trim: true,
+    },
+
     username: {
       type: String,
       required: [true, "Username is required"],
@@ -90,14 +103,13 @@ const userSchema = new mongoose.Schema<IUser>(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 userSchema.index(
   { "authProviders.provider": 1, "authProviders.providerId": 1 },
-  { unique: true, sparse: true }
+  { unique: true, sparse: true },
 );
-
 
 // Pre-save hook: hash password
 userSchema.pre("save", async function (this: IUser) {
@@ -107,7 +119,7 @@ userSchema.pre("save", async function (this: IUser) {
 
 // Method to compare password
 userSchema.methods.comparePassword = async function (
-  candidatePassword: string
+  candidatePassword: string,
 ): Promise<boolean> {
   if (!this.password) return false;
   return await bcrypt.compare(candidatePassword, this.password!);
