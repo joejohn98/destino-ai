@@ -7,22 +7,8 @@ import {
   Review,
 } from "../models";
 import { AppError } from "../utils/AppError";
+import { CreateContinentInput, UpdateContinentInput } from "../validators/continent.validators";
 
-export interface CreateContinentInput {
-  name: string;
-  slug?: string;
-  description?: string;
-  imageUrl?: string;
-  image?: string;
-}
-
-export interface UpdateContinentInput {
-  name?: string;
-  slug?: string;
-  description?: string;
-  imageUrl?: string;
-  image?: string;
-}
 
 const getAllContinents = async () => {
   const continents = await Continent.find()
