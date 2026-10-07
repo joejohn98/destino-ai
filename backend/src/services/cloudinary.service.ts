@@ -22,9 +22,10 @@ export const uploadImageStream = (
       },
       (error, result?: UploadApiResponse) => {
         if (error || !result) {
+          console.error("Cloudinary upload error:", error);
           return reject(
             new AppError(
-              `Cloudinary upload failed: ${error?.message || "Unknown error"}`,
+              "Cloudinary upload failed. Please try again later.",
               500
             )
           );
@@ -61,8 +62,9 @@ export const deleteImage = async (publicId: string): Promise<boolean> => {
     const result = await cloudinary.uploader.destroy(publicId);
     return result.result === "ok";
   } catch (error: any) {
+    console.error("Cloudinary delete error:", error);
     throw new AppError(
-      `Failed to delete image from Cloudinary: ${error.message}`,
+      "Failed to delete image from Cloudinary. Please try again later.",
       500
     );
   }

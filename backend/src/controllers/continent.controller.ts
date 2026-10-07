@@ -6,8 +6,10 @@ import { AppError } from "../utils/AppError";
 import { isValidObjectId } from "../utils/validation";
 import { uploadImageStream } from "../services/cloudinary.service";
 import z from "zod";
-import { createContinentSchema, updateContinentSchema } from "../validators/continent.validators";
-
+import {
+  createContinentSchema,
+  updateContinentSchema,
+} from "../validators/continent.validators";
 
 export const getAllContinents: RequestHandler = catchAsync(
   async (req: Request, res: Response) => {
@@ -44,7 +46,6 @@ export const getContinent: RequestHandler = catchAsync(
 );
 
 export const createContinent: RequestHandler = catchAsync(
-
   async (req: Request, res: Response) => {
     const parsed = createContinentSchema.safeParse(req.body);
 
@@ -64,8 +65,8 @@ export const createContinent: RequestHandler = catchAsync(
       imageUrl = uploadRes.url;
     }
 
-    if (!name || !imageUrl) {
-      throw new AppError("Missing required fields (name and imageUrl/image are required)", 400);
+    if (!imageUrl) {
+      throw new AppError("An image is required (either upload a file or provide an imageUrl)", 400);
     }
 
     const payload: { name: string; imageUrl: string; description?: string } = {
@@ -90,7 +91,7 @@ export const createContinent: RequestHandler = catchAsync(
 export const updateContinent: RequestHandler = catchAsync(
   async (req: Request, res: Response) => {
     const id = req.params.id as string;
-    
+
     const parsed = updateContinentSchema.safeParse(req.body);
 
     if (!parsed.success) {
@@ -111,7 +112,11 @@ export const updateContinent: RequestHandler = catchAsync(
 
     if (!isValidObjectId(id)) throw new AppError("Invalid Continent ID", 400);
 
-    const updatePayload: { name?: string; description?: string; imageUrl?: string } = {};
+    const updatePayload: {
+      name?: string;
+      description?: string;
+      imageUrl?: string;
+    } = {};
     if (name) updatePayload.name = name;
     if (description) updatePayload.description = description;
     if (imageUrl) updatePayload.imageUrl = imageUrl;
@@ -127,7 +132,6 @@ export const updateContinent: RequestHandler = catchAsync(
     });
   },
 );
-
 
 export const deleteContinent: RequestHandler = catchAsync(
   async (req: Request, res: Response) => {
