@@ -4,6 +4,7 @@ import { AppError } from "../utils/AppError";
 interface CreateCountryInput {
   name?: string;
   description?: string;
+  imageUrl?: string;
   image?: string;
   continent?: string;
 }
@@ -41,10 +42,14 @@ const getCountry = async (slug: string) => {
 const createCountry = async (countryData: {
   name: string;
   description?: string;
-  image: string;
+  imageUrl?: string;
   continent: string;
 }) => {
-  const { name, continent } = countryData;
+  const { name, description, imageUrl, continent } = countryData;
+
+  if (!imageUrl) {
+    throw new AppError("Image URL is required", 400);
+  }
 
   const existingContinent = await Continent.findById(continent);
   if (!existingContinent) {
@@ -57,9 +62,25 @@ const createCountry = async (countryData: {
     throw new AppError("Country with this name already exists", 400);
   }
 
-  const newCountry = await Country.create(countryData);
+  const payload: {
+    name: string;
+    imageUrl: string;
+    continent: string;
+    description?: string;
+  } = {
+    name,
+    imageUrl,
+    continent,
+  };
+
+  if (description) {
+    payload.description = description;
+  }
+
+  const newCountry = await Country.create(payload);
   return newCountry;
 };
+
 
 const updateCountry = async (id: string, updateData: CreateCountryInput) => {
   // Find country by ID
@@ -90,13 +111,14 @@ const updateCountry = async (id: string, updateData: CreateCountryInput) => {
   if (updateData.name) country.name = updateData.name;
   if (updateData.description !== undefined)
     country.description = updateData.description;
-  if (updateData.image) country.image = updateData.image;
+  if (updateData.imageUrl) country.imageUrl = updateData.imageUrl;
 
   // Save changes
   await country.save();
 
   return country;
 };
+
 
 const deleteCountry = async (id: string) => {
   // Find country by ID

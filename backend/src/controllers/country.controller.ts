@@ -2,9 +2,9 @@ import type { RequestHandler, Request, Response } from "express";
 
 import { catchAsync } from "../utils/catchAsync";
 import countryService from "../services/country.service";
-
 import { AppError } from "../utils/AppError";
 import { isValidObjectId } from "../utils/validation";
+import { uploadImageStream } from "../services/cloudinary.service";
 
 export const getAllCountries: RequestHandler = catchAsync(async (_req, res) => {
   const countries = await countryService.getAllCountries();
@@ -27,11 +27,16 @@ export const getCountry: RequestHandler = catchAsync(async (req, res) => {
 });
 
 export const createCountry: RequestHandler = catchAsync(async (req, res) => {
-  const { name, description, image, continent } = req.body;
+  let { name, description, imageUrl, continent } = req.body;
 
-  if (!name || !image || !continent) {
+  if (req.file) {
+    const uploadRes = await uploadImageStream(req.file.buffer, "countries");
+    imageUrl = uploadRes.url;
+  }
+
+  if (!name || !imageUrl || !continent) {
     throw new AppError(
-      "Missing required fields (name, image, and continent are required)",
+      "Missing required fields (name, imageUrl/image, and continent are required)",
       400,
     );
   }
@@ -39,7 +44,7 @@ export const createCountry: RequestHandler = catchAsync(async (req, res) => {
   const country = await countryService.createCountry({
     name,
     description,
-    image,
+    imageUrl,
     continent,
   });
   res.status(201).json({
@@ -57,12 +62,17 @@ export const updateCountry: RequestHandler = catchAsync(
       throw new AppError("Invalid country ID", 400);
     }
 
-    const { name, description, image, continent } = req.body;
+    let { name, description, imageUrl, continent } = req.body;
+
+    if (req.file) {
+      const uploadRes = await uploadImageStream(req.file.buffer, "countries");
+      imageUrl = uploadRes.url;
+    }
 
     const updatedCountry = await countryService.updateCountry(id, {
       name,
       description,
-      image,
+      imageUrl,
       continent,
     });
     res.status(200).json({

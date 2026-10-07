@@ -4,6 +4,8 @@ import { catchAsync } from "../utils/catchAsync";
 import continentService from "../services/continent.service";
 import { AppError } from "../utils/AppError";
 import { isValidObjectId } from "../utils/validation";
+import { uploadImageStream } from "../services/cloudinary.service";
+
 
 export const getAllContinents: RequestHandler = catchAsync(
   async (req: Request, res: Response) => {
@@ -40,19 +42,26 @@ export const getContinent: RequestHandler = catchAsync(
 );
 
 export const createContinent: RequestHandler = catchAsync(
+
   async (req: Request, res: Response) => {
-    // Validation
-    const { name, description, image } = req.body;
-    if (!name || !image) throw new AppError("Missing required fields", 400);
+    let { name, description, imageUrl } = req.body;
+
+    if (req.file) {
+      const uploadRes = await uploadImageStream(req.file.buffer, "continents");
+      imageUrl = uploadRes.url;
+    }
+
+    if (!name || !imageUrl) {
+      throw new AppError("Missing required fields (name and imageUrl/image are required)", 400);
+    }
 
     const continent = await continentService.createContinent({
       name,
       description,
-      image,
+      imageUrl,
     });
 
-    // Send response
-    res.status(200).json({
+    res.status(201).json({
       status: "success",
       data: {
         continent,
@@ -64,18 +73,23 @@ export const createContinent: RequestHandler = catchAsync(
 export const updateContinent: RequestHandler = catchAsync(
   async (req: Request, res: Response) => {
     const id = req.params.id as string;
+    let { name, description, imageUrl } = req.body;
 
-    const { name, description, image } = req.body;
+    if (req.file) {
+      const uploadRes = await uploadImageStream(req.file.buffer, "continents");
+      imageUrl = uploadRes.url;
+    }
 
-    if (!name && !description && !image)
+    if (!name && !description && !imageUrl) {
       throw new AppError("Nothing to update", 400);
+    }
 
     if (!isValidObjectId(id)) throw new AppError("Invalid Continent ID", 400);
 
     const continent = await continentService.updateContinent(id, {
       name,
       description,
-      image,
+      imageUrl
     });
 
     res.status(200).json({
@@ -87,6 +101,7 @@ export const updateContinent: RequestHandler = catchAsync(
     });
   },
 );
+
 
 export const deleteContinent: RequestHandler = catchAsync(
   async (req: Request, res: Response) => {

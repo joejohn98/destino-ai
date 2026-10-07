@@ -12,7 +12,16 @@ export interface CreateContinentInput {
   name: string;
   slug?: string;
   description?: string;
-  image: string;
+  imageUrl?: string;
+  image?: string;
+}
+
+export interface UpdateContinentInput {
+  name?: string;
+  slug?: string;
+  description?: string;
+  imageUrl?: string;
+  image?: string;
 }
 
 const getAllContinents = async () => {
@@ -85,7 +94,11 @@ const getContinent = async (slug: string) => {
 };
 
 const createContinent = async (continentData: CreateContinentInput) => {
-  const { name } = continentData;
+  const { name, description, imageUrl } = continentData;
+
+  if (!name || !imageUrl) {
+    throw new AppError("Name and image URL are required", 400);
+  }
 
   // Check if continent with this name already exists
   const existingContinent = await Continent.findOne({ name });
@@ -93,13 +106,24 @@ const createContinent = async (continentData: CreateContinentInput) => {
     throw new AppError(`Continent "${name}" already exists`, 400);
   }
 
+  const payload: { name: string; imageUrl: string; description?: string } = {
+    name,
+    imageUrl
+  };
+
+  if (description) {
+    payload.description = description;
+  }
+
   // Create new continent
-  const newContinent = await Continent.create(continentData);
+  const newContinent = await Continent.create(payload);
 
   return newContinent;
 };
 
-const updateContinent = async (id: string, updateData: CreateContinentInput) => {
+
+const updateContinent = async (id: string, updateData: UpdateContinentInput) => {
+
     // Find continent by slug
     const continent = await Continent.findById(id);
     if (!continent) {
@@ -116,9 +140,10 @@ const updateContinent = async (id: string, updateData: CreateContinentInput) => 
     }
 
   // Update fields
-    if (updateData.name) continent.name = updateData.name;
+  if (updateData.name) continent.name = updateData.name;
   if (updateData.description) continent.description = updateData.description;
-  if (updateData.image) continent.image = updateData.image;
+  if(updateData.imageUrl) continent.imageUrl = updateData.imageUrl;
+
 
   // Save changes
   await continent.save();
