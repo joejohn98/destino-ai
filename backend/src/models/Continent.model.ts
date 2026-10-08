@@ -41,7 +41,7 @@ const continentSchema = new mongoose.Schema<IContinent>(
 
   {
     timestamps: true,
-     toJSON: { virtuals: true },
+    toJSON: { virtuals: true },
     toObject: { virtuals: true },
   },
 );
@@ -55,17 +55,10 @@ continentSchema.pre("validate", function () {
 
 // Virtual populate countries
 continentSchema.virtual("countries", {
-  ref: "Country",        
-  localField: "_id",   
+  ref: "Country",
+  localField: "_id",
   foreignField: "continent",
 });
-
-// Virtual populate destinations
-continentSchema.virtual("destinations", {
-  ref: "Destination",
-  localField: "_id",
-  foreignField: "location.country",
-})
 
 export const Continent = mongoose.model<IContinent>(
   "Continent",
