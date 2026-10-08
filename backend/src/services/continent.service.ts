@@ -127,7 +127,7 @@ const updateContinent = async (id: string, updateData: UpdateContinentInput) => 
 
   // Update fields
   if (updateData.name) continent.name = updateData.name;
-  if (updateData.description) continent.description = updateData.description;
+  if (updateData.description !== undefined) continent.description = updateData.description;
   if(updateData.imageUrl) continent.imageUrl = updateData.imageUrl;
 
 

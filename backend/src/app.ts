@@ -9,7 +9,7 @@ import {
   continentCountryRoutes,
   countryRoutes,
 } from "./routes/country.routes";
-import { reviewRoutes } from "./routes/review.routes";
+import { destinationReviewRoutes, reviewRoutes } from "./routes/review.routes";
 
 const app = express();
 
@@ -20,7 +20,8 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/destinations", destinationRouter);
-app.use("/api/destinations/:slug/reviews", reviewRoutes);
+app.use("/api/countries/:countrySlug/destinations/:destinationSlug/reviews", destinationReviewRoutes);
+app.use("/api/reviews", reviewRoutes);
 
 // Admin routes
 app.use("/api/admin/continents", continentRoutes);
