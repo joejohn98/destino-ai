@@ -2,15 +2,19 @@ import { Continent, Country, Destination, Review } from "../models";
 import { AppError } from "../utils/AppError";
 
 interface CreateCountryInput {
+  name: string;
+  description?: string;
+  imageUrl: string;
+}
+
+interface UpdateCountryInput {
   name?: string;
   description?: string;
   imageUrl?: string;
-  image?: string;
-  continent?: string;
 }
 
-const getAllCountries = async () => {
-  const countries = await Country.find()
+const getAllCountries = async (continentId: string) => {
+  const countries = await Country.find({ continent: continentId })
     .select("-__v")
     .populate({
       path: "continent",
@@ -25,8 +29,8 @@ const getAllCountries = async () => {
   return countries;
 };
 
-const getCountry = async (slug: string) => {
-  const country = await Country.findOne({ slug })
+const getCountry = async (continentId: string, slug: string) => {
+  const country = await Country.findOne({ slug, continent: continentId })
     .populate({
       path: "destinations",
       select: "_id name",
@@ -39,20 +43,14 @@ const getCountry = async (slug: string) => {
   return country;
 };
 
-const createCountry = async (countryData: {
-  name: string;
-  description?: string;
-  imageUrl?: string;
-  continent: string;
-}) => {
-  const { name, description, imageUrl, continent } = countryData;
+const createCountry = async (
+  continentId: string,
+  countryData: CreateCountryInput,
+) => {
+  const { name, description, imageUrl } = countryData;
 
-  if (!imageUrl) {
-    throw new AppError("Image URL is required", 400);
-  }
-
-  const existingContinent = await Continent.findById(continent);
-  if (!existingContinent) {
+  const continent = await Continent.findById(continentId);
+  if (!continent) {
     throw new AppError("Continent not found with that ID", 404);
   }
 
@@ -62,15 +60,10 @@ const createCountry = async (countryData: {
     throw new AppError("Country with this name already exists", 400);
   }
 
-  const payload: {
-    name: string;
-    imageUrl: string;
-    continent: string;
-    description?: string;
-  } = {
+  const payload: CreateCountryInput & { continent: typeof continent._id } = {
     name,
     imageUrl,
-    continent,
+    continent: continent._id,
   };
 
   if (description) {
@@ -81,12 +74,13 @@ const createCountry = async (countryData: {
   return newCountry;
 };
 
-
-const updateCountry = async (id: string, updateData: CreateCountryInput) => {
-  // Find country by ID
+const updateCountry = async (
+  id: string,
+  updateData: UpdateCountryInput,
+) => {
   const country = await Country.findById(id);
   if (!country) {
-    throw new AppError("No country found with that ID", 404);
+    throw new AppError("Country not found", 404);
   }
   // Check if another country has the same name (if name is being updated)
   if (updateData.name && updateData.name !== country.name) {
@@ -96,15 +90,6 @@ const updateCountry = async (id: string, updateData: CreateCountryInput) => {
     if (existingCountry) {
       throw new AppError("Another country with this name already exists", 400);
     }
-  }
-
-  // Validate continent if updating continent
-  if (updateData.continent) {
-    const existingContinent = await Continent.findById(updateData.continent);
-    if (!existingContinent) {
-      throw new AppError("Continent not found with that ID", 404);
-    }
-    country.continent = updateData.continent as any;
   }
 
   // Update fields
@@ -119,16 +104,16 @@ const updateCountry = async (id: string, updateData: CreateCountryInput) => {
   return country;
 };
 
-
 const deleteCountry = async (id: string) => {
-  // Find country by ID
   const country = await Country.findById(id);
   if (!country) {
     throw new AppError("Country not found", 404);
   }
 
   // Cascade delete destinations
-  const destinations = await Destination.find({ "location.country": id });
+  const destinations = await Destination.find({
+    "location.country": country._id,
+  });
 
   if (destinations.length > 0) {
     const destinationIds = destinations.map((d) => d._id);
@@ -137,7 +122,7 @@ const deleteCountry = async (id: string) => {
   }
 
   // Delete the country
-  const deletedCountry = await Country.findByIdAndDelete(id);
+  const deletedCountry = await Country.findByIdAndDelete(country._id);
 
   return deletedCountry;
 };

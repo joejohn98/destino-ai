@@ -7,7 +7,13 @@ import { isValidObjectId } from "../utils/validation";
 import { uploadImageStream } from "../services/cloudinary.service";
 
 export const getAllCountries: RequestHandler = catchAsync(async (_req, res) => {
-  const countries = await countryService.getAllCountries();
+  const continentId = _req.params.continentId as string;
+
+  if (!isValidObjectId(continentId)) {
+    throw new AppError("Invalid continent ID", 400);
+  }
+
+  const countries = await countryService.getAllCountries(continentId);
   res.status(200).json({
     success: true,
     message: "Countries fetched successfully",
@@ -16,9 +22,14 @@ export const getAllCountries: RequestHandler = catchAsync(async (_req, res) => {
 });
 
 export const getCountry: RequestHandler = catchAsync(async (req, res) => {
+  const continentId = req.params.continentId as string;
   const slug = req.params.slug as string;
 
-  const country = await countryService.getCountry(slug);
+  if (!isValidObjectId(continentId)) {
+    throw new AppError("Invalid continent ID", 400);
+  }
+
+  const country = await countryService.getCountry(continentId, slug);
   res.status(200).json({
     success: true,
     message: "Country fetched successfully",
@@ -27,25 +38,29 @@ export const getCountry: RequestHandler = catchAsync(async (req, res) => {
 });
 
 export const createCountry: RequestHandler = catchAsync(async (req, res) => {
-  let { name, description, imageUrl, continent } = req.body;
+  const continentId = req.params.continentId as string;
+  let { name, description, imageUrl } = req.body;
+
+  if (!isValidObjectId(continentId)) {
+    throw new AppError("Invalid continent ID", 400);
+  }
 
   if (req.file) {
     const uploadRes = await uploadImageStream(req.file.buffer, "countries");
     imageUrl = uploadRes.url;
   }
 
-  if (!name || !imageUrl || !continent) {
+  if (!name || !imageUrl) {
     throw new AppError(
-      "Missing required fields (name, imageUrl/image, and continent are required)",
+      "Missing required fields (name and imageUrl/image are required)",
       400,
     );
   }
 
-  const country = await countryService.createCountry({
+  const country = await countryService.createCountry(continentId, {
     name,
     description,
     imageUrl,
-    continent,
   });
   res.status(201).json({
     success: true,
@@ -62,7 +77,7 @@ export const updateCountry: RequestHandler = catchAsync(
       throw new AppError("Invalid country ID", 400);
     }
 
-    let { name, description, imageUrl, continent } = req.body;
+    let { name, description, imageUrl } = req.body;
 
     if (req.file) {
       const uploadRes = await uploadImageStream(req.file.buffer, "countries");
@@ -73,7 +88,6 @@ export const updateCountry: RequestHandler = catchAsync(
       name,
       description,
       imageUrl,
-      continent,
     });
     res.status(200).json({
       success: true,

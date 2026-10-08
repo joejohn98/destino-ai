@@ -1,4 +1,4 @@
-import {Router} from "express";
+import { Router } from "express";
 import {
     createCountry,
     deleteCountry,
@@ -9,17 +9,17 @@ import {
 
 import { uploadSingle } from "../middleware/upload.middleware";
 
-const router = Router();
+const countryRoutes = Router();
+const continentCountryRoutes = Router({ mergeParams: true });
 
-router.get("/", getAllCountries);
+continentCountryRoutes.get("/", getAllCountries);
 
-router.get("/:slug", getCountry);
+continentCountryRoutes.get("/:slug", getCountry);
 
-router.post("/", uploadSingle("image"), createCountry);
+continentCountryRoutes.post("/", uploadSingle("image"), createCountry);
 
-router.put("/:id", uploadSingle("image"), updateCountry);
+countryRoutes.put("/:id", uploadSingle("image"), updateCountry);
 
+countryRoutes.delete("/:id", deleteCountry);
 
-router.delete("/:id", deleteCountry);
-
-export const countryRoutes = router;
+export { countryRoutes, continentCountryRoutes };

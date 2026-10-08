@@ -5,7 +5,11 @@ import "./models";
 import destinationRouter from "./routes/destination.routes";
 import { authRoutes } from "./routes/auth.routes";
 import { continentRoutes } from "./routes/continent.routes";
-import { countryRoutes } from "./routes/country.routes";
+import {
+  continentCountryRoutes,
+  countryRoutes,
+} from "./routes/country.routes";
+import { reviewRoutes } from "./routes/review.routes";
 
 const app = express();
 
@@ -16,11 +20,12 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/destinations", destinationRouter);
+app.use("/api/destinations/:slug/reviews", reviewRoutes);
 
 // Admin routes
 app.use("/api/admin/continents", continentRoutes);
+app.use("/api/admin/continents/:continentId/countries", continentCountryRoutes);
 app.use("/api/admin/countries", countryRoutes);
-
 
 
 app.get("/", (req: Request, res: Response) => {
