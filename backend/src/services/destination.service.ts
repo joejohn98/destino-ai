@@ -1,6 +1,11 @@
 import { Category, Destination } from "../models/Destination.model";
 import { Country } from "../models/Country.model";
 import { AppError } from "../utils/AppError";
+import type {
+  CreateDestinationInput,
+  UpdateDestinationInput,
+} from "../validators/destination.validators";
+import { Review } from "../models";
 
 const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -301,7 +306,6 @@ const getDestinationByName = async (rawName: string): Promise<any> => {
     throw new AppError("Destination not found", 404);
   }
 
-
   const countryObj = destination.location?.country as any;
   const countryName =
     typeof countryObj === "object" && countryObj?.name
@@ -375,6 +379,99 @@ const getDestinationBySlug = async (
   };
 };
 
+const createDestination = async (data: CreateDestinationInput) => {
+  const existingDest = await Destination.findOne({ name: data.name });
+  if (existingDest) {
+    throw new AppError("Destination with this name already exists", 409);
+  }
+
+  const countryRegex = new RegExp(
+    `^${escapeRegex(data.location.country)}$`,
+    "i",
+  );
+  const country = await Country.findOne({ name: countryRegex });
+  if (!country) {
+    throw new AppError(`Country '${data.location.country}' not found`, 404);
+  }
+
+  const payload: any = {
+    name: data.name,
+    description: data.description,
+    location: {
+      city: data.location.city,
+      country: country._id,
+    },
+    category: data.category,
+  };
+
+  if (data.bestTimeToVisit) payload.bestTimeToVisit = data.bestTimeToVisit;
+  if (data.images && data.images.length > 0) payload.imageUrls = data.images;
+
+  const newDest = await Destination.create(payload);
+  const { __v, ...rest } = newDest.toObject();
+  return rest;
+};
+
+const updateDestination = async (id: string, data: UpdateDestinationInput) => {
+  const updatePayload: Record<string, unknown> = {};
+
+  if (data.name !== undefined) {
+    const existing = await Destination.findOne({
+      name: data.name,
+      _id: { $ne: id },
+    });
+    if (existing)
+      throw new AppError("Destination with this name already exists", 409);
+    updatePayload.name = data.name;
+  }
+  if (data.description !== undefined)
+    updatePayload.description = data.description;
+  if (data.category !== undefined) updatePayload.category = data.category;
+  if (data.bestTimeToVisit !== undefined)
+    updatePayload.bestTimeToVisit = data.bestTimeToVisit;
+  if (data.images !== undefined) updatePayload.imageUrls = data.images;
+
+  if (data.location?.city !== undefined)
+    updatePayload["location.city"] = data.location.city;
+  if (data.location?.country !== undefined) {
+    const countryRegex = new RegExp(
+      `^${escapeRegex(data.location.country)}$`,
+      "i",
+    );
+    const country = await Country.findOne({ name: countryRegex });
+    if (!country)
+      throw new AppError(`Country '${data.location.country}' not found`, 404);
+    updatePayload["location.country"] = country._id;
+  }
+
+  const updatedDest = await Destination.findByIdAndUpdate(
+    id,
+    { $set: updatePayload },
+    { new: true, runValidators: true },
+  )
+    .select("-__v")
+    .lean();
+
+  if (!updatedDest) {
+    throw new AppError("Destination not found", 404);
+  }
+
+  return updatedDest;
+};
+
+const deleteDestination = async (id: string) => {
+  const deletedDest = await Destination.findByIdAndDelete(id)
+    .select("-__v")
+    .lean();
+  if (!deletedDest) {
+    throw new AppError("Destination not found", 404);
+  }
+
+  await Review.deleteMany({ destination: deletedDest._id });
+
+  return deletedDest;
+};
+
 export default {
   getPaginatedDestinations,
   searchDestinations,
@@ -386,4 +483,7 @@ export default {
   getCountriesByContinent,
   getDestinationByName,
   getDestinationBySlug,
+  createDestination,
+  updateDestination,
+  deleteDestination,
 };

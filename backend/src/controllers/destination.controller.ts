@@ -1,6 +1,7 @@
 import type { RequestHandler } from "express";
 import destinationService from "../services/destination.service";
 import { catchAsync } from "../utils/catchAsync";
+import { uploadMultipleImageStreams } from "../services/cloudinary.service";
 
 /**
  * GET /api/destinations
@@ -193,3 +194,86 @@ export const getDestinationBySlug: RequestHandler = catchAsync(
     });
   }
 );
+
+/**
+ * POST /api/destinations
+ * Create a new destination (Admin only)
+ */
+export const createDestination: RequestHandler = catchAsync(async (req, res) => {
+  let images = req.body.images || [];
+  if (typeof images === "string") images = [images];
+
+  let fileBuffers: Buffer[] = [];
+  if (req.file) fileBuffers.push(req.file.buffer);
+  if (req.files && Array.isArray(req.files)) {
+    fileBuffers.push(...req.files.map((f) => f.buffer));
+  }
+
+  if (fileBuffers.length > 0) {
+    const uploadResults = await uploadMultipleImageStreams(fileBuffers, "destinations");
+    const uploadedUrls = uploadResults.map((res) => res.url);
+    images = [...images, ...uploadedUrls];
+  }
+
+  req.body.images = images;
+  const destination = await destinationService.createDestination(req.body);
+
+  res.status(201).json({
+    status: "success",
+    message: "Destination created successfully",
+    data: destination,
+  });
+});
+
+/**
+ * PUT /api/destinations/:id
+ * Update an existing destination (Admin only)
+ */
+export const updateDestination: RequestHandler = catchAsync(async (req, res) => {
+  let images = req.body.images;
+
+  if (images !== undefined) {
+    if (typeof images === "string") images = [images];
+  } else {
+    images = []; // Start with an empty array if undefined but files are uploaded
+  }
+
+  let fileBuffers: Buffer[] = [];
+  if (req.file) fileBuffers.push(req.file.buffer);
+  if (req.files && Array.isArray(req.files)) {
+    fileBuffers.push(...req.files.map((f) => f.buffer));
+  }
+
+  if (fileBuffers.length > 0) {
+    const uploadResults = await uploadMultipleImageStreams(fileBuffers, "destinations");
+    const uploadedUrls = uploadResults.map((res) => res.url);
+    images = [...images, ...uploadedUrls];
+  }
+
+  // Only override if we received images in body or files
+  if (req.body.images !== undefined || fileBuffers.length > 0) {
+    req.body.images = images;
+  }
+
+  const destination = await destinationService.updateDestination(req.params.id as string, req.body);
+
+  res.status(200).json({
+    status: "success",
+    message: "Destination updated successfully",
+    data: destination,
+  });
+});
+
+/**
+ * DELETE /api/destinations/:id
+ * Delete a destination (Admin only)
+ */
+export const deleteDestination: RequestHandler = catchAsync(async (req, res) => {
+  const deletedDestination = await destinationService.deleteDestination(req.params.id as string);
+
+  res.status(200).json({
+    status: "success",
+    message: "Destination deleted successfully",
+    data: deletedDestination,
+  });
+});

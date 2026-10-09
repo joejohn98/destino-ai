@@ -9,7 +9,17 @@ import {
   getCountriesByContinent,
   getPaginatedDestinations,
   getDestinationByName,
+  createDestination,
+  updateDestination,
+  deleteDestination,
 } from "../controllers/destination.controller";
+import { protect, restrictTo } from "../middleware/auth.middleware";
+import { validate } from "../middleware/validation.middleware";
+import {
+  createDestinationSchema,
+  updateDestinationSchema,
+} from "../validators/destination.validators";
+import { uploadArray } from "../middleware/upload.middleware";
 
 const router = Router();
 
@@ -22,6 +32,29 @@ router.get("/category/:category", getDestinationsByCategory);
 router.get("/continents", getContinentStats);
 router.get("/continents/:continent/countries", getCountriesByContinent);
 router.get("/", getPaginatedDestinations);
+router.post(
+  "/",
+  protect,
+  restrictTo("admin"),
+  uploadArray("images", 5),
+  validate(createDestinationSchema),
+  createDestination
+);
+
 router.get("/:name", getDestinationByName);
+router.put(
+  "/:id",
+  protect,
+  restrictTo("admin"),
+  uploadArray("images", 5),
+  validate(updateDestinationSchema),
+  updateDestination
+);
+router.delete(
+  "/:id",
+  protect,
+  restrictTo("admin"),
+  deleteDestination
+);
 
 export default router;
