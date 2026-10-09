@@ -42,7 +42,13 @@ export const createReview = catchAsync(async (req, res) => {
   }
 
   const userId = req.user!._id.toString();
-  const review = await reviewService.createReview(countrySlug, destinationSlug, userId, parsed.data);
+  const review = await reviewService.createReview(
+    countrySlug,
+    destinationSlug,
+    userId,
+    req.user!.username,
+    parsed.data,
+  );
 
   res.status(201).json({
     status: "success",

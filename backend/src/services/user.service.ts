@@ -1,4 +1,4 @@
-import { User } from "../models";
+import { Review, User } from "../models";
 import { AppError } from "../utils/AppError";
 import type { UpdateProfileInput } from "../validators/user.validators";
 
@@ -40,11 +40,23 @@ const updateProfile = async (
 };
 
 const deleteProfile = async (userId: string) => {
-  const user = await User.findByIdAndDelete(userId);
+  const user = await User.findById(userId);
 
   if (!user) {
     throw new AppError("User not found", 404);
   }
+
+  await Review.updateMany(
+    { user: user._id },
+    {
+      $set: {
+        user: null,
+        authorName: "Deleted user",
+      },
+    },
+  );
+
+  await User.findByIdAndDelete(user._id);
 };
 
 export default { getProfile, updateProfile, deleteProfile };

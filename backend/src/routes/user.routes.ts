@@ -13,10 +13,8 @@ const userRoutes = Router();
 
 userRoutes.use(protect);
 
-userRoutes
-  .route("/profile")
-  .get(getProfile)
-  .put(validate(updateProfileSchema), updateProfile)
-  .delete(deleteProfile);
+userRoutes.get("/profile", getProfile);
+userRoutes.patch("/profile", validate(updateProfileSchema), updateProfile);
+userRoutes.delete("/profile", deleteProfile);
 
 export { userRoutes };

@@ -5,11 +5,17 @@ import {
   UpdateReviewInput,
 } from "../validators/review.validators";
 
-const getDestinationReviews = async (countrySlug: string, destinationSlug: string) => {
+const getDestinationReviews = async (
+  countrySlug: string,
+  destinationSlug: string,
+) => {
   const country = await Country.findOne({ slug: countrySlug });
   if (!country) throw new AppError("Country not found", 404);
 
-  const destination = await Destination.findOne({ slug: destinationSlug, "location.country": country._id });
+  const destination = await Destination.findOne({
+    slug: destinationSlug,
+    "location.country": country._id,
+  });
 
   if (!destination) {
     throw new AppError("Destination not found in this country", 404);
@@ -27,14 +33,19 @@ const createReview = async (
   countrySlug: string,
   destinationSlug: string,
   userId: string,
+  authorName: string,
   reviewData: CreateReviewInput,
 ) => {
   const country = await Country.findOne({ slug: countrySlug });
   if (!country) throw new AppError("Country not found", 404);
 
-  const destination = await Destination.findOne({ slug: destinationSlug, "location.country": country._id });
+  const destination = await Destination.findOne({
+    slug: destinationSlug,
+    "location.country": country._id,
+  });
 
-  if (!destination) throw new AppError("Destination not found in this country", 404);
+  if (!destination)
+    throw new AppError("Destination not found in this country", 404);
 
   const existingReview = await Review.findOne({
     destination: destination._id,
@@ -52,6 +63,7 @@ const createReview = async (
     reviewText: comment,
     destination: destination._id,
     user: userId,
+    authorName,
   });
 
   return review;
@@ -67,7 +79,7 @@ const updateReview = async (
   if (!review) throw new AppError("No review found with that ID", 404);
 
   // Only the owner can update their own review
-  if (review.user.toString() !== userId)
+  if (!review.user || review.user.toString() !== userId)
     throw new AppError("You do not have permission to update this review", 403);
 
   if (updateData.rating !== undefined) review.rating = updateData.rating;
@@ -86,7 +98,7 @@ const deleteReview = async (reviewId: string, userId: string, role: string) => {
   if (!review) throw new AppError("No review found with that ID", 404);
 
   // Only the owner or admin can delete a review
-  if (review.user.toString() !== userId && role !== "admin")
+  if ((!review.user || review.user.toString() !== userId) && role !== "admin")
     throw new AppError("You do not have permission to delete this review", 403);
 
   // Use findByIdAndDelete so the findOneAnd* hooks in Review.model.ts are triggered and the average rating is updated
