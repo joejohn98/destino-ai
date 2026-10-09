@@ -1,17 +1,9 @@
 import { Continent, Country, Destination, Review } from "../models";
 import { AppError } from "../utils/AppError";
-
-interface CreateCountryInput {
-  name: string;
-  description?: string;
-  imageUrl: string;
-}
-
-interface UpdateCountryInput {
-  name?: string;
-  description?: string;
-  imageUrl?: string;
-}
+import type {
+  CreateCountryInput,
+  UpdateCountryInput,
+} from "../validators/country.validators";
 
 const getAllCountries = async (continentId: string) => {
   const countries = await Country.find({ continent: continentId })
@@ -60,7 +52,16 @@ const createCountry = async (
     throw new AppError("Country with this name already exists", 400);
   }
 
-  const payload: CreateCountryInput & { continent: typeof continent._id } = {
+  if (!imageUrl) {
+    throw new AppError("Image URL is required", 400);
+  }
+
+  const payload: {
+    name: string;
+    imageUrl: string;
+    continent: typeof continent._id;
+    description?: string;
+  } = {
     name,
     imageUrl,
     continent: continent._id,
@@ -74,10 +75,7 @@ const createCountry = async (
   return newCountry;
 };
 
-const updateCountry = async (
-  id: string,
-  updateData: UpdateCountryInput,
-) => {
+const updateCountry = async (id: string, updateData: UpdateCountryInput) => {
   const country = await Country.findById(id);
   if (!country) {
     throw new AppError("Country not found", 404);

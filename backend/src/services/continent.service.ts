@@ -7,12 +7,14 @@ import {
   Review,
 } from "../models";
 import { AppError } from "../utils/AppError";
-import { CreateContinentInput, UpdateContinentInput } from "../validators/continent.validators";
-
+import {
+  CreateContinentInput,
+  UpdateContinentInput,
+} from "../validators/continent.validators";
 
 const getAllContinents = async () => {
   const continents = await Continent.find()
-    .select("-_v")
+    .select("-__v")
     .populate({
       path: "countries",
       select: "_id name slug",
@@ -23,8 +25,8 @@ const getAllContinents = async () => {
     })
     .lean();
 
-  if (!continents || continents.length === 0) {
-    throw new AppError("No continents found", 404);
+  if (!continents) {
+    return [];
   }
 
   const data = continents.map((continent: IContinent) => ({
@@ -94,7 +96,7 @@ const createContinent = async (continentData: CreateContinentInput) => {
 
   const payload: { name: string; imageUrl: string; description?: string } = {
     name,
-    imageUrl
+    imageUrl,
   };
 
   if (description) {
@@ -107,29 +109,33 @@ const createContinent = async (continentData: CreateContinentInput) => {
   return newContinent;
 };
 
-
-const updateContinent = async (id: string, updateData: UpdateContinentInput) => {
-
-    // Find continent by slug
-    const continent = await Continent.findById(id);
-    if (!continent) {
-        throw new AppError("No continent found with that ID", 404);
+const updateContinent = async (
+  id: string,
+  updateData: UpdateContinentInput,
+) => {
+  // Find continent by slug
+  const continent = await Continent.findById(id);
+  if (!continent) {
+    throw new AppError("No continent found with that ID", 404);
+  }
+  // Check if another continent has the same name (if name is being updated)
+  if (updateData.name && updateData.name !== continent.name) {
+    const existingContinent = await Continent.findOne({
+      name: updateData.name,
+    });
+    if (existingContinent) {
+      throw new AppError(
+        "Another continent with this name already exists",
+        400,
+      );
     }
-    // Check if another continent has the same name (if name is being updated)
-    if (updateData.name && updateData.name !== continent.name) {
-        const existingContinent = await Continent.findOne({
-            name: updateData.name,
-        });
-        if (existingContinent) {
-            throw new AppError("Another continent with this name already exists",400);
-        }
-    }
+  }
 
   // Update fields
   if (updateData.name) continent.name = updateData.name;
-  if (updateData.description !== undefined) continent.description = updateData.description;
-  if(updateData.imageUrl) continent.imageUrl = updateData.imageUrl;
-
+  if (updateData.description !== undefined)
+    continent.description = updateData.description;
+  if (updateData.imageUrl) continent.imageUrl = updateData.imageUrl;
 
   // Save changes
   await continent.save();

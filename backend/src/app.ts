@@ -6,10 +6,7 @@ import "./models";
 import destinationRouter from "./routes/destination.routes";
 import { authRoutes } from "./routes/auth.routes";
 import { continentRoutes } from "./routes/continent.routes";
-import {
-  continentCountryRoutes,
-  countryRoutes,
-} from "./routes/country.routes";
+import { continentCountryRoutes, countryRoutes } from "./routes/country.routes";
 import { destinationReviewRoutes, reviewRoutes } from "./routes/review.routes";
 import { getDestinationBySlug } from "./controllers/destination.controller";
 import { userRoutes } from "./routes/user.routes";
@@ -33,14 +30,16 @@ app.get(
 );
 
 // Reviews are nested under the same country/destination hierarchy.
-app.use("/api/countries/:countrySlug/destinations/:destinationSlug/reviews", destinationReviewRoutes);
+app.use(
+  "/api/countries/:countrySlug/destinations/:destinationSlug/reviews",
+  destinationReviewRoutes,
+);
 app.use("/api/reviews", reviewRoutes);
 
 // Admin routes
 app.use("/api/admin/continents", continentRoutes);
 app.use("/api/admin/continents/:continentId/countries", continentCountryRoutes);
 app.use("/api/admin/countries", countryRoutes);
-
 
 app.get("/", (req: Request, res: Response) => {
   res.status(200).json({

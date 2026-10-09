@@ -5,7 +5,7 @@ const createReviewSchema = z.object({
     .number("Rating must be a number")
     .min(1, "Rating must be at least 1")
     .max(5, "Rating must be at most 5"),
-  comment: z
+  reviewText: z
     .string()
     .min(1, "Review text cannot be empty")
     .max(500, "Review text cannot exceed 500 characters")

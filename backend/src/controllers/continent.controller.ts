@@ -5,11 +5,7 @@ import continentService from "../services/continent.service";
 import { AppError } from "../utils/AppError";
 import { isValidObjectId } from "../utils/validation";
 import { uploadImageStream } from "../services/cloudinary.service";
-import z from "zod";
-import {
-  createContinentSchema,
-  updateContinentSchema,
-} from "../validators/continent.validators";
+import { CreateContinentInput, UpdateContinentInput } from "../validators/continent.validators";
 
 export const getAllContinents: RequestHandler = catchAsync(
   async (req: Request, res: Response) => {
@@ -19,10 +15,9 @@ export const getAllContinents: RequestHandler = catchAsync(
     // Send response
     res.status(200).json({
       status: "success",
+      message: "Continents fetched successfully",
       results: continents.length,
-      data: {
-        continents,
-      },
+      data: continents,
     });
   },
 );
@@ -38,27 +33,15 @@ export const getContinent: RequestHandler = catchAsync(
     // Send response
     res.status(200).json({
       status: "success",
-      data: {
-        continent,
-      },
+      message: "Continent fetched successfully",
+      data: continent,
     });
   },
 );
 
 export const createContinent: RequestHandler = catchAsync(
   async (req: Request, res: Response) => {
-    const parsed = createContinentSchema.safeParse(req.body);
-
-    if (!parsed.success) {
-      res.status(400).json({
-        status: "fail",
-        message: parsed.error.issues[0]?.message || "Validation failed",
-        errors: z.flattenError(parsed.error).fieldErrors,
-      });
-      return;
-    }
-
-    let { name, description, imageUrl } = parsed.data;
+    let { name, description, imageUrl } = req.body;
 
     if (req.file) {
       const uploadRes = await uploadImageStream(req.file.buffer, "continents");
@@ -66,10 +49,13 @@ export const createContinent: RequestHandler = catchAsync(
     }
 
     if (!imageUrl) {
-      throw new AppError("An image is required (either upload a file or provide an imageUrl)", 400);
+      throw new AppError(
+        "An image is required (either upload a file or provide an imageUrl)",
+        400,
+      );
     }
 
-    const payload: { name: string; imageUrl: string; description?: string } = {
+    const payload: CreateContinentInput = {
       name,
       imageUrl,
     };
@@ -81,9 +67,8 @@ export const createContinent: RequestHandler = catchAsync(
 
     res.status(201).json({
       status: "success",
-      data: {
-        continent,
-      },
+      message: "Continent created successfully",
+      data: continent,
     });
   },
 );
@@ -92,18 +77,7 @@ export const updateContinent: RequestHandler = catchAsync(
   async (req: Request, res: Response) => {
     const id = req.params.id as string;
 
-    const parsed = updateContinentSchema.safeParse(req.body);
-
-    if (!parsed.success) {
-      res.status(400).json({
-        status: "fail",
-        message: parsed.error.issues[0]?.message || "Validation failed",
-        errors: z.flattenError(parsed.error).fieldErrors,
-      });
-      return;
-    }
-
-    let { name, description, imageUrl } = parsed.data;
+    let { name, description, imageUrl } = req.body;
 
     if (req.file) {
       const uploadRes = await uploadImageStream(req.file.buffer, "continents");
@@ -112,23 +86,17 @@ export const updateContinent: RequestHandler = catchAsync(
 
     if (!isValidObjectId(id)) throw new AppError("Invalid Continent ID", 400);
 
-    const updatePayload: {
-      name?: string;
-      description?: string;
-      imageUrl?: string;
-    } = {};
-    if (name) updatePayload.name = name;
-    if (description) updatePayload.description = description;
-    if (imageUrl) updatePayload.imageUrl = imageUrl;
+    const updatePayload: UpdateContinentInput = {};
+    if (name !== undefined) updatePayload.name = name;
+    if (description !== undefined) updatePayload.description = description;
+    if (imageUrl !== undefined) updatePayload.imageUrl = imageUrl;
 
     const continent = await continentService.updateContinent(id, updatePayload);
 
     res.status(200).json({
       status: "success",
       message: "Continent updated successfully",
-      data: {
-        continent,
-      },
+      data: continent,
     });
   },
 );
@@ -141,7 +109,7 @@ export const deleteContinent: RequestHandler = catchAsync(
 
     await continentService.deleteContinent(id);
 
-    res.status(204).json({
+    res.status(200).json({
       status: "success",
       message: "Continent deleted successfully",
     });

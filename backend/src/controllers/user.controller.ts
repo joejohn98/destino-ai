@@ -19,7 +19,7 @@ export const getProfile: RequestHandler = catchAsync(async (req, res) => {
 
   res.status(200).json({
     status: "success",
-    data: { user },
+    data: user,
   });
 });
 
@@ -32,7 +32,7 @@ export const updateProfile: RequestHandler = catchAsync(async (req, res) => {
   res.status(200).json({
     status: "success",
     message: "Profile updated successfully",
-    data: { user },
+    data: user,
   });
 });
 

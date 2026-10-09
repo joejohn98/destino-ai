@@ -56,11 +56,11 @@ const createReview = async (
     throw new AppError("You have already reviewed this destination", 400);
   }
 
-  const { rating, comment } = reviewData;
+  const { rating, reviewText } = reviewData;
 
   const review = await Review.create({
     rating,
-    reviewText: comment,
+    reviewText,
     destination: destination._id,
     user: userId,
     authorName,
