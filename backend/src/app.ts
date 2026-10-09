@@ -10,6 +10,7 @@ import { continentCountryRoutes, countryRoutes } from "./routes/country.routes";
 import { destinationReviewRoutes, reviewRoutes } from "./routes/review.routes";
 import { getDestinationBySlug } from "./controllers/destination.controller";
 import { userRoutes } from "./routes/user.routes";
+import aiRoutes from "./routes/ai.routes";
 
 const app = express();
 
@@ -40,6 +41,9 @@ app.use("/api/reviews", reviewRoutes);
 app.use("/api/admin/continents", continentRoutes);
 app.use("/api/admin/continents/:continentId/countries", continentCountryRoutes);
 app.use("/api/admin/countries", countryRoutes);
+
+// AI routes
+app.use("/api/ai", aiRoutes);
 
 app.get("/", (req: Request, res: Response) => {
   res.status(200).json({
