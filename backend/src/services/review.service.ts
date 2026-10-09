@@ -1,4 +1,5 @@
 import { Country, Destination, Review } from "../models";
+import { analyzeSentiment } from "./ai.service";
 import { AppError } from "../utils/AppError";
 import {
   CreateReviewInput,
@@ -58,12 +59,16 @@ const createReview = async (
 
   const { rating, reviewText } = reviewData;
 
+  const { sentiment, themes } = await analyzeSentiment(reviewText);
+
   const review = await Review.create({
     rating,
     reviewText,
     destination: destination._id,
     user: userId,
     authorName,
+    sentiment,
+    themes,
   });
 
   return review;
