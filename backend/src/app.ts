@@ -1,6 +1,7 @@
 import express, { NextFunction, Request, Response } from "express";
 import cors from "cors";
 import morgan from "morgan";
+import cookieParser from "cookie-parser";
 import "./models";
 import destinationRouter from "./routes/destination.routes";
 import { authRoutes } from "./routes/auth.routes";
@@ -10,6 +11,8 @@ import {
   countryRoutes,
 } from "./routes/country.routes";
 import { destinationReviewRoutes, reviewRoutes } from "./routes/review.routes";
+import { getDestinationBySlug } from "./controllers/destination.controller";
+import { userRoutes } from "./routes/user.routes";
 
 const app = express();
 
@@ -17,9 +20,19 @@ app.use(cors({ credentials: true }));
 app.use(morgan("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
 app.use("/api/destinations", destinationRouter);
+
+// Canonical destination detail: resolves unambiguously via the compound unique index.
+app.get(
+  "/api/countries/:countrySlug/destinations/:destinationSlug",
+  getDestinationBySlug,
+);
+
+// Reviews are nested under the same country/destination hierarchy.
 app.use("/api/countries/:countrySlug/destinations/:destinationSlug/reviews", destinationReviewRoutes);
 app.use("/api/reviews", reviewRoutes);
 
