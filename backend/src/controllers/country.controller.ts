@@ -5,6 +5,11 @@ import countryService from "../services/country.service";
 import { AppError } from "../utils/AppError";
 import { isValidObjectId } from "../utils/validation";
 import { uploadImageStream } from "../services/cloudinary.service";
+import z from "zod";
+import {
+  createCountrySchema,
+  updateCountrySchema,
+} from "../validators/country.validators";
 
 export const getAllCountries: RequestHandler = catchAsync(async (_req, res) => {
   const continentId = _req.params.continentId as string;
@@ -39,7 +44,18 @@ export const getCountry: RequestHandler = catchAsync(async (req, res) => {
 
 export const createCountry: RequestHandler = catchAsync(async (req, res) => {
   const continentId = req.params.continentId as string;
-  let { name, description, imageUrl } = req.body;
+
+  const parsed = createCountrySchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({
+      status: "fail",
+      message: parsed.error.issues[0]?.message || "Validation failed",
+      errors: z.flattenError(parsed.error).fieldErrors,
+    });
+    return;
+  }
+
+  let { name, description, imageUrl } = parsed.data;
 
   if (!isValidObjectId(continentId)) {
     throw new AppError("Invalid continent ID", 400);
@@ -50,18 +66,23 @@ export const createCountry: RequestHandler = catchAsync(async (req, res) => {
     imageUrl = uploadRes.url;
   }
 
-  if (!name || !imageUrl) {
+  if (!imageUrl) {
     throw new AppError(
-      "Missing required fields (name and imageUrl/image are required)",
+      "An image is required (either upload a file or provide an imageUrl)",
       400,
     );
   }
 
-  const country = await countryService.createCountry(continentId, {
-    name,
-    description,
-    imageUrl,
-  });
+  const countryData: {
+    name: string;
+    description?: string;
+    imageUrl: string;
+  } = { name, imageUrl };
+  if (description !== undefined) {
+    countryData.description = description;
+  }
+
+  const country = await countryService.createCountry(continentId, countryData);
   res.status(201).json({
     success: true,
     message: "Country created successfully",
@@ -73,22 +94,37 @@ export const updateCountry: RequestHandler = catchAsync(
   async (req: Request, res: Response) => {
     const id = req.params.id as string;
 
+    const parsed = updateCountrySchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({
+        status: "fail",
+        message: parsed.error.issues[0]?.message || "Validation failed",
+        errors: z.flattenError(parsed.error).fieldErrors,
+      });
+      return;
+    }
+
     if (!isValidObjectId(id)) {
       throw new AppError("Invalid country ID", 400);
     }
 
-    let { name, description, imageUrl } = req.body;
+    let { name, description, imageUrl } = parsed.data;
 
     if (req.file) {
       const uploadRes = await uploadImageStream(req.file.buffer, "countries");
       imageUrl = uploadRes.url;
     }
 
-    const updatedCountry = await countryService.updateCountry(id, {
-      name,
-      description,
-      imageUrl,
-    });
+    const updateData: {
+      name?: string;
+      description?: string;
+      imageUrl?: string;
+    } = {};
+    if (name !== undefined) updateData.name = name;
+    if (description !== undefined) updateData.description = description;
+    if (imageUrl !== undefined) updateData.imageUrl = imageUrl;
+
+    const updatedCountry = await countryService.updateCountry(id, updateData);
     res.status(200).json({
       success: true,
       message: "Country updated successfully",
