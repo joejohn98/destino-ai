@@ -1,7 +1,6 @@
 import { Category, Destination } from "../models/Destination.model";
 import { Country } from "../models/Country.model";
 import { AppError } from "../utils/AppError";
-import { Review } from "../models";
 
 const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -37,14 +36,40 @@ const getPaginatedDestinations = async (
   const skip = (page - 1) * limit;
 
   const [destinations, total] = await Promise.all([
-    Destination.find().select("-reviews -__v").skip(skip).limit(limit).lean(),
+    Destination.find()
+      .select("-reviews -__v")
+      .populate({
+        path: "location.country",
+        select: "slug name",
+        populate: { path: "continent", select: "slug name" },
+      })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
     Destination.countDocuments(),
   ]);
+
+  // Flatten country/continent slugs so the frontend can build the full
+  // hierarchical URL: /continents/:continentSlug/countries/:countrySlug/destinations/:destinationSlug
+  const enriched = destinations.map((d: any) => {
+    const country = d.location?.country;
+    const continent = country?.continent;
+    return {
+      ...d,
+      location: {
+        city: d.location?.city,
+        country: country?.name ?? country,
+        countrySlug: country?.slug ?? null,
+      },
+      continent: continent?.name ?? null,
+      continentSlug: continent?.slug ?? null,
+    };
+  });
 
   const totalPages = Math.ceil(total / limit) || 0;
 
   return {
-    destinations,
+    destinations: enriched,
     totalDestinations: total,
     totalPages,
     currentPage: page,
@@ -267,7 +292,8 @@ const getDestinationByName = async (rawName: string): Promise<any> => {
   })
     .populate({
       path: "location.country",
-      populate: { path: "continent" },
+      select: "name slug",
+      populate: { path: "continent", select: "name slug" },
     })
     .lean();
 
@@ -275,9 +301,6 @@ const getDestinationByName = async (rawName: string): Promise<any> => {
     throw new AppError("Destination not found", 404);
   }
 
-  const reviews = await Review.find({ destination: destination._id })
-    .populate("user", "name email avatar")
-    .lean();
 
   const countryObj = destination.location?.country as any;
   const countryName =
@@ -294,9 +317,61 @@ const getDestinationByName = async (rawName: string): Promise<any> => {
     location: {
       city: destination.location?.city,
       country: countryName,
+      countrySlug: countryObj?.slug ?? null,
     },
     continent: continentName,
-    reviews,
+    continentSlug: countryObj?.continent?.slug ?? null,
+  };
+};
+
+/**
+ * Canonical destination detail lookup.
+ * Uses the compound unique index { "location.country": 1, slug: 1 } so it is
+ * always unambiguous — even if two countries share an identically-named destination.
+ */
+const getDestinationBySlug = async (
+  countrySlug: string,
+  destinationSlug: string,
+): Promise<any> => {
+  const country = await Country.findOne({
+    slug: countrySlug.toLowerCase(),
+  })
+    .select("_id name slug continent")
+    .populate<{ continent: { _id: any; name: string; slug: string } }>(
+      "continent",
+      "name slug",
+    )
+    .lean();
+
+  if (!country) {
+    throw new AppError(`Country '${countrySlug}' not found`, 404);
+  }
+
+  const destination = await Destination.findOne({
+    slug: destinationSlug.toLowerCase(),
+    "location.country": country._id,
+  })
+    .select("-__v")
+    .lean();
+
+  if (!destination) {
+    throw new AppError(
+      `Destination '${destinationSlug}' not found in '${country.name}'`,
+      404,
+    );
+  }
+
+  const continent = country.continent as any;
+
+  return {
+    ...destination,
+    location: {
+      city: destination.location?.city,
+      country: country.name,
+      countrySlug: country.slug,
+    },
+    continent: continent?.name ?? null,
+    continentSlug: continent?.slug ?? null,
   };
 };
 
@@ -310,4 +385,5 @@ export default {
   getContinentStats,
   getCountriesByContinent,
   getDestinationByName,
+  getDestinationBySlug,
 };

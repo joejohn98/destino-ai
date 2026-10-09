@@ -157,11 +157,35 @@ export const getCountriesByContinent: RequestHandler = catchAsync(
  * GET /api/destinations/:name
  * Get a single destination by name (or slug).
  * MUST be registered last in destination.routes.ts!
+ * NOTE: Kept for backwards-compat / search result shortcuts only.
+ *       Prefer the canonical route below for all navigation links.
  */
 export const getDestinationByName: RequestHandler = catchAsync(
   async (req, res) => {
     const rawName = String(req.params.name || "");
     const destination = await destinationService.getDestinationByName(rawName);
+
+    res.status(200).json({
+      status: "success",
+      data: destination,
+    });
+  }
+);
+
+/**
+ * GET /api/countries/:countrySlug/destinations/:destinationSlug
+ * Canonical, unambiguous destination detail endpoint.
+ * Resolves via the compound unique index { location.country, slug }
+ * so slug collisions across countries are impossible.
+ */
+export const getDestinationBySlug: RequestHandler = catchAsync(
+  async (req, res) => {
+    const countrySlug = String(req.params.countrySlug || "");
+    const destinationSlug = String(req.params.destinationSlug || "");
+    const destination = await destinationService.getDestinationBySlug(
+      countrySlug,
+      destinationSlug,
+    );
 
     res.status(200).json({
       status: "success",

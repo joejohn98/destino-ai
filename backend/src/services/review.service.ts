@@ -36,6 +36,15 @@ const createReview = async (
 
   if (!destination) throw new AppError("Destination not found in this country", 404);
 
+  const existingReview = await Review.findOne({
+    destination: destination._id,
+    user: userId,
+  });
+
+  if (existingReview) {
+    throw new AppError("You have already reviewed this destination", 400);
+  }
+
   const { rating, comment } = reviewData;
 
   const review = await Review.create({
