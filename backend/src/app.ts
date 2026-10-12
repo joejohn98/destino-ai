@@ -11,6 +11,7 @@ import { destinationReviewRoutes, reviewRoutes } from "./routes/review.routes";
 import { getDestinationBySlug } from "./controllers/destination.controller";
 import { userRoutes } from "./routes/user.routes";
 import aiRoutes from "./routes/ai.routes";
+import agentRoutes from "./routes/agent.routes";
 
 const app = express();
 
@@ -44,6 +45,7 @@ app.use("/api/admin/countries", countryRoutes);
 
 // AI routes
 app.use("/api/ai", aiRoutes);
+app.use("/api/ai/agents", agentRoutes);
 
 app.get("/", (req: Request, res: Response) => {
   res.status(200).json({

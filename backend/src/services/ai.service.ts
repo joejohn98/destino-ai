@@ -3,17 +3,7 @@ import z from "zod";
 import { Destination } from "../models/Destination.model";
 import { Review } from "../models/Review.model";
 import { AppError } from "../utils/AppError";
-
-const loadAiSdk = async () => {
-  const aiSdk = await import("ai");
-  const googleProvider = await import("@ai-sdk/google");
-
-  return {
-    generateText: aiSdk.generateText,
-    Output: aiSdk.Output,
-    google: googleProvider.google,
-  };
-};
+import { loadAiSdk } from "../utils/ai-sdk";
 
 const sentimentAnalysisSchema = z.object({
   sentiment: z.enum(["positive", "neutral", "negative"]),
@@ -134,7 +124,7 @@ const generateDestinationSummary = async (
     lastGeneratedCount === undefined ||
     destination.ratingsCount - lastGeneratedCount >= 5 ||
     destination.ratingsCount < lastGeneratedCount;
-    
+
   if (!shouldRegenerate) {
     return {
       summary: destination.aiReviewSummary,
