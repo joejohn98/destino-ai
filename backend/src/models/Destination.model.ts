@@ -27,6 +27,8 @@ export interface IDestination extends Document {
   category: Category;
   imageUrls: string[];
   bestTimeToVisit?: string;
+  travelTips?: string[];
+  travelTipsContextHash?: string;
   openingHours?: string;
   ticketPrice?: string;
   website?: string;
@@ -98,6 +100,14 @@ const destinationSchema = new mongoose.Schema<IDestination>(
     bestTimeToVisit: {
       type: String,
       trim: true,
+      default: undefined,
+    },
+    travelTips: {
+      type: [String],
+      default: undefined,
+    },
+    travelTipsContextHash: {
+      type: String,
       default: undefined,
     },
     averageRating: {
