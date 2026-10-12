@@ -444,9 +444,21 @@ const updateDestination = async (id: string, data: UpdateDestinationInput) => {
     updatePayload["location.country"] = country._id;
   }
 
+  const contextChanged =
+    data.name !== undefined ||
+    data.category !== undefined ||
+    data.bestTimeToVisit !== undefined ||
+    data.location?.city !== undefined ||
+    data.location?.country !== undefined;
+
   const updatedDest = await Destination.findByIdAndUpdate(
     id,
-    { $set: updatePayload },
+    {
+      $set: updatePayload,
+      ...(contextChanged
+        ? { $unset: { travelTips: 1, travelTipsContextHash: 1 } }
+        : {}),
+    },
     { new: true, runValidators: true },
   )
     .select("-__v")

@@ -1,4 +1,6 @@
 import { Router } from "express";
+import { generateDestinationTips } from "../controllers/ai.controller";
+
 const aiRoutes = Router();
 
 // aiRoutes.get(
@@ -7,6 +9,6 @@ const aiRoutes = Router();
 //   generateDestinationSummary,
 // );
 
-// aiRoutes.get("/destinations/:destinationId/tips", protect, generateTips);
+aiRoutes.get("/destinations/:destinationId/tips", generateDestinationTips);
 
 export default aiRoutes;

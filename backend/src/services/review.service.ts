@@ -1,5 +1,5 @@
 import { Country, Destination, Review } from "../models";
-import { analyzeSentiment } from "./ai.service";
+import aiService from "./ai.service";
 import { AppError } from "../utils/AppError";
 import {
   CreateReviewInput,
@@ -59,7 +59,17 @@ const createReview = async (
 
   const { rating, reviewText } = reviewData;
 
-  const { sentiment, themes } = await analyzeSentiment(reviewText);
+  let sentiment: "positive" | "neutral" | "negative" = "neutral";
+  let themes = [];
+
+  try {
+    const aiResult = await aiService.analyzeSentiment(reviewText);
+    sentiment = aiResult.sentiment;
+    themes = aiResult.themes;
+  } catch (error) {
+    console.error("Error analyzing sentiment:", error);
+    throw new AppError("Failed to analyze sentiment", 500);
+  }
 
   const review = await Review.create({
     rating,
