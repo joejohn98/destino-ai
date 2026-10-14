@@ -1,6 +1,7 @@
 import {
   itinerarySchema,
   PLANNER_SYSTEM,
+  PLANNER_TOOL_ORDER,
   plannerTools,
 } from "../agents/planner.agent";
 import { AppError } from "../utils/AppError";
@@ -15,6 +16,7 @@ const planItinerary = async (query: string) => {
     instructions: PLANNER_SYSTEM,
     tools: plannerTools,
     stopWhen: isStepCount(10),
+    toolOrder: PLANNER_TOOL_ORDER,
     output: Output.object({
       schema: itinerarySchema,
     }),
@@ -48,7 +50,11 @@ const planItinerary = async (query: string) => {
       throw error;
     }
 
-    throw new AppError("Unable to generate the travel itinerary", 502);
+    throw new AppError(
+      "Unable to generate the travel itinerary",
+      502,
+      error,
+    );
   }
 };
 

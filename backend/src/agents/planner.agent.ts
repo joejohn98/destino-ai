@@ -33,9 +33,12 @@ export const plannerTools = {
   ...budgetTools,
 };
 
-// ─── Stop condition ───────────────────────────────────────────────────────────
-// The agent loop will stop after 10 steps maximum.
-// One "step" = one model generation (which may include one or more tool calls).
+export const PLANNER_TOOL_ORDER = [
+  "searchDestinations",
+  "getDestinationReviews",
+  "estimateTripBudget",
+] as const;
+
 
 // ─── Output Schema ────────────────────────────────────────────────────────────
 // Zod schema that enforces the exact JSON shape Gemini must return.

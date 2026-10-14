@@ -3,14 +3,29 @@ import z from "zod";
 import { Destination } from "../models/Destination.model";
 
 const estimateTripBudgetInput = z.object({
-  destinationIds: z.array(z.string().min(1)).min(1).max(10),
-  durationDays: z.number().int().min(1).max(30),
-  travellers: z.number().int().min(1).max(20),
-  travelStyle: z.enum(["budget", "moderate", "luxury"]),
-  budgetLimit: z.number().nonnegative().optional(),
+  destinationIds: z
+    .array(z.string().min(1))
+    .min(1)
+    .max(10)
+    .describe("Array of destination IDs (MongoDB ObjectId strings)"),
+  durationDays: z
+    .number()
+    .int()
+    .min(1)
+    .max(30)
+    .describe("Trip duration in days"),
+  travellers: z.number().int().min(1).max(20).describe("Number of travellers"),
+  travelStyle: z
+    .enum(["budget", "moderate", "luxury"])
+    .describe("Travel style preference"),
+  budgetLimit: z
+    .number()
+    .nonnegative()
+    .optional()
+    .describe("Maximum budget limit (INR)"),
 });
 
-const rates = {
+const DAILY_RATES = {
   budget: {
     accommodation: 800,
     food: 700,
@@ -63,7 +78,9 @@ export const budgetTools = {
         .select("_id name")
         .lean();
 
-      const foundIds = new Set(destinations.map((destination) => String(destination._id)));
+      const foundIds = new Set(
+        destinations.map((destination) => String(destination._id)),
+      );
       const missingIds = destinationIds.filter((id) => !foundIds.has(id));
       if (missingIds.length > 0) {
         return {
@@ -72,7 +89,7 @@ export const budgetTools = {
         };
       }
 
-      const rate = rates[travelStyle];
+      const rate = DAILY_RATES[travelStyle];
       const dailyPerTraveller =
         rate.accommodation + rate.food + rate.localTransport + rate.activities;
       const intercityTotal =
