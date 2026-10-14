@@ -27,3 +27,25 @@ export const generateItinerary = catchAsync(
     });
   },
 );
+
+export const compareDestinations = catchAsync(
+  async (req: Request, res: Response) => {
+    const query = req.query.q as string | undefined;
+    if (!query || typeof query !== "string")
+      throw new AppError("Please provide a query", 400);
+
+    const comparison = await agentService.compareDestinations(query);
+
+    res.status(200).json({
+      status: "success",
+      message: "Destinations compared successfully",
+      data: {
+        comparison: comparison.output,
+        meta: {
+          stepsUsed: comparison.steps.length,
+          totalTokens: comparison.usage.totalTokens ?? "N/A",
+        },
+      },
+    });
+  },
+);

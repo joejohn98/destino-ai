@@ -1,9 +1,10 @@
 import {Router} from "express";
-import { generateItinerary } from "../controllers/agent.controller";
+import { compareDestinations, generateItinerary } from "../controllers/agent.controller";
 
 
 const agentRoutes = Router();
 
 agentRoutes.post("/plan-itinerary", generateItinerary);
 
+agentRoutes.post("/compare", compareDestinations)
 export default agentRoutes;
