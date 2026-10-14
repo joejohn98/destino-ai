@@ -2,6 +2,10 @@ import mongoose from "mongoose";
 import z from "zod";
 import { Destination } from "../models/Destination.model";
 
+// ─── Tool: Estimate trip budget ───────────────────────────────────────────────
+// Used by: Planner Agent only
+// When: Agent has decided on destinations and needs to calculate total cost
+
 const estimateTripBudgetInput = z.object({
   destinationIds: z
     .array(z.string().min(1))
@@ -63,79 +67,90 @@ export const budgetTools = {
       travelStyle,
       budgetLimit,
     }: z.infer<typeof estimateTripBudgetInput>) => {
-      const invalidId = destinationIds.find(
-        (destinationId) => !mongoose.isValidObjectId(destinationId),
-      );
-      if (invalidId) {
+      try {
+        const invalidId = destinationIds.find(
+          (destinationId) => !mongoose.isValidObjectId(destinationId),
+        );
+        if (invalidId) {
+          return {
+            error: `Invalid destination ID: ${invalidId}`,
+          };
+        }
+
+        const destinations = await Destination.find({
+          _id: { $in: destinationIds },
+        })
+          .select("_id name")
+          .lean();
+
+        const foundIds = new Set(
+          destinations.map((destination) => String(destination._id)),
+        );
+        const missingIds = destinationIds.filter((id) => !foundIds.has(id));
+        if (missingIds.length > 0) {
+          return {
+            error: "Some destination IDs were not found in the database.",
+            missingIds,
+          };
+        }
+
+        const rate = DAILY_RATES[travelStyle];
+        const dailyPerTraveller =
+          rate.accommodation +
+          rate.food +
+          rate.localTransport +
+          rate.activities;
+        const intercityTotal =
+          Math.max(0, destinations.length - 1) *
+          rate.intercityTransport *
+          travellers;
+        const dailyTotal = dailyPerTraveller * durationDays * travellers;
+        const total = dailyTotal + intercityTotal;
+
         return {
-          error: `Invalid destination ID: ${invalidId}`,
+          currency: "INR",
+          travelStyle,
+          destinations: destinations.map((destination) => ({
+            id: String(destination._id),
+            name: destination.name,
+          })),
+          durationDays,
+          travellers,
+          totalEstimatedCost: total,
+          totalEstimatedCostFormatted: formatInr(total),
+          perPersonCost: Math.round(total / travellers),
+          perPersonCostFormatted: formatInr(Math.round(total / travellers)),
+          breakdown: {
+            accommodation: formatInr(
+              rate.accommodation * durationDays * travellers,
+            ),
+            food: formatInr(rate.food * durationDays * travellers),
+            localTransport: formatInr(
+              rate.localTransport * durationDays * travellers,
+            ),
+            activities: formatInr(rate.activities * durationDays * travellers),
+            intercityTransport: formatInr(intercityTotal),
+          },
+          budgetStatus:
+            budgetLimit === undefined
+              ? "not-provided"
+              : total <= budgetLimit
+                ? "within-budget"
+                : "over-budget",
+          budgetLimit:
+            budgetLimit === undefined ? null : formatInr(budgetLimit),
+          assumptions: [
+            "Estimates are per the selected travel style and expressed in Indian rupees.",
+            "Accommodation, food, local transport, activities, and intercity transport are included.",
+            "Flights, visas, shopping, and unusual seasonal surcharges are not included.",
+          ],
+        };
+      } catch (error) {
+        console.error("[estimateTripBudget] Error executing tool:", error);
+        return {
+          error: "Failed to estimate trip budget due to a database error.",
         };
       }
-
-      const destinations = await Destination.find({
-        _id: { $in: destinationIds },
-      })
-        .select("_id name")
-        .lean();
-
-      const foundIds = new Set(
-        destinations.map((destination) => String(destination._id)),
-      );
-      const missingIds = destinationIds.filter((id) => !foundIds.has(id));
-      if (missingIds.length > 0) {
-        return {
-          error: "Some destination IDs were not found in the database.",
-          missingIds,
-        };
-      }
-
-      const rate = DAILY_RATES[travelStyle];
-      const dailyPerTraveller =
-        rate.accommodation + rate.food + rate.localTransport + rate.activities;
-      const intercityTotal =
-        Math.max(0, destinations.length - 1) *
-        rate.intercityTransport *
-        travellers;
-      const dailyTotal = dailyPerTraveller * durationDays * travellers;
-      const total = dailyTotal + intercityTotal;
-
-      return {
-        currency: "INR",
-        travelStyle,
-        destinations: destinations.map((destination) => ({
-          id: String(destination._id),
-          name: destination.name,
-        })),
-        durationDays,
-        travellers,
-        totalEstimatedCost: total,
-        totalEstimatedCostFormatted: formatInr(total),
-        perPersonCost: Math.round(total / travellers),
-        perPersonCostFormatted: formatInr(Math.round(total / travellers)),
-        breakdown: {
-          accommodation: formatInr(
-            rate.accommodation * durationDays * travellers,
-          ),
-          food: formatInr(rate.food * durationDays * travellers),
-          localTransport: formatInr(
-            rate.localTransport * durationDays * travellers,
-          ),
-          activities: formatInr(rate.activities * durationDays * travellers),
-          intercityTransport: formatInr(intercityTotal),
-        },
-        budgetStatus:
-          budgetLimit === undefined
-            ? "not-provided"
-            : total <= budgetLimit
-              ? "within-budget"
-              : "over-budget",
-        budgetLimit: budgetLimit === undefined ? null : formatInr(budgetLimit),
-        assumptions: [
-          "Estimates are per the selected travel style and expressed in Indian rupees.",
-          "Accommodation, food, local transport, activities, and intercity transport are included.",
-          "Flights, visas, shopping, and unusual seasonal surcharges are not included.",
-        ],
-      };
     },
   },
 };

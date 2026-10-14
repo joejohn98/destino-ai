@@ -1,5 +1,6 @@
 import z from "zod";
 import { Destination } from "../models/Destination.model";
+import mongoose from "mongoose";
 
 const searchDestinationsInput = z.object({
   query: z.string().trim().min(2).max(200),
@@ -26,10 +27,15 @@ const searchDestinationsInput = z.object({
     .describe("Maximum number of results to return, defaults to 5"),
 });
 
+const getDestinationDetailsInput = z.object({
+  destinationId: z.string().describe("The MongoDB ObjectId of the destination"),
+});
+
 const escapeRegex = (value: string) =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 export const destinationTools = {
+  // ─── Tool 1: Search destinations ───────────────────────────────────────────
   searchDestinations: {
     description:
       "Find destinations in the database matching a travel request. Use only IDs returned by this tool in later calls.",
@@ -57,41 +63,98 @@ export const destinationTools = {
         ],
       };
 
-      const destinations = await Destination.find(destinationFilter)
-        .select(
-          "_id name location category description averageRating ratingsCount bestTimeToVisit travelTips",
-        )
-        .sort({ isFeatured: -1, averageRating: -1, ratingsCount: -1 })
-        .limit(maxResults)
-        .populate<{
-          location: {
-            city: string;
-            country: { name: string; slug: string };
-          };
-        }>("location.country", "name slug")
-        .lean();
+      try {
+        const destinations = await Destination.find(destinationFilter)
+          .select(
+            "_id name location category description averageRating ratingsCount bestTimeToVisit travelTips",
+          )
+          .sort({ isFeatured: -1, averageRating: -1, ratingsCount: -1 })
+          .limit(maxResults)
+          .populate<{
+            location: {
+              city: string;
+              country: { name: string; slug: string };
+            };
+          }>("location.country", "name slug")
+          .lean();
 
-      if (destinations.length === 0) {
+        if (destinations.length === 0) {
+          return {
+            error:
+              "No destinations found matching the search criteria. Try relaxing your filters or using different keywords.",
+          };
+        }
+
         return {
-          error:
-            "No destinations found matching the search criteria. Try relaxing your filters or using different keywords.",
+          matches: destinations.map((destination) => ({
+            id: String(destination._id),
+            name: destination.name,
+            city: destination.location.city,
+            country: destination.location.country?.name ?? "Unknown",
+            category: destination.category,
+            description: destination.description,
+            averageRating: destination.averageRating,
+            ratingsCount: destination.ratingsCount,
+            bestTimeToVisit: destination.bestTimeToVisit ?? "Not specified",
+            travelTips: destination.travelTips ?? [],
+          })),
+        };
+      } catch (error) {
+        console.error("[searchDestinations] Error executing tool:", error);
+        return {
+          error: "Failed to search destinations due to a database error.",
         };
       }
+    },
+  },
 
-      return {
-        matches: destinations.map((destination) => ({
-          id: String(destination._id),
+  // ─── Tool 2: Get destination details ───────────────────────────────────────
+  // Used by: Comparison Agent
+  // When: Agent already has an ID and needs full details for a specific destination
+  getDestinationDetails: {
+    description:
+      "Get complete details of a specific destination using its ID. Use this when you already know the destination ID.",
+    inputSchema: getDestinationDetailsInput,
+    execute: async ({
+      destinationId,
+    }: z.infer<typeof getDestinationDetailsInput>) => {
+      try {
+        if (!mongoose.isValidObjectId(destinationId)) {
+          return { error: `Invalid destination ID: ${destinationId}` };
+        }
+
+        const destination = await Destination.findById(destinationId)
+          .select("-reviews -__v")
+          .populate<{
+            location: {
+              city: string;
+              country: { name: string; slug: string };
+            };
+          }>("location.country", "name slug")
+          .lean();
+
+        if (!destination) {
+          return { error: `No destination found with ID: ${destinationId}` };
+        }
+
+        return {
+          id: destination._id.toString(),
           name: destination.name,
-          city: destination.location.city,
-          country: destination.location.country.name,
-          category: destination.category,
           description: destination.description,
+          city: destination.location.city,
+          country: destination.location.country?.name ?? "Unknown",
+          category: destination.category,
           averageRating: destination.averageRating,
           ratingsCount: destination.ratingsCount,
           bestTimeToVisit: destination.bestTimeToVisit ?? "Not specified",
           travelTips: destination.travelTips ?? [],
-        })),
-      };
+        };
+      } catch (error) {
+        console.error("[getDestinationDetails] Error executing tool:", error);
+        return {
+          error: "Failed to fetch destination details due to a database error.",
+        };
+      }
     },
   },
 };

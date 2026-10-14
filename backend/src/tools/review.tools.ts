@@ -53,41 +53,49 @@ export const reviewTools = {
       destinationIds,
       maxReviewsPerDestination,
     }: z.infer<typeof getDestinationReviewsInput>) => {
-      const invalidId = destinationIds.find(
-        (destinationId) => !mongoose.isValidObjectId(destinationId),
-      );
-      if (invalidId) {
+      try {
+        const invalidId = destinationIds.find(
+          (destinationId) => !mongoose.isValidObjectId(destinationId),
+        );
+        if (invalidId) {
+          return {
+            reviews: [],
+            error: `Invalid destination ID: ${invalidId}`,
+          };
+        }
+
+        const reviews = await Review.find({
+          destination: { $in: destinationIds },
+        })
+          .select("destination user rating reviewText authorName createdAt")
+          .populate<{ user: PopulatedReviewUser }>(
+            "user",
+            "username firstName lastName email",
+          )
+          .sort({ createdAt: -1 })
+          .lean();
+
+        const reviewsByDestination = destinationIds.map((destinationId) => ({
+          destinationId,
+          reviews: reviews
+            .filter((review) => String(review.destination) === destinationId)
+            .slice(0, maxReviewsPerDestination)
+            .map((review) => ({
+              rating: review.rating,
+              reviewText: review.reviewText,
+              authorName: getReviewerName(review.user, review.authorName),
+              createdAt: review.createdAt,
+            })),
+        }));
+
+        return { reviews: reviewsByDestination };
+      } catch (error) {
+        console.error("[getDestinationReviews] Error executing tool:", error);
         return {
           reviews: [],
-          error: `Invalid destination ID: ${invalidId}`,
+          error: "Failed to fetch destination reviews due to a database error.",
         };
       }
-
-      const reviews = await Review.find({
-        destination: { $in: destinationIds },
-      })
-        .select("destination user rating reviewText authorName createdAt")
-        .populate<{ user: PopulatedReviewUser }>(
-          "user",
-          "username firstName lastName email",
-        )
-        .sort({ createdAt: -1 })
-        .lean();
-
-      const reviewsByDestination = destinationIds.map((destinationId) => ({
-        destinationId,
-        reviews: reviews
-          .filter((review) => String(review.destination) === destinationId)
-          .slice(0, maxReviewsPerDestination)
-          .map((review) => ({
-            rating: review.rating,
-            reviewText: review.reviewText,
-            authorName: getReviewerName(review.user, review.authorName),
-            createdAt: review.createdAt,
-          })),
-      }));
-
-      return { reviews: reviewsByDestination };
     },
   },
 };
