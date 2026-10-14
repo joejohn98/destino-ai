@@ -1,7 +1,8 @@
-import express, { NextFunction, Request, Response } from "express";
+import express, { Request, Response } from "express";
 import cors from "cors";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
+
 import "./models";
 import destinationRouter from "./routes/destination.routes";
 import { authRoutes } from "./routes/auth.routes";
@@ -12,6 +13,7 @@ import { getDestinationBySlug } from "./controllers/destination.controller";
 import { userRoutes } from "./routes/user.routes";
 import aiRoutes from "./routes/ai.routes";
 import agentRoutes from "./routes/agent.routes";
+import { globalErrorHandler, notFoundHandler } from "./middleware/error.middleware";
 
 const app = express();
 
@@ -53,15 +55,10 @@ app.get("/", (req: Request, res: Response) => {
   });
 });
 
-// Global Error handling middleware
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  console.error(err.stack);
-  const statusCode = err.statusCode || 500;
-  const status = err.status || "error";
-  res.status(statusCode).json({
-    status,
-    message: err.message || "Internal Server Error",
-  });
-});
+// Catch unhandled routes
+app.all("*", notFoundHandler);
+
+// Global error handling middleware
+app.use(globalErrorHandler);
 
 export default app;
