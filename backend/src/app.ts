@@ -56,7 +56,7 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 // Catch unhandled routes
-app.all("*", notFoundHandler);
+app.use(notFoundHandler);
 
 // Global error handling middleware
 app.use(globalErrorHandler);

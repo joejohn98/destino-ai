@@ -38,16 +38,16 @@ const getDestinationReviewsInput = z.object({
     .int()
     .min(1)
     .max(10)
-    .default(5)
+    .default(10)
     .describe(
-      "Maximum number of reviews to fetch per destination, defaults to 5",
+      "Maximum number of reviews to fetch per destination, defaults to 10",
     ),
 });
 
 export const reviewTools = {
   getDestinationReviews: {
     description:
-      "Fetch real traveller reviews for up to three destination IDs returned by searchDestinations. Use this to understand actual visitor experiences, common praises, and complaints. Never invent review content or tips.",
+      "Fetch real traveller reviews for all selected destination IDs in one call, up to three destinations. Call this after destination research, request up to 10 reviews per destination, and use the results to compare actual visitor experiences, common praises, and complaints. Never invent review content or tips.",
     inputSchema: getDestinationReviewsInput,
     execute: async ({
       destinationIds,

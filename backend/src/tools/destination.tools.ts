@@ -38,7 +38,7 @@ export const destinationTools = {
   // ─── Tool 1: Search destinations ───────────────────────────────────────────
   searchDestinations: {
     description:
-      "Find destinations in the database matching a travel request. Use only IDs returned by this tool in later calls.",
+      "Find one requested destination in the database. Call this separately for each destination name in a comparison, using the destination's exact or commonly used name. Use only IDs returned by this tool in later calls. Do not use one broad query containing multiple destination names.",
     inputSchema: searchDestinationsInput,
     execute: async ({
       query,
@@ -66,7 +66,7 @@ export const destinationTools = {
       try {
         const destinations = await Destination.find(destinationFilter)
           .select(
-            "_id name location category description averageRating ratingsCount bestTimeToVisit travelTips",
+            "_id name location category description averageRating ratingsCount bestTimeToVisit travelTips aiReviewSummary",
           )
           .sort({ isFeatured: -1, averageRating: -1, ratingsCount: -1 })
           .limit(maxResults)
@@ -96,6 +96,8 @@ export const destinationTools = {
             averageRating: destination.averageRating,
             ratingsCount: destination.ratingsCount,
             bestTimeToVisit: destination.bestTimeToVisit ?? "Not specified",
+            aiReviewSummary:
+              destination.aiReviewSummary ?? "No AI summary available",
             travelTips: destination.travelTips ?? [],
           })),
         };
@@ -113,7 +115,7 @@ export const destinationTools = {
   // When: Agent already has an ID and needs full details for a specific destination
   getDestinationDetails: {
     description:
-      "Get complete details of a specific destination using its ID. Use this when you already know the destination ID.",
+      "Get complete verified details for one selected destination using its ID. Call this once for every destination selected for comparison before making a recommendation. Use only IDs returned by searchDestinations.",
     inputSchema: getDestinationDetailsInput,
     execute: async ({
       destinationId,
@@ -147,6 +149,8 @@ export const destinationTools = {
           averageRating: destination.averageRating,
           ratingsCount: destination.ratingsCount,
           bestTimeToVisit: destination.bestTimeToVisit ?? "Not specified",
+          aiReviewSummary:
+            destination.aiReviewSummary ?? "No AI summary available",
           travelTips: destination.travelTips ?? [],
         };
       } catch (error) {
