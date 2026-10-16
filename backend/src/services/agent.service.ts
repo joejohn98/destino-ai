@@ -12,7 +12,6 @@ import {
 } from "../agents/planner.agent";
 import { AppError } from "../utils/AppError";
 import { loadAiSdk } from "../utils/ai-sdk";
-import comparisonService from "./comparison.service";
 
 const planItinerary = async (query: string) => {
   const { ToolLoopAgent, Output, google, isStepCount } = await loadAiSdk();
