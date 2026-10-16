@@ -1,7 +1,7 @@
 import {
+  comparisonSchema,
   COMPARISON_SYSTEM,
   COMPARISON_TOOLS_ORDER,
-  comparisonSchema,
   comparisonTools,
 } from "../agents/comparison.agent";
 import {
@@ -12,6 +12,7 @@ import {
 } from "../agents/planner.agent";
 import { AppError } from "../utils/AppError";
 import { loadAiSdk } from "../utils/ai-sdk";
+import comparisonService from "./comparison.service";
 
 const planItinerary = async (query: string) => {
   const { ToolLoopAgent, Output, google, isStepCount } = await loadAiSdk();
@@ -27,9 +28,9 @@ const planItinerary = async (query: string) => {
       schema: itinerarySchema,
     }),
     onStepEnd: ({ stepNumber, toolCalls }) => {
-      const toolsUsed = toolCalls?.map((tc) => tc.toolName) ?? [];
+      const toolsUsed = toolCalls?.map((toolCall) => toolCall.toolName) ?? [];
       console.log(
-        `[Comparison] Step ${stepNumber + 1} — tools: ${
+        `[Planner] Step ${stepNumber + 1} - tools: ${
           toolsUsed.join(", ") || "none"
         }`,
       );
@@ -61,10 +62,11 @@ const planItinerary = async (query: string) => {
 };
 
 const compareDestinations = async (query: string) => {
+  // const { evidence } = await comparisonService.prepareComparisonData(query);
   const { ToolLoopAgent, Output, google, isStepCount } = await loadAiSdk();
 
-  const agent = new ToolLoopAgent({
-    id: "destino-travel-comparison-agent",
+  const comparisonAgent = new ToolLoopAgent({
+    id: "destino-travel-comparison",
     model: google("gemini-3.5-flash-lite"),
     instructions: COMPARISON_SYSTEM,
     tools: comparisonTools,
@@ -74,9 +76,9 @@ const compareDestinations = async (query: string) => {
       schema: comparisonSchema,
     }),
     onStepEnd: ({ stepNumber, toolCalls }) => {
-      const toolsUsed = toolCalls?.map((tc) => tc.toolName) ?? [];
+      const toolsUsed = toolCalls?.map((toolCall) => toolCall.toolName) ?? [];
       console.log(
-        `[Comparison] Step ${stepNumber + 1} — tools: ${
+        `[Comparison] Step ${stepNumber + 1} - tools: ${
           toolsUsed.join(", ") || "none"
         }`,
       );
@@ -84,14 +86,15 @@ const compareDestinations = async (query: string) => {
     maxRetries: 2,
     temperature: 0.2,
   });
+
   try {
-    const result = await agent.generate({
+    const result = await comparisonAgent.generate({
       prompt: query,
     });
 
     if (!result.output) {
       throw new AppError(
-        "The Comparison Agent did not return a valid structured comparison",
+        "The comparison agent did not return a valid structured comparison",
         502,
       );
     }
@@ -102,7 +105,7 @@ const compareDestinations = async (query: string) => {
       throw error;
     }
 
-    throw new AppError("Unable to generate the travel comparison", 502, error);
+    throw new AppError("Unable to compare the destinations", 502, error);
   }
 };
 
