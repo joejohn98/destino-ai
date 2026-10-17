@@ -7,6 +7,7 @@ import {
   Review,
 } from "../models";
 import { AppError } from "../utils/AppError";
+import { invalidateKeys } from "../utils/cache";
 import {
   CreateContinentInput,
   UpdateContinentInput,
@@ -106,6 +107,8 @@ const createContinent = async (continentData: CreateContinentInput) => {
   // Create new continent
   const newContinent = await Continent.create(payload);
 
+  await invalidateKeys("agg:continent:stats");
+
   return newContinent;
 };
 
@@ -139,6 +142,8 @@ const updateContinent = async (
 
   // Save changes
   await continent.save();
+
+  await invalidateKeys("agg:continent:stats");
 
   return continent;
 };
@@ -175,6 +180,8 @@ const deleteContinent = async (id: string) => {
 
   // 4. Delete the continent itself
   await Continent.findByIdAndDelete(continent._id);
+
+  await invalidateKeys("agg:continent:stats");
 
   return continent;
 };

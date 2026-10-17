@@ -1,5 +1,6 @@
 import { Continent, Country, Destination, Review } from "../models";
 import { AppError } from "../utils/AppError";
+import { invalidateKeys } from "../utils/cache";
 import type {
   CreateCountryInput,
   UpdateCountryInput,
@@ -72,6 +73,10 @@ const createCountry = async (
   }
 
   const newCountry = await Country.create(payload);
+
+  // A new country changes both continent stats and the per-continent country list
+  await invalidateKeys("agg:continent:stats");
+
   return newCountry;
 };
 
@@ -99,6 +104,8 @@ const updateCountry = async (id: string, updateData: UpdateCountryInput) => {
   // Save changes
   await country.save();
 
+  await invalidateKeys("agg:continent:stats");
+
   return country;
 };
 
@@ -121,6 +128,8 @@ const deleteCountry = async (id: string) => {
 
   // Delete the country
   const deletedCountry = await Country.findByIdAndDelete(country._id);
+
+  await invalidateKeys("agg:continent:stats");
 
   return deletedCountry;
 };
