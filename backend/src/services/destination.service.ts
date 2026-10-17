@@ -12,9 +12,12 @@ import { Review } from "../models";
 const CACHE_KEYS = {
   continentStats: "agg:continent:stats",
   continentCountries: (slug: string) => `agg:continent:${slug}:countries`,
+  paginatedPage: (page: number, limit: number) =>
+    `api:dest:paginated:p${page}:l${limit}`,
 } as const;
 
-const AGG_CACHE_TTL = 30 * 60; // 30 minutes
+const AGG_CACHE_TTL = 30 * 60;     // 30 minutes
+const LISTING_CACHE_TTL = 3 * 60;  // 3 minutes
 
 const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -49,45 +52,51 @@ const getPaginatedDestinations = async (
   const limit = Math.min(Math.max(1, options.limit || 12), 50);
   const skip = (page - 1) * limit;
 
-  const [destinations, total] = await Promise.all([
-    Destination.find()
-      .select("-reviews -__v")
-      .populate({
-        path: "location.country",
-        select: "slug name",
-        populate: { path: "continent", select: "slug name" },
-      })
-      .skip(skip)
-      .limit(limit)
-      .lean(),
-    Destination.countDocuments(),
-  ]);
+  return withCache(
+    CACHE_KEYS.paginatedPage(page, limit),
+    LISTING_CACHE_TTL,
+    async () => {
+      const [destinations, total] = await Promise.all([
+        Destination.find()
+          .select("-reviews -__v")
+          .populate({
+            path: "location.country",
+            select: "slug name",
+            populate: { path: "continent", select: "slug name" },
+          })
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+        Destination.countDocuments(),
+      ]);
 
-  // Flatten country/continent slugs so the frontend can build the full
-  // hierarchical URL: /continents/:continentSlug/countries/:countrySlug/destinations/:destinationSlug
-  const enriched = destinations.map((d: any) => {
-    const country = d.location?.country;
-    const continent = country?.continent;
-    return {
-      ...d,
-      location: {
-        city: d.location?.city,
-        country: country?.name ?? country,
-        countrySlug: country?.slug ?? null,
-      },
-      continent: continent?.name ?? null,
-      continentSlug: continent?.slug ?? null,
-    };
-  });
+      // Flatten country/continent slugs so the frontend can build the full
+      // hierarchical URL: /continents/:continentSlug/countries/:countrySlug/destinations/:destinationSlug
+      const enriched = destinations.map((d: any) => {
+        const country = d.location?.country;
+        const continent = country?.continent;
+        return {
+          ...d,
+          location: {
+            city: d.location?.city,
+            country: country?.name ?? country,
+            countrySlug: country?.slug ?? null,
+          },
+          continent: continent?.name ?? null,
+          continentSlug: continent?.slug ?? null,
+        };
+      });
 
-  const totalPages = Math.ceil(total / limit) || 0;
+      const totalPages = Math.ceil(total / limit) || 0;
 
-  return {
-    destinations: enriched,
-    totalDestinations: total,
-    totalPages,
-    currentPage: page,
-  };
+      return {
+        destinations: enriched,
+        totalDestinations: total,
+        totalPages,
+        currentPage: page,
+      };
+    },
+  );
 };
 
 const searchDestinations = async (q: string): Promise<any[]> => {
@@ -428,8 +437,13 @@ const createDestination = async (data: CreateDestinationInput) => {
   const newDest = await Destination.create(payload);
   const { __v, ...rest } = newDest.toObject();
 
-  // A new destination changes continent/country counts
-  await invalidateKeys(CACHE_KEYS.continentStats);
+  // A new destination changes listing pages and continent/country counts
+  await invalidateKeys(
+    CACHE_KEYS.continentStats,
+    CACHE_KEYS.paginatedPage(1, 12),
+    CACHE_KEYS.paginatedPage(1, 24),
+    CACHE_KEYS.paginatedPage(1, 50),
+  );
 
   return rest;
 };
@@ -490,8 +504,13 @@ const updateDestination = async (id: string, data: UpdateDestinationInput) => {
     throw new AppError("Destination not found", 404);
   }
 
-  // Rating/category changes can affect continent stats
-  await invalidateKeys(CACHE_KEYS.continentStats);
+  // A destination update affects the listing and continent stats
+  await invalidateKeys(
+    CACHE_KEYS.continentStats,
+    CACHE_KEYS.paginatedPage(1, 12),
+    CACHE_KEYS.paginatedPage(1, 24),
+    CACHE_KEYS.paginatedPage(1, 50),
+  );
 
   return updatedDest;
 };
@@ -506,8 +525,13 @@ const deleteDestination = async (id: string) => {
 
   await Review.deleteMany({ destination: deletedDest._id });
 
-  // Destination removal changes continent/country counts
-  await invalidateKeys(CACHE_KEYS.continentStats);
+  // A deleted destination changes the listing and continent/country counts
+  await invalidateKeys(
+    CACHE_KEYS.continentStats,
+    CACHE_KEYS.paginatedPage(1, 12),
+    CACHE_KEYS.paginatedPage(1, 24),
+    CACHE_KEYS.paginatedPage(1, 50),
+  );
 
   return deletedDest;
 };
