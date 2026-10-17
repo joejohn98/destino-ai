@@ -14,10 +14,13 @@ const CACHE_KEYS = {
   continentCountries: (slug: string) => `agg:continent:${slug}:countries`,
   paginatedPage: (page: number, limit: number) =>
     `api:dest:paginated:p${page}:l${limit}`,
+  destBySlug: (countrySlug: string, destSlug: string) =>
+    `api:dest:slug:${countrySlug}:${destSlug}`,
 } as const;
 
-const AGG_CACHE_TTL = 30 * 60;     // 30 minutes
-const LISTING_CACHE_TTL = 3 * 60;  // 3 minutes
+const AGG_CACHE_TTL     = 30 * 60;  // 30 minutes
+const LISTING_CACHE_TTL =  3 * 60;  // 3 minutes
+const DETAIL_CACHE_TTL  = 10 * 60;  // 10 minutes
 
 const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -364,46 +367,52 @@ const getDestinationBySlug = async (
   countrySlug: string,
   destinationSlug: string,
 ): Promise<any> => {
-  const country = await Country.findOne({
-    slug: countrySlug.toLowerCase(),
-  })
-    .select("_id name slug continent")
-    .populate<{ continent: { _id: any; name: string; slug: string } }>(
-      "continent",
-      "name slug",
-    )
-    .lean();
+  return withCache(
+    CACHE_KEYS.destBySlug(countrySlug, destinationSlug),
+    DETAIL_CACHE_TTL,
+    async () => {
+      const country = await Country.findOne({
+        slug: countrySlug.toLowerCase(),
+      })
+        .select("_id name slug continent")
+        .populate<{ continent: { _id: any; name: string; slug: string } }>(
+          "continent",
+          "name slug",
+        )
+        .lean();
 
-  if (!country) {
-    throw new AppError(`Country '${countrySlug}' not found`, 404);
-  }
+      if (!country) {
+        throw new AppError(`Country '${countrySlug}' not found`, 404);
+      }
 
-  const destination = await Destination.findOne({
-    slug: destinationSlug.toLowerCase(),
-    "location.country": country._id,
-  })
-    .select("-__v")
-    .lean();
+      const destination = await Destination.findOne({
+        slug: destinationSlug.toLowerCase(),
+        "location.country": country._id,
+      })
+        .select("-__v")
+        .lean();
 
-  if (!destination) {
-    throw new AppError(
-      `Destination '${destinationSlug}' not found in '${country.name}'`,
-      404,
-    );
-  }
+      if (!destination) {
+        throw new AppError(
+          `Destination '${destinationSlug}' not found in '${country.name}'`,
+          404,
+        );
+      }
 
-  const continent = country.continent as any;
+      const continent = country.continent as any;
 
-  return {
-    ...destination,
-    location: {
-      city: destination.location?.city,
-      country: country.name,
-      countrySlug: country.slug,
+      return {
+        ...destination,
+        location: {
+          city: destination.location?.city,
+          country: country.name,
+          countrySlug: country.slug,
+        },
+        continent: continent?.name ?? null,
+        continentSlug: continent?.slug ?? null,
+      };
     },
-    continent: continent?.name ?? null,
-    continentSlug: continent?.slug ?? null,
-  };
+  );
 };
 
 const createDestination = async (data: CreateDestinationInput) => {
@@ -504,13 +513,24 @@ const updateDestination = async (id: string, data: UpdateDestinationInput) => {
     throw new AppError("Destination not found", 404);
   }
 
-  // A destination update affects the listing and continent stats
-  await invalidateKeys(
+  // Resolve country slug to build the exact detail cache key
+  const updatedCountry = await Country.findById(updatedDest.location?.country)
+    .select("slug")
+    .lean();
+
+  // A destination update affects the listing, continent stats, and its own detail page
+  const keysToInvalidate: string[] = [
     CACHE_KEYS.continentStats,
     CACHE_KEYS.paginatedPage(1, 12),
     CACHE_KEYS.paginatedPage(1, 24),
     CACHE_KEYS.paginatedPage(1, 50),
-  );
+  ];
+  if (updatedCountry?.slug && updatedDest.slug) {
+    keysToInvalidate.push(
+      CACHE_KEYS.destBySlug(updatedCountry.slug, updatedDest.slug),
+    );
+  }
+  await invalidateKeys(...keysToInvalidate);
 
   return updatedDest;
 };
@@ -525,13 +545,24 @@ const deleteDestination = async (id: string) => {
 
   await Review.deleteMany({ destination: deletedDest._id });
 
-  // A deleted destination changes the listing and continent/country counts
-  await invalidateKeys(
+  // Resolve country slug to build the exact detail cache key
+  const deletedCountry = await Country.findById(deletedDest.location?.country)
+    .select("slug")
+    .lean();
+
+  // A deleted destination changes the listing, continent/country counts, and its own detail page
+  const keysToInvalidate: string[] = [
     CACHE_KEYS.continentStats,
     CACHE_KEYS.paginatedPage(1, 12),
     CACHE_KEYS.paginatedPage(1, 24),
     CACHE_KEYS.paginatedPage(1, 50),
-  );
+  ];
+  if (deletedCountry?.slug && deletedDest.slug) {
+    keysToInvalidate.push(
+      CACHE_KEYS.destBySlug(deletedCountry.slug, deletedDest.slug),
+    );
+  }
+  await invalidateKeys(...keysToInvalidate);
 
   return deletedDest;
 };
