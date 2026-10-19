@@ -10,10 +10,38 @@ export const CATEGORIES = [
   "wildlife",
 ] as const;
 
+export const ATTRACTION_CATEGORIES = [
+  "monument",
+  "museum",
+  "market",
+  "nature",
+  "viewpoint",
+  "day-trip",
+  "activity",
+  "religious",
+  "entertainment",
+] as const;
+
 export const SENTIMENTS = ["positive", "neutral", "negative"] as const;
 
 export type Category = (typeof CATEGORIES)[number];
+export type AttractionCategory = (typeof ATTRACTION_CATEGORIES)[number];
 export type Sentiment = (typeof SENTIMENTS)[number];
+
+/**
+ * A verified local sight, excursion, or activity tied to a Destination.
+ * The AI planner agent builds itinerary day-by-day activities exclusively
+ * from this list — preventing hallucination of non-existent places.
+ */
+export interface IAttraction {
+  _id?: mongoose.Types.ObjectId | string;
+  name: string;
+  description?: string;
+  ticketPrice?: string;
+  suggestedDuration?: string;
+  openingHours?: string;
+  category?: AttractionCategory;
+}
 
 
 export interface IDestination extends Document {
@@ -26,6 +54,8 @@ export interface IDestination extends Document {
   };
   category: Category;
   imageUrls: string[];
+  /** Verified local sights and activities at this destination used by the AI planner. */
+  attractions: IAttraction[];
   bestTimeToVisit?: string;
   travelTips?: string[];
   travelTipsContextHash?: string;
@@ -83,6 +113,29 @@ const destinationSchema = new mongoose.Schema<IDestination>(
     },
     imageUrls: {
       type: [String],
+      default: [],
+    },
+
+    attractions: {
+      type: [
+        new mongoose.Schema<IAttraction>(
+          {
+            name: { type: String, required: true, trim: true },
+            description: { type: String, trim: true },
+            ticketPrice: { type: String, trim: true },
+            suggestedDuration: { type: String, trim: true },
+            openingHours: { type: String, trim: true },
+            category: {
+              type: String,
+              enum: {
+                values: ATTRACTION_CATEGORIES,
+                message: `Attraction category must be one of: ${ATTRACTION_CATEGORIES.join(", ")}`,
+              },
+            },
+          },
+          { _id: true },
+        ),
+      ],
       default: [],
     },
 
