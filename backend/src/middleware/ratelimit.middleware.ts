@@ -18,3 +18,15 @@ export const agentLimiter = rateLimit({
       "Agent rate limit reached. Please wait before making another agent request.",
   },
 });
+
+// Auth routes — prevent brute force login attempts
+export const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  message: {
+    status: "failed",
+    message: "Too many attempts. Try again after 15 minutes.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});

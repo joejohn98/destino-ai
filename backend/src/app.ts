@@ -14,11 +14,12 @@ import { userRoutes } from "./routes/user.routes";
 import aiRoutes from "./routes/ai.routes";
 import agentRoutes from "./routes/agent.routes";
 import { globalErrorHandler, notFoundHandler } from "./middleware/error.middleware";
+import { config } from "./config/config";
 
 const app = express();
 
 app.use(cors({ credentials: true }));
-app.use(morgan("dev"));
+app.use(morgan(config.nodeEnv === "production" ? "combined" : "dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
