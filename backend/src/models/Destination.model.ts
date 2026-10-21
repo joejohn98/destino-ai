@@ -43,13 +43,13 @@ export interface IAttraction {
   category?: AttractionCategory;
 }
 
-
 export interface IDestination extends Document {
   name: string;
   slug: string;
   description: string;
   location: {
     city: string;
+    state?: string;
     country: mongoose.Types.ObjectId;
   };
   category: Category;
@@ -70,7 +70,6 @@ export interface IDestination extends Document {
   createdAt: Date;
   updatedAt: Date;
 }
-
 
 const destinationSchema = new mongoose.Schema<IDestination>(
   {
@@ -94,6 +93,10 @@ const destinationSchema = new mongoose.Schema<IDestination>(
       city: {
         type: String,
         required: [true, "City is required"],
+        trim: true,
+      },
+      state: {
+        type: String,
         trim: true,
       },
       country: {
@@ -199,7 +202,6 @@ destinationSchema.index({ category: 1 });
 destinationSchema.index({ averageRating: -1 });
 destinationSchema.index({ "location.country": 1, slug: 1 }, { unique: true });
 destinationSchema.index({ name: "text", description: "text" });
-
 
 // Pre-save hook: auto-generate slug from name
 destinationSchema.pre("validate", function () {

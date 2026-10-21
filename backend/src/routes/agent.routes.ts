@@ -3,6 +3,7 @@ import {
   compareDestinations,
   generateItinerary,
 } from "../controllers/agent.controller";
+import { agentLimiter } from "../middleware/ratelimit.middleware";
 import { validate } from "../middleware/validation.middleware";
 import {
   compareRequestSchema,
@@ -13,12 +14,14 @@ const agentRoutes = Router();
 
 agentRoutes.post(
   "/plan-itinerary",
+  agentLimiter,
   validate(planRequestSchema),
   generateItinerary,
 );
 
 agentRoutes.post(
   "/compare",
+  agentLimiter,
   validate(compareRequestSchema),
   compareDestinations,
 );
