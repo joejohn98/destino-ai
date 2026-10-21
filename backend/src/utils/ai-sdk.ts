@@ -8,6 +8,7 @@ const importAiSdk = async () => {
     ToolLoopAgent: aiSdk.ToolLoopAgent,
     Output: aiSdk.Output,
     isStepCount: aiSdk.isStepCount,
+    NoOutputGeneratedError: aiSdk.NoOutputGeneratedError,
     generateText: aiSdk.generateText,
     google: googleSdk.google,
   };

@@ -65,11 +65,49 @@ export const compareDestinations = catchAsync(
     const { query } = req.body;
 
     const comparison = await agentService.compareDestinations(query);
+    if (comparison.output?.status === "invalid_request") {
+      res.status(422).json({
+        data: {
+          query,
+          result: comparison.output,
+          meta: {
+            stepsUsed: comparison.steps.length,
+            totalTokens: comparison.usage.totalTokens ?? "N/A",
+          },
+        },
+      });
+      return;
+    }
+
+    if (comparison.output?.status === "unavailable") {
+      res.status(404).json({
+        status: "fail",
+        message:
+          comparison.output.message ||
+          "One or more requested destinations are not available in the database",
+        data: {
+          query,
+          result: comparison.output,
+          meta: {
+            stepsUsed: comparison.steps.length,
+            totalTokens: comparison.usage.totalTokens ?? "N/A",
+          },
+        },
+      });
+      return;
+    }
+
+    const isPartial = comparison.output?.status === "partial";
 
     res.status(200).json({
       status: "success",
-      message: "Destinations compared successfully",
+      message:
+        comparison.output?.message ||
+        (isPartial
+          ? "Destinations compared with partial availability"
+          : "Destinations compared successfully"),
       data: {
+        query,
         comparison: comparison.output,
         meta: {
           stepsUsed: comparison.steps.length,

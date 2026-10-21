@@ -82,6 +82,9 @@ export const destinationTools = {
 
         if (destinations.length === 0) {
           return {
+            status: "not_found" as const,
+            requestedQuery: query,
+            matches: [],
             error:
               "No destinations found matching the search criteria. Try relaxing your filters or using different keywords.",
           };
@@ -116,6 +119,8 @@ export const destinationTools = {
       } catch (error) {
         console.error("[searchDestinations] Error executing tool:", error);
         return {
+          status: "database_error" as const,
+          requestedQuery: query,
           error: "Failed to search destinations due to a database error.",
         };
       }
