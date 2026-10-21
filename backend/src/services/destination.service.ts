@@ -18,9 +18,9 @@ const CACHE_KEYS = {
     `api:dest:slug:${countrySlug}:${destSlug}`,
 } as const;
 
-const AGG_CACHE_TTL     = 30 * 60;  // 30 minutes
-const LISTING_CACHE_TTL =  3 * 60;  // 3 minutes
-const DETAIL_CACHE_TTL  = 10 * 60;  // 10 minutes
+const AGG_CACHE_TTL = 30 * 60; // 30 minutes
+const LISTING_CACHE_TTL = 3 * 60; // 3 minutes
+const DETAIL_CACHE_TTL = 10 * 60; // 10 minutes
 
 const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -435,6 +435,7 @@ const createDestination = async (data: CreateDestinationInput) => {
     description: data.description,
     location: {
       city: data.location.city,
+      ...(data.location.state ? { state: data.location.state } : {}),
       country: country._id,
     },
     category: data.category,
@@ -442,6 +443,8 @@ const createDestination = async (data: CreateDestinationInput) => {
 
   if (data.bestTimeToVisit) payload.bestTimeToVisit = data.bestTimeToVisit;
   if (data.images && data.images.length > 0) payload.imageUrls = data.images;
+  if (data.attractions && data.attractions.length > 0)
+    payload.attractions = data.attractions;
 
   const newDest = await Destination.create(payload);
   const { __v, ...rest } = newDest.toObject();
@@ -475,9 +478,13 @@ const updateDestination = async (id: string, data: UpdateDestinationInput) => {
   if (data.bestTimeToVisit !== undefined)
     updatePayload.bestTimeToVisit = data.bestTimeToVisit;
   if (data.images !== undefined) updatePayload.imageUrls = data.images;
+  if (data.attractions !== undefined)
+    updatePayload.attractions = data.attractions;
 
   if (data.location?.city !== undefined)
     updatePayload["location.city"] = data.location.city;
+  if (data.location?.state !== undefined)
+    updatePayload["location.state"] = data.location.state;
   if (data.location?.country !== undefined) {
     const countryRegex = new RegExp(
       `^${escapeRegex(data.location.country)}$`,

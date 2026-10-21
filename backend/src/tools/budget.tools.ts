@@ -26,7 +26,9 @@ const estimateTripBudgetInput = z.object({
     .number()
     .nonnegative()
     .optional()
-    .describe("Maximum budget limit (INR)"),
+    .describe(
+      "Maximum budget limit in INR (converted to INR if the user specified an international currency like USD, EUR, or GBP)",
+    ),
 });
 
 const DAILY_RATES = {

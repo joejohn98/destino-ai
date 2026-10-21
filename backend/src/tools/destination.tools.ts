@@ -38,7 +38,7 @@ export const destinationTools = {
   // ─── Tool 1: Search destinations ───────────────────────────────────────────
   searchDestinations: {
     description:
-      "Find one requested destination in the database. Call this separately for each destination name in a comparison, using the destination's exact or commonly used name. Use only IDs returned by this tool in later calls. Do not use one broad query containing multiple destination names.",
+      "Find one requested destination in the database. Returns verified destination details and its complete list of verified local attractions (including ticket prices, duration, opening hours, and categories) to be used when building daily itineraries. Call this separately for each destination name in a comparison, using the destination's exact or commonly used name. Use only IDs returned by this tool in later calls. Do not use one broad query containing multiple destination names.",
     inputSchema: searchDestinationsInput,
     execute: async ({
       query,
@@ -60,19 +60,21 @@ export const destinationTools = {
           { name: search },
           { description: search },
           { "location.city": search },
+          { "location.state": search },
         ],
       };
 
       try {
         const destinations = await Destination.find(destinationFilter)
           .select(
-            "_id name location category description averageRating ratingsCount bestTimeToVisit travelTips aiReviewSummary",
+            "_id name location category description averageRating ratingsCount bestTimeToVisit travelTips aiReviewSummary attractions",
           )
           .sort({ isFeatured: -1, averageRating: -1, ratingsCount: -1 })
           .limit(maxResults)
           .populate<{
             location: {
               city: string;
+              state?: string;
               country: { name: string; slug: string };
             };
           }>("location.country", "name slug")
@@ -90,6 +92,7 @@ export const destinationTools = {
             id: String(destination._id),
             name: destination.name,
             city: destination.location.city,
+            state: destination.location.state,
             country: destination.location.country?.name ?? "Unknown",
             category: destination.category,
             description: destination.description,
@@ -99,6 +102,15 @@ export const destinationTools = {
             aiReviewSummary:
               destination.aiReviewSummary ?? "No AI summary available",
             travelTips: destination.travelTips ?? [],
+            attractions: (destination.attractions ?? []).map((a: any) => ({
+              id: a._id ? String(a._id) : undefined,
+              name: a.name,
+              description: a.description ?? "",
+              ticketPrice: a.ticketPrice ?? "Not specified",
+              suggestedDuration: a.suggestedDuration ?? "Not specified",
+              openingHours: a.openingHours ?? "Not specified",
+              category: a.category ?? "activity",
+            })),
           })),
         };
       } catch (error) {
@@ -130,6 +142,7 @@ export const destinationTools = {
           .populate<{
             location: {
               city: string;
+              state?: string;
               country: { name: string; slug: string };
             };
           }>("location.country", "name slug")
@@ -144,6 +157,7 @@ export const destinationTools = {
           name: destination.name,
           description: destination.description,
           city: destination.location.city,
+          state: destination.location.state,
           country: destination.location.country?.name ?? "Unknown",
           category: destination.category,
           averageRating: destination.averageRating,
@@ -152,6 +166,15 @@ export const destinationTools = {
           aiReviewSummary:
             destination.aiReviewSummary ?? "No AI summary available",
           travelTips: destination.travelTips ?? [],
+          attractions: (destination.attractions ?? []).map((a: any) => ({
+            id: a._id ? String(a._id) : undefined,
+            name: a.name,
+            description: a.description ?? "",
+            ticketPrice: a.ticketPrice ?? "Not specified",
+            suggestedDuration: a.suggestedDuration ?? "Not specified",
+            openingHours: a.openingHours ?? "Not specified",
+            category: a.category ?? "activity",
+          })),
         };
       } catch (error) {
         console.error("[getDestinationDetails] Error executing tool:", error);
