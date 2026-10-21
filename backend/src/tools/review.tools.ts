@@ -6,7 +6,6 @@ type PopulatedReviewUser = {
   username?: string;
   firstName?: string;
   lastName?: string;
-  email?: string;
 } | null;
 
 const getReviewerName = (
@@ -64,29 +63,31 @@ export const reviewTools = {
           };
         }
 
-        const reviews = await Review.find({
-          destination: { $in: destinationIds },
-        })
-          .select("destination user rating reviewText authorName createdAt")
-          .populate<{ user: PopulatedReviewUser }>(
-            "user",
-            "username firstName lastName email",
-          )
-          .sort({ createdAt: -1 })
-          .lean();
+        const reviewsByDestination = await Promise.all(
+          destinationIds.map(async (destinationId) => {
+            const reviews = await Review.find({
+              destination: destinationId,
+            })
+              .select("destination user rating reviewText authorName createdAt")
+              .populate<{ user: PopulatedReviewUser }>(
+                "user",
+                "username firstName lastName",
+              )
+              .sort({ createdAt: -1 })
+              .limit(maxReviewsPerDestination)
+              .lean();
 
-        const reviewsByDestination = destinationIds.map((destinationId) => ({
-          destinationId,
-          reviews: reviews
-            .filter((review) => String(review.destination) === destinationId)
-            .slice(0, maxReviewsPerDestination)
-            .map((review) => ({
-              rating: review.rating,
-              reviewText: review.reviewText,
-              authorName: getReviewerName(review.user, review.authorName),
-              createdAt: review.createdAt,
-            })),
-        }));
+            return {
+              destinationId,
+              reviews: reviews.map((review) => ({
+                rating: review.rating,
+                reviewText: review.reviewText,
+                authorName: getReviewerName(review.user, review.authorName),
+                createdAt: review.createdAt,
+              })),
+            };
+          }),
+        );
 
         return { reviews: reviewsByDestination };
       } catch (error) {
