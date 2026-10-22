@@ -10,6 +10,7 @@ export const config = {
   jwtExpiration: process.env.JWT_EXPIRATION as string,
   redisUrl: process.env.REDIS_URL as string,
   geminiApiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY as string,
+  clientUrl: process.env.CLIENT_URL || "http://localhost:3000",
   cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME as string,
   cloudinaryApiKey: process.env.CLOUDINARY_API_KEY as string,
   cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET as string,

@@ -13,8 +13,12 @@ import { getDestinationBySlug } from "./controllers/destination.controller";
 import { userRoutes } from "./routes/user.routes";
 import aiRoutes from "./routes/ai.routes";
 import agentRoutes from "./routes/agent.routes";
-import { globalErrorHandler, notFoundHandler } from "./middleware/error.middleware";
+import {
+  globalErrorHandler,
+  notFoundHandler,
+} from "./middleware/error.middleware";
 import { config } from "./config/config";
+import passport from "./config/passport";
 
 const app = express();
 
@@ -23,6 +27,7 @@ app.use(morgan(config.nodeEnv === "production" ? "combined" : "dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use(passport.initialize());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
