@@ -1,26 +1,209 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* =============================================================================
+   Destino AI — design tokens (Tailwind v4 + shadcn/ui)
+   Source: docs/design/UI_DESIGN_PLAYBOOK.md  (visual reference: Perk screenshot)
+
+   HOW TO USE
+   1. Run the shadcn init first. Keep the lines it generated at the top of
+      app/globals.css (@import "tailwindcss"; @import "tw-animate-css"; etc.).
+   2. Replace the generated color-token and @theme inline blocks with the
+      content of this file. Destino AI uses a light-only theme.
+   3. Keep the generated `@layer base { * { @apply border-border ... } }` block.
+   4. Load the font in app/layout.tsx with next/font (see playbook §5).
+
+   Values marked [M] were sampled from the screenshot. [R] are recommendations
+   (AA-safe status colors, hover tint, chart set) not directly observable.
+   ============================================================================= */
 
 :root {
+  /* ---- Brand primitives ------------------------------------------------- */
+  --lime: #bfff50;            /* [M] primary action, selection, active tab. Always ink text on top */
+  --ink: #14130e;             /* [M] warm near-black: text, outlines, black buttons */
+  --cream: #f5f5eb;           /* [M] marketing cards, hero background */
+  --canvas: #f9faf5;          /* [M] in-app canvas and inset panels */
+  --band: #d2d2c8;           /* [M] "trusted by" strip, dividers on cream */
+  --gray-body: #6b6c68;       /* [M] paragraphs and metadata (4.8:1 on cream, 5.3:1 on white) */
+  --line: #ecede8;            /* [M] 1px card border in product UI */
+  --line-strong: #d2d3ce;     /* [M] select/input border */
+
+  /* Decorative pastels (icons and illustration only, never text) [M] */
+  --pastel-lavender: #c8aaea;
+  --pastel-peach: #ffcead;
+  --pastel-sky: #86e0fa;      /* also the AI sparkle icon color */
+  --pastel-pink: #fab9fb;
+
+  /* ---- Status (AA-safe on their soft backgrounds) [R] -------------------
+     Hue follows the observed mint "On time/Compliant" tag and pink delta chip.
+     Always pair with text or an icon, never color alone. */
+  --success: #0b6b3a;   --success-soft: #e3f8ec;   /* 5.9:1 */
+  --warning: #8a4b00;   --warning-soft: #fff1d6;   /* 6.1:1 */
+  --danger: #b42318;    --danger-soft: #fde8ec;    /* 5.6:1 */
+  --info: #0b5c7a;      --info-soft: #e0f4fb;      /* 6.5:1 */
+
+  /* ---- shadcn semantic tokens ------------------------------------------- */
+  --radius: 0.75rem; /* 12px: in-app card radius */
+
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: var(--ink);
+
+  --card: #ffffff;
+  --card-foreground: var(--ink);
+  --popover: #ffffff;
+  --popover-foreground: var(--ink);
+
+  --primary: var(--lime);
+  --primary-foreground: var(--ink);
+
+  --secondary: var(--cream);
+  --secondary-foreground: var(--ink);
+
+  --muted: var(--cream);
+  --muted-foreground: var(--gray-body);
+
+  --accent: #efefe4;                 /* [R] hover tint, visible on white and cream */
+  --accent-foreground: var(--ink);
+
+  --destructive: var(--danger);
+  --destructive-foreground: #ffffff;
+
+  --border: var(--line);
+  --input: var(--line-strong);
+  --ring: var(--ink);
+
+  --chart-1: #14130e;
+  --chart-2: #c8aaea;
+  --chart-3: #86e0fa;
+  --chart-4: #ffcead;
+  --chart-5: #bfff50;                /* highlight only; add an ink outline or label */
+
+  --sidebar: var(--canvas);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--ink);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #edeee8;         /* observed: active rail item = light gray rounded square */
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--line);
+  --sidebar-ring: var(--ink);
 }
 
 @theme inline {
+  /* Fonts. next/font sets --font-jakarta on <html> (playbook §5). */
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+
+  /* shadcn semantic colors */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Brand + status utilities: bg-lime, text-ink, bg-cream, bg-canvas, bg-success-soft ... */
+  --color-lime: var(--lime);
+  --color-ink: var(--ink);
+  --color-cream: var(--cream);
+  --color-canvas: var(--canvas);
+  --color-band: var(--band);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-pastel-lavender: var(--pastel-lavender);
+  --color-pastel-peach: var(--pastel-peach);
+  --color-pastel-sky: var(--pastel-sky);
+  --color-pastel-pink: var(--pastel-pink);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+
+  /* Radii. shadcn scale kept; named radii express the two surface systems. */
+  --radius-sm: calc(var(--radius) - 4px);   /* 8px */
+  --radius-md: calc(var(--radius) - 2px);   /* 10px */
+  --radius-lg: var(--radius);               /* 12px */
+  --radius-xl: calc(var(--radius) + 4px);   /* 16px */
+  --radius-control: 0.5rem;                 /* 8px: in-app buttons, inputs, selects */
+  --radius-card: 0.75rem;                   /* 12px: in-app cards */
+  --radius-media: 1.25rem;                  /* 20px: photos inside marketing cards */
+  --radius-marketing: 1.75rem;              /* 28px: marketing cards (observed 24-32px) */
+
+  /* Type scale (1920px reference, fluid below). Use as text-display, text-headline... */
+  --text-display: clamp(2.5rem, 1.4rem + 3.6vw, 5rem);       /* hero H1, up to 80px */
+  --text-display--line-height: 1.15;
+  --text-display--letter-spacing: -0.03em;
+  --text-display--font-weight: 600;
+
+  --text-headline: clamp(2rem, 1.2rem + 2.6vw, 3.875rem);    /* section H2, up to 62px */
+  --text-headline--line-height: 1.2;
+  --text-headline--letter-spacing: -0.025em;
+  --text-headline--font-weight: 600;
+
+  --text-title: clamp(1.5rem, 1.25rem + 0.9vw, 2rem);        /* card titles, 24-32px */
+  --text-title--line-height: 1.25;
+  --text-title--letter-spacing: -0.015em;
+  --text-title--font-weight: 600;
+
+  --text-lead: 1.125rem;                                      /* 18px subcopy */
+  --text-lead--line-height: 1.5;
+
+  --text-eyebrow: 0.8125rem;                                  /* 13px uppercase label */
+  --text-eyebrow--line-height: 1.2;
+  --text-eyebrow--letter-spacing: 0.08em;
+  --text-eyebrow--font-weight: 500;
+
+  /* Money fractions stay proportional to the amount's surrounding type size. */
+  --text-money-cents: 0.7em;
+  --text-money-cents--line-height: 1;
+
+  /* Shadow (rare): stacked role cards and the segmented-control track */
+  --shadow-soft: 0 6px 24px rgb(20 19 14 / 0.08);
+
+  /* Page container: ~1620px at 1920 => max-w-page */
+  --container-page: 101.25rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
   }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+  html { color-scheme: light; }
+  body { font-family: var(--font-sans); background: var(--background); color: var(--foreground); }
+  h1, h2, h3 { text-wrap: balance; }
 }
