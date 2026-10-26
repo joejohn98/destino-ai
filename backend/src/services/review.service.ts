@@ -67,8 +67,10 @@ const createReview = async (
     sentiment = aiResult.sentiment;
     themes = aiResult.themes;
   } catch (error) {
-    console.error("Error analyzing sentiment:", error);
-    throw new AppError("Failed to analyze sentiment", 500);
+    console.warn(
+      "[createReview] Sentiment analysis skipped due to AI error:",
+      error,
+    );
   }
 
   const review = await Review.create({

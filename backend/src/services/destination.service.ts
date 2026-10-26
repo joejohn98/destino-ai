@@ -543,14 +543,18 @@ const updateDestination = async (id: string, data: UpdateDestinationInput) => {
 };
 
 const deleteDestination = async (id: string) => {
-  const deletedDest = await Destination.findByIdAndDelete(id)
-    .select("-__v")
-    .lean();
-  if (!deletedDest) {
+  const destination = await Destination.findById(id).select("-__v").lean();
+  if (!destination) {
     throw new AppError("Destination not found", 404);
   }
 
-  await Review.deleteMany({ destination: deletedDest._id });
+  await Review.deleteMany({ destination: destination._id });
+
+  const deletedDest = await Destination.findByIdAndDelete(id);
+
+  if (!deletedDest) {
+    throw new AppError("Failed to delete destination", 500);
+  }
 
   // Resolve country slug to build the exact detail cache key
   const deletedCountry = await Country.findById(deletedDest.location?.country)

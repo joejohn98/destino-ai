@@ -2,14 +2,27 @@ import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Strategy as GitHubStrategy } from "passport-github2";
 import authService from "../services/auth.service";
+import { config } from "./config";
 
 // Google Strategy
 passport.use(
   new GoogleStrategy(
     {
-      clientID: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      callbackURL: process.env.GOOGLE_CALLBACK_URL!,
+      clientID:
+        config.googleClientId ||
+        (() => {
+          throw new Error(
+            "Google Client ID is not defined in the environment variables.",
+          );
+        })(),
+      clientSecret:
+        config.googleClientSecret ||
+        (() => {
+          throw new Error(
+            "Google Client Secret is not defined in the environment variables.",
+          );
+        })(),
+      callbackURL: config.googleCallbackUrl,
     },
     async (_accessToken, _refreshToken, profile, done) => {
       try {
@@ -31,26 +44,37 @@ passport.use(
       } catch (err) {
         return done(err as Error, undefined);
       }
-    }
-  )
+    },
+  ),
 );
 
 // GitHub Strategy
 passport.use(
   new GitHubStrategy(
     {
-      clientID: process.env.GITHUB_CLIENT_ID!,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
-      callbackURL: process.env.GITHUB_CALLBACK_URL!,
+      clientID: config.githubClientId || (() => {
+        throw new Error("GitHub Client ID is not defined in the environment variables.");
+      })(),
+      clientSecret: config.githubClientSecret || (() => {
+        throw new Error("GitHub Client Secret is not defined in the environment variables.");
+      })(),
+      callbackURL: config.githubCallbackUrl,
       scope: ["user:email"],
     },
-    async (_accessToken: string, _refreshToken: string, profile: any, done: any) => {
+    async (
+      _accessToken: string,
+      _refreshToken: string,
+      profile: any,
+      done: any,
+    ) => {
       try {
         const email =
           profile.emails?.[0]?.value ||
           `${profile.username}@users.noreply.github.com`;
 
-        const nameParts = (profile.displayName || profile.username || "").split(" ");
+        const nameParts = (profile.displayName || profile.username || "").split(
+          " ",
+        );
         const firstName = nameParts[0] || "Traveler";
         const lastName = nameParts.slice(1).join(" ") || "User";
 
@@ -67,8 +91,8 @@ passport.use(
       } catch (err) {
         return done(err as Error, undefined);
       }
-    }
-  )
+    },
+  ),
 );
 
 export default passport;

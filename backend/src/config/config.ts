@@ -14,4 +14,10 @@ export const config = {
   cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME as string,
   cloudinaryApiKey: process.env.CLOUDINARY_API_KEY as string,
   cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET as string,
+  googleClientId: process.env.GOOGLE_CLIENT_ID as string,
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+  githubClientId: process.env.GITHUB_CLIENT_ID as string,
+  githubClientSecret: process.env.GITHUB_CLIENT_SECRET as string,
+  googleCallbackUrl: process.env.GOOGLE_CALLBACK_URL as string,
+  githubCallbackUrl: process.env.GITHUB_CALLBACK_URL as string,
 };

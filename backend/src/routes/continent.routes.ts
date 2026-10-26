@@ -13,17 +13,31 @@ import {
   createContinentSchema,
   updateContinentSchema,
 } from "../validators/continent.validators";
+import { protect, restrictTo } from "../middleware/auth.middleware";
 
 const router = Router();
 
 router.get("/", getAllContinents);
 router.get("/:slug", getContinent);
 
-router.post("/", uploadSingle("image"), validate(createContinentSchema), createContinent);
+router.post(
+  "/",
+  uploadSingle("image"),
+  protect,
+  restrictTo("admin"),
+  validate(createContinentSchema),
+  createContinent,
+);
 
-router.put("/:id", uploadSingle("image"), validate(updateContinentSchema), updateContinent);
+router.put(
+  "/:id",
+  uploadSingle("image"),
+  protect,
+  restrictTo("admin"),
+  validate(updateContinentSchema),
+  updateContinent,
+);
 
-
-router.delete("/:id", deleteContinent);
+router.delete("/:id", protect, restrictTo("admin"), deleteContinent);
 
 export const continentRoutes = router;

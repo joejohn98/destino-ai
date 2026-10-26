@@ -1,6 +1,8 @@
+  
 import { createClient } from "redis";
+import { config } from "./config";
 
-const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+const redisUrl = config.redisUrl;
 
 export const redisClient = createClient({ url: redisUrl });
 
