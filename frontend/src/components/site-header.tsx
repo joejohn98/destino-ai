@@ -11,6 +11,8 @@ interface SiteHeaderProps {
 const navigation = [
   { label: "Destinations", href: "/destinations" },
   { label: "Continents", href: "/continents" },
+  { label: "Plan a trip", href: "/ai/plan-itinerary" },
+  { label: "Compare", href: "/ai/compare" },
 ] as const;
 
 export function SiteHeader({ backHref, backLabel }: SiteHeaderProps) {

@@ -183,6 +183,124 @@ export interface LoginPayload {
   password: string;
 }
 
+export interface ItineraryDay {
+  day: number;
+  destinationId: string;
+  destination: string;
+  theme: string;
+  activities: string[];
+  accommodation: string;
+  estimatedDailyCost: string;
+  tips: string[];
+}
+
+export interface ItineraryOutput {
+  status: "success" | "unavailable" | "invalid_request";
+  message?: string;
+  unresolvedDestinations?: string[];
+  suggestedDestinations?: string[];
+  durationDays?: number;
+  travellers?: number;
+  travelStyle?: "budget" | "moderate" | "luxury";
+  budgetLimit?: number | null;
+  assumptions?: string[];
+  title?: string;
+  summary?: string;
+  totalEstimatedCost?: string;
+  perPersonCost?: string;
+  days?: ItineraryDay[];
+  budgetBreakdown?: {
+    accommodation: string;
+    food: string;
+    localTransport: string;
+    activities: string;
+    intercityTransport: string;
+  };
+  bestTimeToVisit?: string;
+  warnings?: string[];
+  reviewHighlights?: string[];
+}
+
+export interface ItineraryMeta {
+  stepsUsed?: number;
+  totalTokens?: number | string;
+}
+
+export type PlanItineraryResponse =
+  | {
+      status: "success";
+      message?: string;
+      data: {
+        query: string;
+        itinerary: ItineraryOutput;
+        meta?: ItineraryMeta;
+      };
+    }
+  | {
+      status: "fail";
+      message: string;
+      data?: {
+        query?: string;
+        result?: ItineraryOutput;
+        meta?: ItineraryMeta;
+      };
+    };
+
+export interface ComparedDestination {
+  name: string;
+  location: string;
+  category: string;
+  averageRating: number;
+  pros: string[];
+  cons: string[];
+  bestFor: string;
+  reviewSentiment:
+    | "overwhelmingly positive"
+    | "mostly positive"
+    | "mixed"
+    | "mostly negative"
+    | "no reviews yet";
+  standoutFact: string;
+}
+
+export interface ComparisonOutput {
+  status: "success" | "partial" | "unavailable" | "invalid_request";
+  message?: string;
+  unresolvedDestinations?: string[];
+  userContext?: string;
+  destinations?: ComparedDestination[];
+  comparisonTable?: {
+    criterion: string;
+    winner: string;
+    reason: string;
+  }[];
+  recommendation?: string;
+  recommendationReason?: string;
+  alternativeAdvice?: string;
+}
+
+export interface CompareDestinationsResponse {
+  status?: "success" | "fail" | "error";
+  message?: string;
+  data?: {
+    query?: string;
+    comparison?: ComparisonOutput;
+    result?: ComparisonOutput;
+    meta?: ItineraryMeta;
+  };
+}
+
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly statusCode: number,
+    public readonly payload: unknown,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 // Fetch helper with error handling
 async function fetchApi<T>(
   endpoint: string,
@@ -201,15 +319,22 @@ async function fetchApi<T>(
 
     if (!res.ok) {
       const errorBody = await res.json().catch(() => null);
-      throw new Error(
+      throw new ApiError(
         errorBody?.message ||
           `API error: ${res.status} ${res.statusText} at ${endpoint}`,
+        res.status,
+        errorBody,
       );
     }
 
     return (await res.json()) as T;
   } catch (error) {
-    console.error(`Fetch failure at ${url}:`, error);
+    // A 4xx response is a handled API outcome (for example, an invalid
+    // comparison request), not a network failure. Keep the payload available
+    // to the page without reporting it as an unexpected fetch error.
+    if (!(error instanceof ApiError) || error.statusCode >= 500) {
+      console.error(`Fetch failure at ${url}:`, error);
+    }
     throw error;
   }
 }
@@ -330,8 +455,8 @@ export const api = {
   },
 
   // Agents
-  async planItinerary(query: string) {
-    return fetchApi<{ status: string; data: unknown }>(
+  async planItinerary(query: string): Promise<PlanItineraryResponse> {
+    return fetchApi<PlanItineraryResponse>(
       "/api/ai/agents/plan-itinerary",
       {
         method: "POST",
@@ -341,8 +466,8 @@ export const api = {
     );
   },
 
-  async compareDestinations(query: string) {
-    return fetchApi<{ status: string; data: unknown }>(
+  async compareDestinations(query: string): Promise<CompareDestinationsResponse> {
+    return fetchApi<CompareDestinationsResponse>(
       "/api/ai/agents/compare",
       {
         method: "POST",
