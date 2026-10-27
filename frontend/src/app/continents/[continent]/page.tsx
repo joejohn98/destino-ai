@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Globe2, MapPin } from "lucide-react";
+import { ArrowRight, Globe2, MapPin, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -11,146 +11,168 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ContinentsHeader } from "@/app/continents/_components/continents-header";
+import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
+import { api, ContinentStat, CountryContinentStat } from "@/lib/api";
 
-type Country = {
-  name: string;
-  flag: string;
+type ContinentPageProps = {
+  params: Promise<{ continent: string }>;
 };
 
-const countries: Record<string, Country[]> = {
-  Asia: [
-    { name: "India", flag: "🇮🇳" },
-    { name: "Japan", flag: "🇯🇵" },
-    { name: "Thailand", flag: "🇹🇭" },
-    { name: "Indonesia", flag: "🇮🇩" },
-    { name: "Vietnam", flag: "🇻🇳" },
-    { name: "South Korea", flag: "🇰🇷" },
-  ],
-  Europe: [
-    { name: "Italy", flag: "🇮🇹" },
-    { name: "France", flag: "🇫🇷" },
-    { name: "Greece", flag: "🇬🇷" },
-    { name: "Portugal", flag: "🇵🇹" },
-    { name: "Spain", flag: "🇪🇸" },
-    { name: "Iceland", flag: "🇮🇸" },
-  ],
-  "North America": [
-    { name: "United States", flag: "🇺🇸" },
-    { name: "Canada", flag: "🇨🇦" },
-    { name: "Mexico", flag: "🇲🇽" },
-    { name: "Costa Rica", flag: "🇨🇷" },
-  ],
-  "South America": [
-    { name: "Brazil", flag: "🇧🇷" },
-    { name: "Peru", flag: "🇵🇪" },
-    { name: "Colombia", flag: "🇨🇴" },
-    { name: "Argentina", flag: "🇦🇷" },
-  ],
-  Africa: [
-    { name: "South Africa", flag: "🇿🇦" },
-    { name: "Egypt", flag: "🇪🇬" },
-    { name: "Morocco", flag: "🇲🇦" },
-    { name: "Kenya", flag: "🇰🇪" },
-  ],
-  Oceania: [
-    { name: "Australia", flag: "🇦🇺" },
-    { name: "New Zealand", flag: "🇳🇿" },
-    { name: "Fiji", flag: "🇫🇯" },
-  ],
-};
-
-export const metadata: Metadata = {
-  title: "Explore countries | Destino AI",
-  description: "Browse countries and find a starting point for your next trip.",
-};
-
-export function generateStaticParams() {
-  return Object.keys(countries).map((continent) => ({ continent }));
+export async function generateMetadata({ params }: ContinentPageProps): Promise<Metadata> {
+  const { continent } = await params;
+  const decoded = decodeURIComponent(continent);
+  const formatted = decoded
+    .replace(/-/g, " ")
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+  return {
+    title: `Explore ${formatted} | Destino AI`,
+    description: `Browse countries and verified destinations in ${formatted}.`,
+  };
 }
 
-export default async function CountriesPage({
-  params,
-}: {
-  params: Promise<{ continent: string }>;
-}) {
+export default async function ContinentDetailPage({ params }: ContinentPageProps) {
   const { continent } = await params;
-  const list = countries[continent];
+  const decodedParam = decodeURIComponent(continent).toLowerCase();
 
-  if (!list) {
+  let continentStats: ContinentStat[] = [];
+  try {
+    const res = await api.getContinentStats();
+    continentStats = res.data || [];
+  } catch (error) {
+    console.error("Failed to fetch continents:", error);
+  }
+
+  const matchedContinent = continentStats.find(
+    (item) =>
+      item.continent.toLowerCase() === decodedParam ||
+      item.continent.toLowerCase().replace(/\s+/g, "-") === decodedParam,
+  );
+
+  if (!matchedContinent) {
+    notFound();
+  }
+
+  const continentName = matchedContinent.continent;
+
+  // Fetch country statistics for this continent
+  let countriesList: CountryContinentStat[] = [];
+  try {
+    const statsRes = await api.getCountriesByContinent(continentName);
+    countriesList = statsRes.data || [];
+  } catch (error) {
+    console.error(`Failed to fetch countries for ${continentName}:`, error);
+  }
+
+  if (countriesList.length === 0) {
     notFound();
   }
 
   return (
-    <main className="min-h-dvh bg-background text-foreground">
-      <ContinentsHeader backHref="/continents" backLabel="All regions" />
+    <div className="flex min-h-dvh flex-col bg-background text-foreground">
+      <SiteHeader backHref="/continents" backLabel="All regions" />
 
-      <section
-        aria-labelledby="continent-heading"
-        className="mx-auto max-w-page px-4 pb-12 pt-12 sm:px-6 sm:pb-16 sm:pt-16 lg:px-10 lg:pb-20 lg:pt-20"
-      >
-        <div className="mb-10 flex items-start gap-4 sm:mb-14 sm:gap-6">
-          <div className="grid size-14 shrink-0 place-items-center rounded-full bg-canvas text-pastel-sky sm:size-16">
-            <Globe2 aria-hidden="true" className="size-7 sm:size-8" />
-          </div>
-          <div>
-            <Badge variant="tag">
-              <MapPin data-icon="inline-start" />
-              Explore by country
-            </Badge>
-            <h1
-              id="continent-heading"
-              className="mt-4 text-display font-semibold text-ink"
-            >
-              {continent}
-            </h1>
-            <p className="mt-3 max-w-2xl text-lead text-muted-foreground">
-              Start with a country and follow your curiosity from there.
-            </p>
-          </div>
-        </div>
-
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 lg:gap-6">
-          {list.map((country) => (
+      <main className="flex-1">
+        <section
+          aria-labelledby="continent-heading"
+          className="mx-auto max-w-page px-4 pb-16 pt-10 sm:px-6 sm:pb-20 sm:pt-14 lg:px-10 lg:pb-24 lg:pt-16"
+        >
+          {/* Breadcrumb */}
+          <nav aria-label="Breadcrumb" className="mb-6 flex items-center gap-2 text-sm">
             <Link
-              key={country.name}
-              href={`/destinations?location=${encodeURIComponent(country.name)}`}
-              className="group block rounded-marketing focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+              href="/continents"
+              className="rounded-sm text-muted-foreground underline-offset-4 transition-colors hover:text-ink hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
             >
-              <Card
-                variant="editorial"
-                className="h-full transition-transform duration-300 group-hover:-translate-y-1 motion-reduce:transition-none"
-              >
-                <CardHeader className="gap-4">
-                  <span
-                    aria-hidden="true"
-                    className="grid size-14 place-items-center rounded-control bg-canvas text-3xl"
-                  >
-                    {country.flag}
-                  </span>
-                  <CardTitle className="text-title font-semibold text-ink">
-                    {country.name}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription>
-                    Browse destination ideas in {country.name}.
-                  </CardDescription>
-                </CardContent>
-                <CardFooter className="border-0 bg-transparent p-0 pt-2">
-                  <span className="inline-flex items-center gap-2 font-medium text-ink underline underline-offset-4">
-                    View destinations
-                    <ArrowRight
-                      aria-hidden="true"
-                      className="transition-transform group-hover:translate-x-1"
-                    />
-                  </span>
-                </CardFooter>
-              </Card>
+              Continents
             </Link>
-          ))}
-        </div>
-      </section>
-    </main>
+            <span aria-hidden="true" className="text-muted-foreground">
+              /
+            </span>
+            <span aria-current="page" className="font-medium text-ink">
+              {continentName}
+            </span>
+          </nav>
+
+          {/* Heading cluster */}
+          <div className="mb-10 flex items-start gap-4 sm:mb-14 sm:gap-6">
+            <div className="grid size-14 shrink-0 place-items-center rounded-2xl bg-canvas text-ink shadow-2xs sm:size-16">
+              <Globe2 aria-hidden="true" className="size-7 sm:size-8" />
+            </div>
+            <div>
+              <Badge variant="tag">
+                <MapPin data-icon="inline-start" />
+                Explore by country
+              </Badge>
+              <h1
+                id="continent-heading"
+                className="mt-3 text-display font-semibold text-ink"
+              >
+                {continentName}
+              </h1>
+              <p className="mt-3 max-w-2xl text-lead text-muted-foreground">
+                Browse countries and verified destinations across this region.
+              </p>
+            </div>
+          </div>
+
+          {/* Country Cards Grid */}
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {countriesList.map((countryItem) => (
+              <Link
+                key={countryItem.country}
+                href={`/destinations?location=${encodeURIComponent(countryItem.country)}`}
+                className="group block rounded-marketing focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+              >
+                <Card
+                  variant="editorial"
+                  className="h-full transition-transform duration-300 group-hover:-translate-y-1 motion-reduce:transition-none"
+                >
+                  <CardHeader className="gap-3 p-6 pb-2">
+                    <div className="flex items-center justify-between">
+                      <div className="grid size-10 place-items-center rounded-control bg-background text-ink shadow-2xs">
+                        <MapPin className="size-5 text-pastel-sky" />
+                      </div>
+                      {countryItem.averageRating > 0 && (
+                        <div className="flex items-center gap-1 text-xs font-semibold text-ink">
+                          <Star className="size-3.5 fill-pastel-peach text-pastel-peach" />
+                          <span>{countryItem.averageRating.toFixed(1)}</span>
+                        </div>
+                      )}
+                    </div>
+                    <CardTitle className="text-title font-semibold text-ink">
+                      {countryItem.country}
+                    </CardTitle>
+                  </CardHeader>
+
+                  <CardContent className="px-6 py-2">
+                    <CardDescription className="text-sm">
+                      {countryItem.destinationCount > 0
+                        ? `${countryItem.destinationCount} verified ${
+                            countryItem.destinationCount === 1
+                              ? "destination"
+                              : "destinations"
+                          } in database.`
+                        : `Browse destination listings in ${countryItem.country}.`}
+                    </CardDescription>
+                  </CardContent>
+
+                  <CardFooter className="border-0 bg-transparent p-6 pt-2">
+                    <span className="inline-flex items-center gap-2 text-sm font-medium text-ink underline underline-offset-4">
+                      View destinations
+                      <ArrowRight
+                        aria-hidden="true"
+                        className="size-4 transition-transform group-hover:translate-x-1"
+                      />
+                    </span>
+                  </CardFooter>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </section>
+      </main>
+
+      <SiteFooter />
+    </div>
   );
 }

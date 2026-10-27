@@ -2,8 +2,6 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
-  cacheComponents: true,
-  partialPrefetching: true,
   reactCompiler: true,
   images: {
     remotePatterns: [
@@ -13,7 +11,15 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "i.postimg.cc",
+      },
+      {
+        protocol: "https",
         hostname: "hebbkx1anhila5yf.public.blob.vercel-storage.com",
+      },
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
       },
     ],
   },
@@ -23,6 +29,12 @@ const nextConfig: NextConfig = {
         loaders: ["@tailwindcss/turbopack"],
         as: "*.css",
       },
+    },
+  },
+  logging: {
+    fetches: {
+      fullUrl: true,
+      hmrRefreshes: true,
     },
   },
 };

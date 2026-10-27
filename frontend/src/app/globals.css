@@ -197,13 +197,14 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    @apply font-sans;
+    color-scheme: light;
+  }
   body {
     @apply bg-background text-foreground;
   }
-  html {
-    @apply font-sans;
+  h1, h2, h3 {
+    text-wrap: balance;
   }
-  html { color-scheme: light; }
-  body { font-family: var(--font-sans); background: var(--background); color: var(--foreground); }
-  h1, h2, h3 { text-wrap: balance; }
 }
