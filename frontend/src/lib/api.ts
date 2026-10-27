@@ -152,6 +152,37 @@ export interface DestinationSummaryResponse {
   };
 }
 
+export interface AuthUser {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  username: string;
+  email: string;
+  role: "user" | "admin";
+  avatarUrl?: string;
+  bio?: string;
+  isActive?: boolean;
+}
+
+export interface AuthResponse {
+  status: string;
+  message?: string;
+  data: AuthUser;
+}
+
+export interface RegisterPayload {
+  firstName: string;
+  lastName: string;
+  username: string;
+  email: string;
+  password: string;
+}
+
+export interface LoginPayload {
+  email: string;
+  password: string;
+}
+
 // Fetch helper with error handling
 async function fetchApi<T>(
   endpoint: string,
@@ -184,6 +215,23 @@ async function fetchApi<T>(
 }
 
 export const api = {
+  // Auth
+  async register(payload: RegisterPayload): Promise<AuthResponse> {
+    return fetchApi<AuthResponse>("/api/auth/register", {
+      method: "POST",
+      body: JSON.stringify(payload),
+      credentials: "include",
+    });
+  },
+
+  async login(payload: LoginPayload): Promise<AuthResponse> {
+    return fetchApi<AuthResponse>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify(payload),
+      credentials: "include",
+    });
+  },
+
   // Destinations
   async getDestinations(params?: {
     page?: number;

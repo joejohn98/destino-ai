@@ -71,6 +71,31 @@ export function SiteHeader({ backHref, backLabel }: SiteHeaderProps) {
               ))}
             </nav>
           )}
+
+          <nav
+            aria-label="Account navigation"
+            className="hidden items-center gap-2 sm:flex"
+          >
+            <Link
+              href="/signin"
+              className={buttonVariants({
+                variant: "ghost",
+                size: "sm",
+                className: "rounded-full",
+              })}
+            >
+              Sign in
+            </Link>
+            <Link
+              href="/signup"
+              className={buttonVariants({
+                size: "sm",
+                className: "rounded-full",
+              })}
+            >
+              Sign up
+            </Link>
+          </nav>
         </div>
       </div>
     </header>

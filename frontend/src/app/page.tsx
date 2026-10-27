@@ -133,7 +133,7 @@ export default async function Page() {
                 href={`/destinations/${heroDestination.slug || heroDestination._id}`}
                 className="group block overflow-hidden rounded-marketing bg-canvas p-2 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring sm:p-4"
               >
-                <div className="relative aspect-[21/9] min-h-72 w-full overflow-hidden rounded-media bg-cream">
+                <div className="relative aspect-21/9 min-h-72 w-full overflow-hidden rounded-media bg-cream">
                   {heroDestination.imageUrls?.[0] ? (
                     <Image
                       src={heroDestination.imageUrls[0]}
@@ -144,7 +144,7 @@ export default async function Page() {
                       className="object-cover transition-transform duration-700 group-hover:scale-105"
                     />
                   ) : null}
-                  <div className="absolute inset-0 bg-gradient-to-t from-ink/70 via-ink/20 to-transparent" />
+                  <div className="absolute inset-0 bg-linear-to-t from-ink/70 via-ink/20 to-transparent" />
                   <div className="absolute bottom-6 left-6 right-6 flex flex-wrap items-end justify-between gap-4 text-white sm:bottom-8 sm:left-8 sm:right-8">
                     <div>
                       <Badge
