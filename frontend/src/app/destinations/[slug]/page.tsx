@@ -22,18 +22,30 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
-import { SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
-import { api, Destination, Review } from "@/lib/api";
+import { api, Destination, Review, destinationHref } from "@/lib/api";
 
 type DestinationDetailPageProps = {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ country?: string | string[] }>;
 };
 
-export async function generateMetadata({ params }: DestinationDetailPageProps) {
-  const { slug } = await params;
+function getCountrySlug(country: string | string[] | undefined) {
+  return Array.isArray(country) ? country[0] : country;
+}
+
+async function fetchDestination(slug: string, countrySlug?: string) {
+  return countrySlug
+    ? api.getCanonicalDestination(countrySlug, slug)
+    : api.getDestinationByNameOrSlug(slug);
+}
+
+export async function generateMetadata({
+  params,
+  searchParams,
+}: DestinationDetailPageProps) {
+  const [{ slug }, query] = await Promise.all([params, searchParams]);
   try {
-    const res = await api.getDestinationByNameOrSlug(slug);
+    const res = await fetchDestination(slug, getCountrySlug(query.country));
     if (res?.data) {
       return {
         title: `${res.data.name} — Destination Guide | Destino AI`,
@@ -50,15 +62,17 @@ export async function generateMetadata({ params }: DestinationDetailPageProps) {
 
 export default async function DestinationDetailPage({
   params,
+  searchParams,
 }: DestinationDetailPageProps) {
-  const { slug } = await params;
+  const [{ slug }, query] = await Promise.all([params, searchParams]);
+  const countryParam = getCountrySlug(query.country);
 
   let destination: Destination | null = null;
   let reviews: Review[] = [];
   let relatedDestinations: Destination[] = [];
 
   try {
-    const res = await api.getDestinationByNameOrSlug(slug);
+    const res = await fetchDestination(slug, countryParam);
     destination = res.data;
   } catch (error) {
     console.error(`Failed to fetch destination ${slug}:`, error);
@@ -85,7 +99,10 @@ export default async function DestinationDetailPage({
   // Fetch related destinations in same country or category
   try {
     if (destination.location?.country) {
-      const relatedRes = await api.getDestinationsByLocation(destination.location.country);
+      const relatedRes = await api.getDestinations({
+        limit: 4,
+        location: destination.location.country,
+      });
       relatedDestinations = (relatedRes.data || [])
         .filter((d) => d._id !== destination?._id)
         .slice(0, 3);
@@ -128,9 +145,7 @@ export default async function DestinationDetailPage({
   ];
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background text-foreground">
-      <SiteHeader backHref="/destinations" backLabel="All destinations" />
-
+    <div className="flex-1 bg-background text-foreground">
       <main className="flex-1">
         <div className="mx-auto max-w-page px-4 pb-24 pt-6 sm:px-6 lg:px-10 lg:pt-10">
           {/* Breadcrumb Navigation */}
@@ -522,7 +537,10 @@ export default async function DestinationDetailPage({
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {relatedDestinations.map((item) => (
                   <Link
-                    href={`/destinations/${item.slug || item._id}`}
+                    href={destinationHref(
+                      item,
+                      destination.location?.countrySlug,
+                    )}
                     key={item._id}
                     className="group block rounded-marketing focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
                   >
@@ -572,8 +590,6 @@ export default async function DestinationDetailPage({
           )}
         </div>
       </main>
-
-      <SiteFooter />
     </div>
   );
 }

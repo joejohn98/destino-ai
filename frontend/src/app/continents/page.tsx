@@ -9,8 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
 import { api, ContinentStat } from "@/lib/api";
 
 export const metadata: Metadata = {
@@ -30,9 +28,7 @@ export default async function ContinentsPage() {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background text-foreground">
-      <SiteHeader backHref="/" backLabel="Back home" />
-
+    <div className="flex-1 bg-background text-foreground">
       <main className="flex-1">
         <section
           aria-labelledby="continents-heading"
@@ -101,8 +97,6 @@ export default async function ContinentsPage() {
           </div>
         </section>
       </main>
-
-      <SiteFooter />
     </div>
   );
 }

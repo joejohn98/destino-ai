@@ -1,12 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
-
-interface SiteHeaderProps {
-  backHref?: string;
-  backLabel?: string;
-  activePath?: string;
-}
 
 const navigation = [
   { label: "Destinations", href: "/destinations" },
@@ -15,7 +12,17 @@ const navigation = [
   { label: "Compare", href: "/ai/compare" },
 ] as const;
 
-export function SiteHeader({ backHref, backLabel }: SiteHeaderProps) {
+export function Header() {
+  const pathname = usePathname();
+  const backLink =
+    pathname === "/continents" || pathname === "/destinations"
+      ? { href: "/", label: "Back home" }
+      : pathname.startsWith("/continents/")
+        ? { href: "/continents", label: "All regions" }
+        : pathname.startsWith("/destinations/")
+          ? { href: "/destinations", label: "All destinations" }
+          : undefined;
+
   return (
     <header className="bg-cream">
       <div className="mx-auto flex max-w-page items-center justify-between gap-4 px-4 py-5 sm:px-6 lg:px-10">
@@ -45,9 +52,9 @@ export function SiteHeader({ backHref, backLabel }: SiteHeaderProps) {
         </div>
 
         <div className="flex items-center gap-3">
-          {backHref ? (
+          {backLink ? (
             <Link
-              href={backHref}
+              href={backLink.href}
               className={buttonVariants({
                 variant: "outline",
                 size: "sm",
@@ -55,7 +62,7 @@ export function SiteHeader({ backHref, backLabel }: SiteHeaderProps) {
               })}
             >
               <ArrowLeft aria-hidden="true" className="size-4" />
-              {backLabel || "Back"}
+              {backLink.label}
             </Link>
           ) : (
             <nav

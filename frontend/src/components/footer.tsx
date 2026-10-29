@@ -6,7 +6,7 @@ const footerLinks = [
   { label: "Continents", href: "/continents" },
 ] as const;
 
-export function SiteFooter() {
+export function Footer() {
   return (
     <footer className="mt-auto bg-primary text-primary-foreground">
       <div className="mx-auto max-w-page px-4 py-10 sm:px-6 sm:py-12 lg:px-10">

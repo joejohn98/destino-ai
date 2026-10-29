@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useSearchParams } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   ArrowRight,
   CalendarDays,
@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Destination, api } from "@/lib/api";
+import { Destination, api, destinationHref } from "@/lib/api";
 
 const CATEGORIES = [
   { value: "all", label: "All" },
@@ -38,84 +38,179 @@ const CATEGORIES = [
   { value: "wildlife", label: "Wildlife" },
 ] as const;
 
-interface DestinationBrowserProps {
+interface DestinationClientProps {
   initialDestinations?: Destination[];
+  initialTotalDestinations?: number;
+  initialTotalPages?: number;
 }
 
-export function DestinationBrowser({
+export function DestinationClient({
   initialDestinations = [],
-}: DestinationBrowserProps) {
+  initialTotalDestinations = 0,
+  initialTotalPages = 0,
+}: DestinationClientProps) {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
-  const locationParam = searchParams.get("location") || "";
 
-  const [query, setQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  // ── Derive initial state from URL so refresh / shared links work ──────────
+  const locationParam = searchParams.get("location") ?? "";
+  const searchParam = searchParams.get("q") ?? "";
+  const categoryParam = searchParams.get("category") ?? "";
+  const ratingParam = Number(searchParams.get("minRating") ?? "0");
+  const ratingFromUrl =
+    Number.isFinite(ratingParam) && ratingParam >= 0 && ratingParam <= 5
+      ? ratingParam
+      : 0;
+  const pageParam = parseInt(searchParams.get("page") ?? "1", 10) || 1;
+
+  const [query, setQuery] = useState(searchParam);
+  const [selectedCategory, setSelectedCategory] = useState(
+    CATEGORIES.some((c) => c.value === categoryParam) ? categoryParam : "all",
+  );
   const [activeLocation, setActiveLocation] = useState(locationParam);
-  const [destinations, setDestinations] = useState<Destination[]>(initialDestinations);
-  const [isLoading, setIsLoading] = useState(initialDestinations.length === 0);
+  const [minRating, setMinRating] = useState(ratingFromUrl);
+  const [currentPage, setCurrentPage] = useState(pageParam);
+
+  const [destinations, setDestinations] =
+    useState<Destination[]>(initialDestinations);
+  const [totalDestinations, setTotalDestinations] = useState(
+    initialTotalDestinations,
+  );
+  const [totalPages, setTotalPages] = useState(initialTotalPages);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState("");
   const [, startTransition] = useTransition();
 
-  // Load destinations based on active filters
+  // ── Sync filter state → URL ────────────────────────────────────────────────
+  // KEY FIX: Every filter change is reflected in the browser URL so filters
+  // are shareable, bookmarkable, and survive page refresh. The server
+  // component in page.tsx reads the same params for the initial SSR render.
+  const syncUrl = useCallback(
+    (params: {
+      q: string;
+      category: string;
+      location: string;
+      minRating: number;
+      page: number;
+    }) => {
+      const qs = new URLSearchParams();
+      if (params.q.trim().length >= 2) qs.set("q", params.q.trim());
+      if (params.category && params.category !== "all")
+        qs.set("category", params.category);
+      if (params.location) qs.set("location", params.location);
+      if (params.minRating > 0)
+        qs.set("minRating", String(params.minRating));
+      if (params.page > 1) qs.set("page", String(params.page));
+
+      const newUrl = qs.toString() ? `${pathname}?${qs.toString()}` : pathname;
+      // Use replace (not push) so the Back button doesn't replay every keystroke
+      router.replace(newUrl, { scroll: false });
+    },
+    [pathname, router],
+  );
+
   useEffect(() => {
     let isCancelled = false;
 
     async function loadData() {
       setIsLoading(true);
+      setLoadError("");
       try {
-        let result: Destination[] = [];
-
-        if (query.trim().length >= 2) {
-          const res = await api.searchDestinations(query.trim());
-          result = res.data || [];
-        } else if (activeLocation) {
-          const res = await api.getDestinationsByLocation(activeLocation);
-          result = res.data || [];
-        } else if (selectedCategory !== "all") {
-          const res = await api.getDestinationsByCategory(selectedCategory);
-          result = res.data || [];
-        } else {
-          const res = await api.getDestinations({ limit: 24 });
-          result = res.data || [];
-        }
-
-        // Apply local category filter if searching or filtering by location
-        if ((query.trim().length >= 2 || activeLocation) && selectedCategory !== "all") {
-          result = result.filter(
-            (d) => d.category?.toLowerCase() === selectedCategory.toLowerCase()
-          );
-        }
+        const search = query.trim();
+        const res = await api.getDestinations({
+          page: currentPage,
+          limit: 24,
+          ...(search.length >= 2 ? { search } : {}),
+          ...(activeLocation ? { location: activeLocation } : {}),
+          ...(selectedCategory !== "all" ? { category: selectedCategory } : {}),
+          ...(minRating > 0 ? { minRating } : {}),
+        });
 
         if (!isCancelled) {
           startTransition(() => {
-            setDestinations(result);
+            setDestinations(res.data || []);
+            setTotalDestinations(res.totalDestinations);
+            setTotalPages(res.totalPages);
             setIsLoading(false);
           });
         }
       } catch (error) {
         console.error("Failed to load destinations:", error);
         if (!isCancelled) {
+          setDestinations([]);
+          setTotalDestinations(0);
+          setTotalPages(0);
+          setLoadError(
+            error instanceof Error
+              ? error.message
+              : "Could not load destinations. Please try again.",
+          );
           setIsLoading(false);
         }
       }
     }
 
-    const timer = setTimeout(() => {
-      loadData();
-    }, query ? 300 : 0);
+    // Debounce text search to avoid hammering the server on every keystroke
+    const timer = setTimeout(loadData, query ? 300 : 0);
 
     return () => {
       isCancelled = true;
       clearTimeout(timer);
     };
-  }, [query, selectedCategory, activeLocation]);
+  }, [query, selectedCategory, activeLocation, minRating, currentPage]);
+
+  // ── Handlers — update React state and sync URL atomically ─────────────────
+  const handleSearch = (value: string) => {
+    setQuery(value);
+    setCurrentPage(1);
+    syncUrl({ q: value, category: selectedCategory, location: activeLocation, minRating, page: 1 });
+  };
+
+  const handleCategoryChange = (value: string) => {
+    const cat = value ?? "all";
+    setSelectedCategory(cat);
+    setCurrentPage(1);
+    syncUrl({ q: query, category: cat, location: activeLocation, minRating, page: 1 });
+  };
+
+  const handleRatingChange = (value: number) => {
+    setMinRating(value);
+    setCurrentPage(1);
+    syncUrl({
+      q: query,
+      category: selectedCategory,
+      location: activeLocation,
+      minRating: value,
+      page: 1,
+    });
+  };
+
+  const handleClearLocation = () => {
+    setActiveLocation("");
+    setCurrentPage(1);
+    syncUrl({ q: query, category: selectedCategory, location: "", minRating, page: 1 });
+  };
+
+  const handlePageChange = (next: number) => {
+    setCurrentPage(next);
+    syncUrl({ q: query, category: selectedCategory, location: activeLocation, minRating, page: next });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const hasActiveFilters =
-    query.length > 0 || selectedCategory !== "all" || Boolean(activeLocation);
+    query.length > 0 ||
+    selectedCategory !== "all" ||
+    Boolean(activeLocation) ||
+    minRating > 0;
 
   const handleReset = () => {
     setQuery("");
     setSelectedCategory("all");
     setActiveLocation("");
+    setMinRating(0);
+    setCurrentPage(1);
+    syncUrl({ q: "", category: "all", location: "", minRating: 0, page: 1 });
   };
 
   return (
@@ -130,14 +225,14 @@ export function DestinationBrowser({
           <span className="sr-only">Search destinations or countries</span>
           <Input
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => handleSearch(e.target.value)}
             placeholder="Search by destination name, city, or country..."
             className="h-11 border-0 bg-transparent px-0 text-ink shadow-none focus-visible:border-0 focus-visible:ring-0"
           />
           {query && (
             <button
               type="button"
-              onClick={() => setQuery("")}
+              onClick={() => handleSearch("")}
               className="rounded-full p-1 text-muted-foreground hover:text-ink"
               aria-label="Clear search"
             >
@@ -155,7 +250,7 @@ export function DestinationBrowser({
               <span>{activeLocation}</span>
               <button
                 type="button"
-                onClick={() => setActiveLocation("")}
+                onClick={handleClearLocation}
                 aria-label={`Remove ${activeLocation} filter`}
                 className="hover:text-danger"
               >
@@ -178,13 +273,42 @@ export function DestinationBrowser({
         </div>
       </Card>
 
+      <div className="mt-5 flex flex-col gap-2 rounded-marketing border border-line bg-background px-5 py-4 sm:max-w-md sm:flex-row sm:items-center sm:gap-5">
+        <label
+          htmlFor="minimum-rating"
+          className="flex min-w-36 items-center gap-2 text-sm font-medium text-ink"
+        >
+          <Star aria-hidden="true" className="size-4 fill-pastel-peach text-pastel-peach" />
+          Minimum rating
+        </label>
+        <input
+          id="minimum-rating"
+          type="range"
+          min="0"
+          max="5"
+          step="0.5"
+          value={minRating}
+          onChange={(event) => handleRatingChange(Number(event.target.value))}
+          aria-valuetext={
+            minRating === 0 ? "Any rating" : `${minRating} stars and above`
+          }
+          className="h-2 w-full cursor-pointer accent-ink"
+        />
+        <output
+          htmlFor="minimum-rating"
+          className="min-w-24 text-right text-sm text-muted-foreground"
+        >
+          {minRating === 0 ? "Any rating" : `${minRating.toFixed(1)}+ stars`}
+        </output>
+      </div>
+
       {/* Categories Segmented Control */}
       <div className="mt-6 max-w-full overflow-x-auto pb-1">
         <ToggleGroup
           aria-label="Filter destinations by category"
           value={[selectedCategory]}
           multiple={false}
-          onValueChange={(val) => setSelectedCategory(val[0] ?? "all")}
+          onValueChange={(val) => handleCategoryChange(val[0] ?? "all")}
           variant="segmented"
           size="lg"
           className="min-w-max"
@@ -221,7 +345,10 @@ export function DestinationBrowser({
               Loading...
             </span>
           ) : (
-            <span>{destinations.length} {destinations.length === 1 ? "place" : "places"}</span>
+            <span>
+              Showing {destinations.length} of {totalDestinations}{" "}
+              {totalDestinations === 1 ? "place" : "places"}
+            </span>
           )}
         </div>
       </div>
@@ -240,12 +367,23 @@ export function DestinationBrowser({
             </Card>
           ))}
         </div>
+      ) : loadError ? (
+        <Card variant="editorial" className="mt-8 p-12 text-center sm:p-16">
+          <CardContent className="px-0">
+            <CardTitle role="heading" aria-level={3} className="text-title font-semibold text-ink">
+              Destinations could not be loaded.
+            </CardTitle>
+            <CardDescription className="mt-3 text-base">
+              {loadError}
+            </CardDescription>
+          </CardContent>
+        </Card>
       ) : destinations.length > 0 ? (
         <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {destinations.map((destination) => (
             <Link
               key={destination._id}
-              href={`/destinations/${destination.slug || destination._id}`}
+              href={destinationHref(destination)}
               aria-label={`Explore ${destination.name}, ${destination.location?.country}`}
               className="group block rounded-marketing focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
             >
@@ -357,6 +495,35 @@ export function DestinationBrowser({
             </Button>
           </CardContent>
         </Card>
+      )}
+
+      {!isLoading && !loadError && totalPages > 1 && (
+        <nav
+          aria-label="Destination pages"
+          className="mt-8 flex items-center justify-center gap-4"
+        >
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={currentPage <= 1}
+            onClick={() => handlePageChange(currentPage - 1)}
+          >
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground" aria-live="polite">
+            Page {currentPage} of {totalPages}
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={currentPage >= totalPages}
+            onClick={() => handlePageChange(currentPage + 1)}
+          >
+            Next
+          </Button>
+        </nav>
       )}
     </section>
   );

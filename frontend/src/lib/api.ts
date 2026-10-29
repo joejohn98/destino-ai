@@ -52,6 +52,16 @@ export interface Destination {
   updatedAt?: string;
 }
 
+export function destinationHref(
+  destination: Destination,
+  countrySlug = destination.location?.countrySlug,
+): string {
+  const href = `/destinations/${encodeURIComponent(destination.slug || destination._id)}`;
+  return countrySlug && destination.slug
+    ? `${href}?country=${encodeURIComponent(countrySlug)}`
+    : href;
+}
+
 export interface Review {
   _id: string;
   destination: string;
@@ -361,11 +371,23 @@ export const api = {
   async getDestinations(params?: {
     page?: number;
     limit?: number;
+    search?: string;
+    location?: string;
+    category?: string;
+    minRating?: number;
   }): Promise<PaginatedDestinationsResponse> {
-    const page = params?.page ?? 1;
-    const limit = params?.limit ?? 12;
+    const query = new URLSearchParams({
+      page: String(params?.page ?? 1),
+      limit: String(params?.limit ?? 12),
+    });
+    if (params?.search) query.set("q", params.search);
+    if (params?.location) query.set("location", params.location);
+    if (params?.category) query.set("category", params.category);
+    if (params?.minRating !== undefined && params.minRating > 0)
+      query.set("minRating", String(params.minRating));
+
     return fetchApi<PaginatedDestinationsResponse>(
-      `/api/destinations?page=${page}&limit=${limit}`,
+      `/api/destinations?${query.toString()}`,
     );
   },
 

@@ -20,9 +20,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
-import { SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
-import { api, ContinentStat, Destination } from "@/lib/api";
+import { api, ContinentStat, Destination, destinationHref } from "@/lib/api";
 
 export const metadata: Metadata = {
   title: "Destino AI — Discover & Plan Trips",
@@ -90,9 +88,7 @@ export default async function Page() {
   const heroDestination = destinations[0];
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background text-foreground">
-      <SiteHeader />
-
+    <div className="flex-1 bg-background text-foreground">
       <main className="flex-1">
         {/* Hero Section */}
         <section className="bg-cream">
@@ -130,7 +126,7 @@ export default async function Page() {
           {heroDestination && (
             <div className="mx-auto max-w-page px-4 pb-12 sm:px-6 sm:pb-16 lg:px-10 lg:pb-20">
               <Link
-                href={`/destinations/${heroDestination.slug || heroDestination._id}`}
+                href={destinationHref(heroDestination)}
                 className="group block overflow-hidden rounded-marketing bg-canvas p-2 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring sm:p-4"
               >
                 <div className="relative aspect-21/9 min-h-72 w-full overflow-hidden rounded-media bg-cream">
@@ -202,7 +198,7 @@ export default async function Page() {
             {destinations.slice(0, 6).map((destination) => (
               <Link
                 key={destination._id}
-                href={`/destinations/${destination.slug || destination._id}`}
+                href={destinationHref(destination)}
                 className="group block rounded-marketing focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
               >
                 <Card
@@ -396,8 +392,6 @@ export default async function Page() {
           </div>
         </section>
       </main>
-
-      <SiteFooter />
     </div>
   );
 }

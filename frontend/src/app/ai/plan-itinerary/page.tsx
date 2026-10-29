@@ -15,7 +15,6 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
-import { SiteHeader } from "@/components/site-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -182,8 +181,7 @@ export default function PlannerPage() {
   };
 
   return (
-    <div className="min-h-dvh bg-canvas text-foreground">
-      <SiteHeader />
+    <div className="flex-1 bg-canvas text-foreground">
       <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
         <section className="flex flex-col gap-5">
           <div className="flex flex-wrap items-center gap-3">

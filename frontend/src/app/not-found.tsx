@@ -2,14 +2,10 @@ import Link from "next/link";
 import { ArrowRight, Compass } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
 
 export default function NotFound() {
   return (
-    <div className="flex min-h-dvh flex-col bg-background text-foreground">
-      <SiteHeader backHref="/" backLabel="Back home" />
-
+    <div className="flex flex-1 flex-col bg-background text-foreground">
       <main className="flex flex-1 items-center justify-center px-4 py-20 sm:px-6 lg:px-10">
         <Card variant="editorial" className="max-w-lg p-10 text-center sm:p-14">
           <CardContent className="p-0">
@@ -40,8 +36,6 @@ export default function NotFound() {
           </CardContent>
         </Card>
       </main>
-
-      <SiteFooter />
     </div>
   );
 }
