@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Compass,
   Mail,
@@ -24,8 +25,11 @@ import {
 } from "lucide-react";
 import { signupSchema, type SignUpFormData } from "@/schemas/auth.schema";
 import { api, type AuthUser } from "@/lib/api";
+import { safeRedirectPath, useAuth } from "@/components/auth-provider";
 
 export default function SignUpPage() {
+  const router = useRouter();
+  const { signIn } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [agreedTerms, setAgreedTerms] = useState(false);
   const [submittedUser, setSubmittedUser] = useState<AuthUser | null>(null);
@@ -74,6 +78,10 @@ export default function SignUpPage() {
     try {
       const { data } = await api.register(values);
       setSubmittedUser(data);
+      signIn(data);
+      router.replace(
+        safeRedirectPath(new URLSearchParams(window.location.search).get("next")),
+      );
       toast.success("Account created successfully", {
         description: `Welcome ${data.firstName}!`,
       });
@@ -259,6 +267,7 @@ export default function SignUpPage() {
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
+                  onClick={() => window.location.assign(api.oauthUrl("google"))}
                   className="inline-flex items-center justify-center gap-2.5 rounded-xl border border-[#dfe2dc] bg-white py-2.5 text-xs font-semibold text-[#18251f] shadow-sm transition hover:border-[#e8a83e] hover:bg-[#faf9f6]"
                 >
                   <svg className="size-4" viewBox="0 0 24 24">
@@ -284,6 +293,7 @@ export default function SignUpPage() {
 
                 <button
                   type="button"
+                  onClick={() => window.location.assign(api.oauthUrl("github"))}
                   className="inline-flex items-center justify-center gap-2.5 rounded-xl border border-[#dfe2dc] bg-white py-2.5 text-xs font-semibold text-[#18251f] shadow-sm transition hover:border-[#e8a83e] hover:bg-[#faf9f6]"
                 >
                   <svg

@@ -7,7 +7,6 @@ import {
   Clock3,
   Compass,
   MapPin,
-  MessageSquare,
   Sparkles,
   Star,
   Ticket,
@@ -23,6 +22,8 @@ import {
 } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { api, Destination, Review, destinationHref } from "@/lib/api";
+import { FavoriteButton } from "@/components/favorite-button";
+import { ReviewsSection } from "@/components/reviews/reviews-section";
 
 type DestinationDetailPageProps = {
   params: Promise<{ slug: string }>;
@@ -238,6 +239,11 @@ export default async function DestinationDetailPage({
               </p>
 
               <div className="mt-8 flex flex-wrap gap-3">
+                <FavoriteButton
+                  variant="labeled"
+                  destinationId={destination._id}
+                  destinationName={destination.name}
+                />
                 {destination.website && (
                   <a
                     href={destination.website}
@@ -421,103 +427,12 @@ export default async function DestinationDetailPage({
           )}
 
           {/* Traveler Reviews Section */}
-          <section aria-labelledby="reviews-heading" className="mt-14">
-            <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-              <div>
-                <p className="text-eyebrow font-medium uppercase text-muted-foreground">
-                  Community feedback
-                </p>
-                <h2
-                  id="reviews-heading"
-                  className="mt-1 text-title font-semibold text-ink"
-                >
-                  Authentic Traveler Reviews
-                </h2>
-              </div>
-              <span className="text-sm text-muted-foreground">
-                {reviews.length} {reviews.length === 1 ? "review" : "reviews"} recorded
-              </span>
-            </div>
-
-            {reviews.length > 0 ? (
-              <div className="grid gap-5 md:grid-cols-2">
-                {reviews.map((review) => (
-                  <Card key={review._id} variant="app" className="bg-background p-6">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-ink">
-                            {review.authorName || review.user?.username || "Anonymous Traveler"}
-                          </span>
-                          {review.sentiment && (
-                            <Badge
-                              variant={
-                                review.sentiment === "positive"
-                                  ? "success"
-                                  : review.sentiment === "negative"
-                                    ? "danger"
-                                    : "info"
-                              }
-                              className="text-xs capitalize"
-                            >
-                              {review.sentiment}
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {new Date(review.createdAt).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-1">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`size-3.5 ${
-                              i < review.rating
-                                ? "fill-pastel-peach text-pastel-peach"
-                                : "text-line-strong"
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    </div>
-
-                    <p className="mt-4 text-sm leading-relaxed text-ink/90">
-                      &ldquo;{review.reviewText}&rdquo;
-                    </p>
-
-                    {review.themes && review.themes.length > 0 && (
-                      <div className="mt-4 flex flex-wrap gap-1.5 border-t border-line/60 pt-3">
-                        {review.themes.map((theme, i) => (
-                          <span
-                            key={i}
-                            className="rounded-full bg-canvas px-2.5 py-0.5 text-xs text-muted-foreground"
-                          >
-                            #{theme}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <Card variant="editorial" className="p-8 text-center">
-                <MessageSquare className="mx-auto size-8 text-muted-foreground" />
-                <p className="mt-3 text-base font-medium text-ink">
-                  No traveler reviews recorded yet for {destination.name}.
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Be among the first explorers to share verified impressions.
-                </p>
-              </Card>
-            )}
-          </section>
+          <ReviewsSection
+            destinationName={destination.name}
+            countrySlug={countrySlug}
+            destinationSlug={destination.slug}
+            initialReviews={reviews}
+          />
 
           {/* Related Destinations */}
           {relatedDestinations.length > 0 && (
@@ -536,12 +451,12 @@ export default async function DestinationDetailPage({
 
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {relatedDestinations.map((item) => (
+                  <div key={item._id} className="relative">
                   <Link
                     href={destinationHref(
                       item,
                       destination.location?.countrySlug,
                     )}
-                    key={item._id}
                     className="group block rounded-marketing focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
                   >
                     <Card
@@ -584,6 +499,12 @@ export default async function DestinationDetailPage({
                       </CardFooter>
                     </Card>
                   </Link>
+                  <FavoriteButton
+                    destinationId={item._id}
+                    destinationName={item.name}
+                    className="absolute right-4 top-4 z-10"
+                  />
+                  </div>
                 ))}
               </div>
             </section>

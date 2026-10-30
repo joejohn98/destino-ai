@@ -3,6 +3,7 @@
 import { useMemo } from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "cn"
+import { Field as FieldPrimitive } from "@base-ui/react/field"
 
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
@@ -224,6 +225,38 @@ function FieldError({
   )
 }
 
+function FieldControl({
+  className,
+  ...props
+}: React.ComponentProps<"input">) {
+  return (
+    <FieldPrimitive.Control
+      data-slot="field-control"
+      className={cn(
+        "peer h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base shadow-xs transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm",
+        className,
+      )}
+      {...props}
+    />
+  )
+}
+
+function FieldTextarea({
+  className,
+  ...props
+}: React.ComponentProps<"textarea">) {
+  return (
+    <textarea
+      data-slot="field-textarea"
+      className={cn(
+        "flex min-h-24 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-2 text-base shadow-xs transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm",
+        className,
+      )}
+      {...props}
+    />
+  )
+}
+
 export {
   Field,
   FieldLabel,
@@ -235,4 +268,6 @@ export {
   FieldSet,
   FieldContent,
   FieldTitle,
+  FieldControl,
+  FieldTextarea,
 }

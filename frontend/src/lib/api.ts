@@ -172,12 +172,65 @@ export interface AuthUser {
   avatarUrl?: string;
   bio?: string;
   isActive?: boolean;
+  favoriteDestinations?: string[];
 }
 
 export interface AuthResponse {
   status: string;
   message?: string;
   data: AuthUser;
+}
+
+export interface AuthProfileResponse {
+  status: string;
+  message?: string;
+  data: AuthUser;
+}
+
+export interface FavoritesResponse {
+  status: string;
+  results: number;
+  totalFavorites: number;
+  totalPages: number;
+  currentPage: number;
+  data: Destination[];
+}
+
+export interface FavoriteIdsResponse {
+  status: string;
+  message?: string;
+  data: { favoriteDestinations: string[] };
+}
+
+export interface MyReview {
+  _id: string;
+  rating: number;
+  reviewText: string;
+  sentiment?: "positive" | "neutral" | "negative";
+  themes: string[];
+  createdAt: string;
+  updatedAt: string;
+  destination: {
+    _id: string;
+    name: string;
+    slug: string;
+    countryName?: string | null;
+    countrySlug?: string | null;
+  };
+}
+
+export interface MyReviewsResponse {
+  status: string;
+  results: number;
+  totalReviews: number;
+  totalPages: number;
+  currentPage: number;
+  data: MyReview[];
+}
+
+export interface ReviewPayload {
+  rating: number;
+  reviewText: string;
 }
 
 export interface RegisterPayload {
@@ -367,6 +420,84 @@ export const api = {
     });
   },
 
+  async logout(): Promise<{ status: string; message?: string }> {
+    return fetchApi<{ status: string; message?: string }>("/api/auth/logout", {
+      method: "POST",
+      credentials: "include",
+    });
+  },
+
+  /** Full-page redirect target for Google/GitHub sign-in. */
+  oauthUrl(provider: "google" | "github"): string {
+    return `${API_BASE}/api/auth/${provider}`;
+  },
+
+  // Current user
+  async getProfile(): Promise<AuthProfileResponse> {
+    return fetchApi<AuthProfileResponse>("/api/users/profile", {
+      credentials: "include",
+    });
+  },
+
+  async updateProfile(
+    payload: Partial<Pick<AuthUser, "firstName" | "lastName" | "email">>,
+  ): Promise<AuthProfileResponse> {
+    return fetchApi<AuthProfileResponse>("/api/users/profile", {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+      credentials: "include",
+    });
+  },
+
+  async deleteProfile(): Promise<{ status: string; message?: string }> {
+    return fetchApi<{ status: string; message?: string }>("/api/users/profile", {
+      method: "DELETE",
+      credentials: "include",
+    });
+  },
+
+  async getMyReviews(params?: {
+    page?: number;
+    limit?: number;
+  }): Promise<MyReviewsResponse> {
+    const query = new URLSearchParams({
+      page: String(params?.page ?? 1),
+      limit: String(params?.limit ?? 12),
+    });
+    return fetchApi<MyReviewsResponse>(`/api/users/reviews?${query.toString()}`, {
+      credentials: "include",
+    });
+  },
+
+  // Favorites
+  async getFavorites(params?: {
+    page?: number;
+    limit?: number;
+  }): Promise<FavoritesResponse> {
+    const query = new URLSearchParams({
+      page: String(params?.page ?? 1),
+      limit: String(params?.limit ?? 12),
+    });
+    return fetchApi<FavoritesResponse>(
+      `/api/users/favorites?${query.toString()}`,
+      { credentials: "include" },
+    );
+  },
+
+  async addFavorite(destinationId: string): Promise<FavoriteIdsResponse> {
+    return fetchApi<FavoriteIdsResponse>(
+      `/api/users/favorites/${encodeURIComponent(destinationId)}`,
+      { method: "POST", credentials: "include" },
+    );
+  },
+
+  async removeFavorite(destinationId: string): Promise<FavoriteIdsResponse> {
+    return fetchApi<FavoriteIdsResponse>(
+      `/api/users/favorites/${encodeURIComponent(destinationId)}`,
+      { method: "DELETE", credentials: "include" },
+    );
+  },
+
   // Destinations
   async getDestinations(params?: {
     page?: number;
@@ -439,6 +570,36 @@ export const api = {
   ): Promise<ReviewsResponse> {
     return fetchApi<ReviewsResponse>(
       `/api/countries/${encodeURIComponent(countrySlug)}/destinations/${encodeURIComponent(destinationSlug)}/reviews`,
+    );
+  },
+
+  async createReview(
+    countrySlug: string,
+    destinationSlug: string,
+    payload: ReviewPayload,
+  ): Promise<{ status: string; message?: string }> {
+    return fetchApi<{ status: string; message?: string }>(
+      `/api/countries/${encodeURIComponent(countrySlug)}/destinations/${encodeURIComponent(destinationSlug)}/reviews`,
+      { method: "POST", body: JSON.stringify(payload), credentials: "include" },
+    );
+  },
+
+  async updateReview(
+    reviewId: string,
+    payload: Partial<ReviewPayload>,
+  ): Promise<{ status: string; message?: string }> {
+    return fetchApi<{ status: string; message?: string }>(
+      `/api/reviews/${encodeURIComponent(reviewId)}`,
+      { method: "PATCH", body: JSON.stringify(payload), credentials: "include" },
+    );
+  },
+
+  async deleteReview(
+    reviewId: string,
+  ): Promise<{ status: string; message?: string }> {
+    return fetchApi<{ status: string; message?: string }>(
+      `/api/reviews/${encodeURIComponent(reviewId)}`,
+      { method: "DELETE", credentials: "include" },
     );
   },
 

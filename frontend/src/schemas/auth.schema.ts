@@ -32,3 +32,17 @@ export const signInSchema = z.object({
 export type SignUpFormData = z.infer<typeof signupSchema>;
 
 export type SignInFormData = z.infer<typeof signInSchema>;
+
+export interface ProfileFormData {
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
+export const profileSchema = z.object({
+  firstName: z.string().trim().min(1, "First name is required"),
+  lastName: z.string().trim().min(1, "Last name is required"),
+  email: z.email("Invalid email address").min(1, "Email is required"),
+});
+
+export const DELETE_ACCOUNT_CONFIRMATION = "delete";

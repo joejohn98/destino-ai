@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { api, ContinentStat, Destination, destinationHref } from "@/lib/api";
+import { FavoriteButton } from "@/components/favorite-button";
 
 export const metadata: Metadata = {
   title: "Destino AI — Discover & Plan Trips",
@@ -196,8 +197,8 @@ export default async function Page() {
 
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {destinations.slice(0, 6).map((destination) => (
+              <div key={destination._id} className="relative">
               <Link
-                key={destination._id}
                 href={destinationHref(destination)}
                 className="group block rounded-marketing focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
               >
@@ -258,6 +259,12 @@ export default async function Page() {
                   </CardFooter>
                 </Card>
               </Link>
+              <FavoriteButton
+                destinationId={destination._id}
+                destinationName={destination.name}
+                className="absolute right-4 top-4 z-10"
+              />
+              </div>
             ))}
           </div>
         </section>

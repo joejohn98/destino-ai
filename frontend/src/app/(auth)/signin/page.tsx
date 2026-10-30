@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Compass,
   Mail,
@@ -20,8 +21,11 @@ import {
 } from "lucide-react";
 import { signInSchema, type SignInFormData } from "@/schemas/auth.schema";
 import { api, type AuthUser } from "@/lib/api";
+import { safeRedirectPath, useAuth } from "@/components/auth-provider";
 
 export default function SignInPage() {
+  const router = useRouter();
+  const { signIn } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [submittedUser, setSubmittedUser] = useState<AuthUser | null>(null);
@@ -40,6 +44,10 @@ export default function SignInPage() {
     try {
       const { data } = await api.login(values);
       setSubmittedUser(data);
+      signIn(data);
+      router.replace(
+        safeRedirectPath(new URLSearchParams(window.location.search).get("next")),
+      );
       toast.success("Welcome back!", {
         description: `Signed in as ${data.email}.`,
       });
@@ -197,6 +205,7 @@ export default function SignInPage() {
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
+                  onClick={() => window.location.assign(api.oauthUrl("google"))}
 
                   className="inline-flex items-center justify-center gap-2.5 rounded-xl border border-[#dfe2dc] bg-white py-2.5 text-xs font-semibold text-[#18251f] shadow-sm transition hover:border-[#e8a83e] hover:bg-[#faf9f6]"
                 >
@@ -223,6 +232,7 @@ export default function SignInPage() {
 
                 <button
                   type="button"
+                  onClick={() => window.location.assign(api.oauthUrl("github"))}
                   className="inline-flex items-center justify-center gap-2.5 rounded-xl border border-[#dfe2dc] bg-white py-2.5 text-xs font-semibold text-[#18251f] shadow-sm transition hover:border-[#e8a83e] hover:bg-[#faf9f6]"
                 >
                   <svg
@@ -281,26 +291,12 @@ export default function SignInPage() {
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between">
-                    <label
-                      htmlFor="password"
-                      className="block text-xs font-semibold uppercase tracking-wider text-[#18372b]"
-                    >
-                      Password
-                    </label>
-                    <a
-                      href="#forgot-password"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        alert(
-                          "Password reset instructions will be sent to your email.",
-                        );
-                      }}
-                      className="text-xs font-medium text-[#c47e18] transition hover:text-[#9a671f]"
-                    >
-                      Forgot password?
-                    </a>
-                  </div>
+                  <label
+                    htmlFor="password"
+                    className="block text-xs font-semibold uppercase tracking-wider text-[#18372b]"
+                  >
+                    Password
+                  </label>
                   <div className="relative mt-1.5">
                     <Lock className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[#657069]" />
                     <input
