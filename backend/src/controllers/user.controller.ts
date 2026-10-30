@@ -46,3 +46,52 @@ export const deleteProfile: RequestHandler = catchAsync(async (req, res) => {
     message: "Account deleted successfully",
   });
 });
+
+export const getFavorites: RequestHandler = catchAsync(async (req, res) => {
+  const page = Math.max(parseInt(String(req.query.page || "1"), 10) || 1, 1);
+  const limit = Math.min(
+    Math.max(parseInt(String(req.query.limit || "12"), 10) || 12, 1),
+    50,
+  );
+
+  const result = await userService.getFavorites(
+    getAuthenticatedUserId(req.user?._id.toString()),
+    page,
+    limit,
+  );
+
+  res.status(200).json({
+    status: "success",
+    results: result.data.length,
+    totalFavorites: result.totalFavorites,
+    totalPages: result.totalPages,
+    currentPage: result.currentPage,
+    data: result.data,
+  });
+});
+
+export const addFavorite: RequestHandler = catchAsync(async (req, res) => {
+  const favoriteDestinations = await userService.addFavorite(
+    getAuthenticatedUserId(req.user?._id.toString()),
+    String(req.params.destinationId),
+  );
+
+  res.status(200).json({
+    status: "success",
+    message: "Destination added to favorites",
+    data: { favoriteDestinations },
+  });
+});
+
+export const removeFavorite: RequestHandler = catchAsync(async (req, res) => {
+  const favoriteDestinations = await userService.removeFavorite(
+    getAuthenticatedUserId(req.user?._id.toString()),
+    String(req.params.destinationId),
+  );
+
+  res.status(200).json({
+    status: "success",
+    message: "Destination removed from favorites",
+    data: { favoriteDestinations },
+  });
+});

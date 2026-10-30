@@ -8,7 +8,7 @@ import type {
   CreateDestinationInput,
   UpdateDestinationInput,
 } from "../validators/destination.validators";
-import { Review } from "../models";
+import { Review, User } from "../models";
 
 // ─── Cache keys ───────────────────────────────────────────────────────────────
 const CACHE_KEYS = {
@@ -637,6 +637,10 @@ const deleteDestination = async (id: string) => {
   }
 
   await Review.deleteMany({ destination: destination._id });
+  await User.updateMany(
+    { favoriteDestinations: destination._id },
+    { $pull: { favoriteDestinations: destination._id } },
+  );
 
   const deletedDest = await Destination.findByIdAndDelete(id);
 

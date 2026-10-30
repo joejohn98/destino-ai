@@ -59,8 +59,8 @@ app.use("/api/admin/continents/:continentId/countries", continentCountryRoutes);
 app.use("/api/admin/countries", countryRoutes);
 
 // AI routes
-app.use("/api/ai", aiRoutes);
 app.use("/api/ai/agents", agentRoutes);
+app.use("/api/ai", aiRoutes);
 
 app.get("/", (req: Request, res: Response) => {
   res.status(200).json({
