@@ -11,11 +11,23 @@ export const getPaginatedDestinations: RequestHandler = catchAsync(
   async (req, res) => {
     const page = parseInt(String(req.query.page || "1"), 10) || 1;
     const rawLimit = parseInt(String(req.query.limit || "12"), 10) || 12;
-
-    const result = await destinationService.getPaginatedDestinations({
+    const options: Parameters<
+      typeof destinationService.getPaginatedDestinations
+    >[0] = {
       page,
       limit: rawLimit,
-    });
+    };
+    const search = String(req.query.q || "").trim();
+    const location = String(req.query.location || "").trim();
+    const category = String(req.query.category || "").trim();
+    const rawMinRating = req.query.minRating;
+
+    if (search) options.search = search;
+    if (location) options.location = location;
+    if (category) options.category = category;
+    if (rawMinRating !== undefined) options.minRating = Number(rawMinRating);
+
+    const result = await destinationService.getPaginatedDestinations(options);
 
     res.status(200).json({
       status: "success",

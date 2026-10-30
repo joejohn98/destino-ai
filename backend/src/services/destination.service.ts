@@ -1,4 +1,6 @@
-import { Category, Destination } from "../models/Destination.model";
+import type { QueryFilter } from "mongoose";
+import { CATEGORIES, Destination } from "../models/Destination.model";
+import type { Category, IDestination } from "../models/Destination.model";
 import { Country } from "../models/Country.model";
 import { AppError } from "../utils/AppError";
 import { invalidateKeys, withCache } from "../utils/cache";
@@ -27,6 +29,11 @@ const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 export interface PaginatedOptions {
   page: number;
   limit: number;
+  search?: string;
+  location?: string;
+  category?: string;
+  /** Filter destinations where averageRating >= minRating (0–5) */
+  minRating?: number;
 }
 
 export interface PaginatedResult {
@@ -55,50 +62,131 @@ const getPaginatedDestinations = async (
   const limit = Math.min(Math.max(1, options.limit || 12), 50);
   const skip = (page - 1) * limit;
 
+  const search = options.search?.trim();
+  const location = options.location?.trim();
+  const category = options.category?.trim().toLowerCase();
+  const minRating =
+    options.minRating !== undefined ? Number(options.minRating) : undefined;
+
+  if (search && search.length < 2) {
+    throw new AppError(
+      "Search query 'q' must be at least 2 characters long",
+      400,
+    );
+  }
+  if (category && !CATEGORIES.includes(category as Category)) {
+    throw new AppError(
+      `Invalid category. Valid categories are: ${CATEGORIES.join(", ")}`,
+      400,
+    );
+  }
+  if (
+    minRating !== undefined &&
+    (isNaN(minRating) || minRating < 0 || minRating > 5)
+  ) {
+    throw new AppError("minRating must be a number between 0 and 5", 400);
+  }
+
+  const searchRegex = search ? new RegExp(escapeRegex(search), "i") : undefined;
+  const locationRegex = location
+    ? new RegExp(escapeRegex(location), "i")
+    : undefined;
+  const [matchingSearchCountries, matchingLocationCountries] =
+    await Promise.all([
+      searchRegex
+        ? Country.find({ name: searchRegex }).select("_id").lean()
+        : Promise.resolve([]),
+      locationRegex
+        ? Country.find({ name: locationRegex }).select("_id").lean()
+        : Promise.resolve([]),
+    ]);
+
+  const filters: QueryFilter<IDestination>[] = [];
+  if (searchRegex) {
+    filters.push({
+      $or: [
+        { name: searchRegex },
+        { description: searchRegex },
+        { "location.city": searchRegex },
+        {
+          "location.country": {
+            $in: matchingSearchCountries.map((country) => country._id),
+          },
+        },
+      ],
+    });
+  }
+  if (locationRegex) {
+    filters.push({
+      $or: [
+        { "location.city": locationRegex },
+        {
+          "location.country": {
+            $in: matchingLocationCountries.map((country) => country._id),
+          },
+        },
+      ],
+    });
+  }
+  if (category) {
+    filters.push({ category: category as Category });
+  }
+  if (minRating !== undefined) {
+    filters.push({ averageRating: { $gte: minRating } });
+  }
+
+  const filter: QueryFilter<IDestination> =
+    filters.length > 0 ? { $and: filters } : {};
+
+  const loadPage = async (): Promise<PaginatedResult> => {
+    const [destinations, total] = await Promise.all([
+      Destination.find(filter)
+        .select("-reviews -__v")
+        .populate({
+          path: "location.country",
+          select: "slug name",
+          populate: { path: "continent", select: "slug name" },
+        })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Destination.countDocuments(filter),
+    ]);
+
+    // Flatten country/continent slugs for frontend navigation and filtering.
+    const enriched = destinations.map((d: any) => {
+      const country = d.location?.country;
+      const continent = country?.continent;
+      return {
+        ...d,
+        location: {
+          city: d.location?.city,
+          country: country?.name ?? country,
+          countrySlug: country?.slug ?? null,
+        },
+        continent: continent?.name ?? null,
+        continentSlug: continent?.slug ?? null,
+      };
+    });
+
+    const totalPages = Math.ceil(total / limit) || 0;
+
+    return {
+      destinations: enriched,
+      totalDestinations: total,
+      totalPages,
+      currentPage: page,
+    };
+  };
+
+  if (search || location || category || minRating !== undefined) {
+    return loadPage();
+  }
+
   return withCache(
     CACHE_KEYS.paginatedPage(page, limit),
     LISTING_CACHE_TTL,
-    async () => {
-      const [destinations, total] = await Promise.all([
-        Destination.find()
-          .select("-reviews -__v")
-          .populate({
-            path: "location.country",
-            select: "slug name",
-            populate: { path: "continent", select: "slug name" },
-          })
-          .skip(skip)
-          .limit(limit)
-          .lean(),
-        Destination.countDocuments(),
-      ]);
-
-      // Flatten country/continent slugs so the frontend can build the full
-      // hierarchical URL: /continents/:continentSlug/countries/:countrySlug/destinations/:destinationSlug
-      const enriched = destinations.map((d: any) => {
-        const country = d.location?.country;
-        const continent = country?.continent;
-        return {
-          ...d,
-          location: {
-            city: d.location?.city,
-            country: country?.name ?? country,
-            countrySlug: country?.slug ?? null,
-          },
-          continent: continent?.name ?? null,
-          continentSlug: continent?.slug ?? null,
-        };
-      });
-
-      const totalPages = Math.ceil(total / limit) || 0;
-
-      return {
-        destinations: enriched,
-        totalDestinations: total,
-        totalPages,
-        currentPage: page,
-      };
-    },
+    loadPage,
   );
 };
 
