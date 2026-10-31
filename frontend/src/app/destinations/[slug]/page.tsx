@@ -21,7 +21,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
-import { api, Destination, Review, destinationHref } from "@/lib/api";
+import {
+  api,
+  Destination,
+  Review,
+  destinationHref,
+  shouldBypassImageOptimization,
+} from "@/lib/api";
 import { FavoriteButton } from "@/components/favorite-button";
 import { ReviewsSection } from "@/components/reviews/reviews-section";
 
@@ -189,6 +195,7 @@ export default async function DestinationDetailPage({
                   src={destination.imageUrls[0]}
                   alt={destination.name}
                   fill
+                  unoptimized={shouldBypassImageOptimization(destination.imageUrls[0])}
                   priority
                   sizes="(max-width: 1024px) 100vw, 60vw"
                   className="object-cover"
@@ -469,6 +476,7 @@ export default async function DestinationDetailPage({
                             src={item.imageUrls[0]}
                             alt={item.name}
                             fill
+                            unoptimized={shouldBypassImageOptimization(item.imageUrls[0])}
                             sizes="(max-width: 768px) 100vw, 33vw"
                             className="object-cover transition-transform duration-500 group-hover:scale-105"
                           />

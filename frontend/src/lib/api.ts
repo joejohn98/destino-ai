@@ -62,6 +62,27 @@ export function destinationHref(
     : href;
 }
 
+const nextOptimizedImageHosts = new Set([
+  "images.unsplash.com",
+  "i.postimg.cc",
+  "hebbkx1anhila5yf.public.blob.vercel-storage.com",
+  "res.cloudinary.com",
+]);
+
+/** Bypass Next's image proxy for administrator-supplied hosts. */
+export function shouldBypassImageOptimization(source: string): boolean {
+  try {
+    const url = new URL(source);
+    return (
+      url.protocol !== "https:" ||
+      url.port !== "" ||
+      !nextOptimizedImageHosts.has(url.hostname)
+    );
+  } catch {
+    return false;
+  }
+}
+
 export interface Review {
   _id: string;
   destination: string;
@@ -187,6 +208,12 @@ export interface AuthProfileResponse {
   data: AuthUser;
 }
 
+export interface FavoriteIdsResponse {
+  status: string;
+  message?: string;
+  data: { favoriteDestinations: string[] };
+}
+
 export interface FavoritesResponse {
   status: string;
   results: number;
@@ -196,11 +223,64 @@ export interface FavoritesResponse {
   data: Destination[];
 }
 
-export interface FavoriteIdsResponse {
-  status: string;
-  message?: string;
-  data: { favoriteDestinations: string[] };
+export interface AdminDestShort {
+  _id: string;
+  name: string;
+  location: { country: string };
 }
+
+export interface AdminCountryItem {
+  _id: string;
+  name: string;
+  slug: string;
+  continent: string;
+  destinations: AdminDestShort[];
+  destinationCount?: number;
+  /** Present when the country is fetched via the full /countries admin route. */
+  imageUrl?: string;
+  description?: string;
+}
+
+export interface AdminContinent {
+  _id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  imageUrl: string;
+  countries: AdminCountryItem[];
+  countryCount: number;
+  destinationCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminContinentsListResponse {
+  status: "success";
+  message?: string;
+  results: number;
+  data: AdminContinent[];
+}
+
+export interface AdminSingleContinentResponse {
+  status: "success";
+  message?: string;
+  data: AdminContinent;
+}
+
+export interface AdminDestRow {
+  _id: string;
+  name: string;
+  slug: string;
+  description: string;
+  location: { city: string; country: string; countrySlug?: string };
+  category: string;
+  imageUrls: string[];
+  averageRating: number;
+  ratingsCount: number;
+  aiReviewSummary?: string;
+  attractions?: Attraction[];
+}
+
 
 export interface MyReview {
   _id: string;
@@ -371,10 +451,14 @@ async function fetchApi<T>(
 ): Promise<T> {
   const url = `${API_BASE}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
   try {
+    // Multipart payloads must let the browser set the boundary + Content-Type.
+    // Only inject the JSON header for non-FormData bodies.
+    const isFormData = options?.body instanceof FormData;
+
     const res = await fetch(url, {
       ...options,
       headers: {
-        "Content-Type": "application/json",
+        ...(isFormData ? {} : { "Content-Type": "application/json" }),
         ...options?.headers,
       },
       cache: "no-store", // Ensure we don't cache API responses
@@ -465,6 +549,111 @@ export const api = {
       limit: String(params?.limit ?? 12),
     });
     return fetchApi<MyReviewsResponse>(`/api/users/reviews?${query.toString()}`, {
+      credentials: "include",
+    });
+  },
+
+  // ─── Destination Admin Endpoints ─────────────────────────────────────────────
+  async createDestination(formData: FormData): Promise<{ status: string; data: Destination }> {
+    return fetchApi<{ status: string; data: Destination }>("/api/destinations", {
+      method: "POST",
+      body: formData,
+      credentials: "include",
+    });
+  },
+
+  async updateDestination(id: string, formData: FormData): Promise<{ status: string; data: Destination }> {
+    return fetchApi<{ status: string; data: Destination }>(`/api/destinations/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      body: formData,
+      credentials: "include",
+    });
+  },
+
+  async deleteDestination(id: string): Promise<{ status: string; message?: string }> {
+    return fetchApi<{ status: string; message?: string }>(`/api/destinations/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+  },
+
+  async regenerateAiSummary(destinationId: string): Promise<{ status: string; data: { summary?: string | null } }> {
+    return fetchApi<{ status: string; data: { summary?: string | null } }>(
+      `/api/ai/destinations/${encodeURIComponent(destinationId)}/summary/regenerate`,
+      {
+        method: "POST",
+        credentials: "include",
+      },
+    );
+  },
+
+  // ─── Continent Admin Endpoints ──────────────────────────────────────────────
+  async getAdminContinents(): Promise<AdminContinentsListResponse> {
+    return fetchApi<AdminContinentsListResponse>("/api/admin/continents", {
+      credentials: "include",
+    });
+  },
+
+  async getAdminContinent(slug: string): Promise<AdminSingleContinentResponse> {
+    return fetchApi<AdminSingleContinentResponse>(
+      `/api/admin/continents/${encodeURIComponent(slug)}`,
+      { credentials: "include" },
+    );
+  },
+
+  async createContinent(formData: FormData): Promise<{ status: string; data: Continent }> {
+    return fetchApi<{ status: string; data: Continent }>("/api/admin/continents", {
+      method: "POST",
+      body: formData,
+      credentials: "include",
+    });
+  },
+
+  async updateContinent(id: string, formData: FormData): Promise<{ status: string; data: Continent }> {
+    return fetchApi<{ status: string; data: Continent }>(`/api/admin/continents/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      body: formData,
+      credentials: "include",
+    });
+  },
+
+  async deleteContinent(id: string): Promise<{ status: string; message?: string }> {
+    return fetchApi<{ status: string; message?: string }>(`/api/admin/continents/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+  },
+
+  // ─── Country Admin Endpoints ────────────────────────────────────────────────
+  async getAdminCountries(continentId: string): Promise<{ status: string; results?: number; data: AdminCountryItem[] }> {
+    return fetchApi<{ status: string; results?: number; data: AdminCountryItem[] }>(
+      `/api/admin/continents/${encodeURIComponent(continentId)}/countries`,
+      { credentials: "include" },
+    );
+  },
+
+  async createCountry(continentId: string, formData: FormData): Promise<{ status: string; data: AdminCountryItem }> {
+    return fetchApi<{ status: string; data: AdminCountryItem }>(
+      `/api/admin/continents/${encodeURIComponent(continentId)}/countries`,
+      {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      },
+    );
+  },
+
+  async updateCountry(id: string, formData: FormData): Promise<{ status: string; data: AdminCountryItem }> {
+    return fetchApi<{ status: string; data: AdminCountryItem }>(`/api/admin/countries/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      body: formData,
+      credentials: "include",
+    });
+  },
+
+  async deleteCountry(id: string): Promise<{ status: string; message?: string }> {
+    return fetchApi<{ status: string; message?: string }>(`/api/admin/countries/${encodeURIComponent(id)}`, {
+      method: "DELETE",
       credentials: "include",
     });
   },
@@ -603,11 +792,7 @@ export const api = {
     );
   },
 
-  // Continents & Countries
-  async getAdminContinents(): Promise<ContinentsResponse> {
-    return fetchApi<ContinentsResponse>("/api/admin/continents");
-  },
-
+  // Continents & Countries (public)
   async getContinentStats(): Promise<ContinentStatsResponse> {
     return fetchApi<ContinentStatsResponse>("/api/destinations/continents");
   },

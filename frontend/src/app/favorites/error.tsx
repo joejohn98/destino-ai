@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect } from "react";
 import { BookmarkX } from "lucide-react";
 
@@ -24,10 +25,16 @@ export default function FavoritesError({
 
   return (
     <main className="flex flex-1 items-center justify-center bg-background px-4 py-20 text-foreground sm:px-6 lg:px-10">
-      <Card variant="editorial" className="w-full max-w-lg p-10 text-center sm:p-14">
+      <Card
+        variant="editorial"
+        className="w-full max-w-lg p-10 text-center sm:p-14"
+      >
         <CardContent className="flex flex-col items-center gap-4 p-0">
           <div className="mx-auto grid size-16 place-items-center rounded-full bg-canvas text-ink">
-            <BookmarkX aria-hidden="true" className="size-8 text-pastel-peach" />
+            <BookmarkX
+              aria-hidden="true"
+              className="size-8 text-pastel-peach"
+            />
           </div>
           <div>
             <CardTitle
@@ -46,7 +53,12 @@ export default function FavoritesError({
             <Button type="button" size="pill" onClick={reset}>
               Try again
             </Button>
-            <Button variant="outline" size="pill" render={<a href="/destinations" />}>
+            <Button
+              variant="outline"
+              size="pill"
+              nativeButton={false}
+              render={<Link href="/destinations" />}
+            >
               Browse destinations
             </Button>
           </div>

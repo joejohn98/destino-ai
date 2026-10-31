@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/card";
 import { api, ContinentStat } from "@/lib/api";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Explore Continents",
   description:

@@ -46,7 +46,6 @@ export function MyReviews() {
     if (status !== "authenticated") return;
     let cancelled = false;
 
-    setLoading(true);
     api
       .getMyReviews({ page, limit: PAGE_SIZE })
       .then((res) => {
@@ -104,12 +103,18 @@ export function MyReviews() {
   };
 
   return (
-    <section aria-labelledby="my-reviews-heading" className="flex flex-col gap-4">
+    <section
+      aria-labelledby="my-reviews-heading"
+      className="flex flex-col gap-4"
+    >
       <div>
         <p className="text-eyebrow font-medium uppercase text-muted-foreground">
           Activity
         </p>
-        <h2 id="my-reviews-heading" className="mt-1 text-title font-semibold text-ink">
+        <h2
+          id="my-reviews-heading"
+          className="mt-1 text-title font-semibold text-ink"
+        >
           My reviews
         </h2>
       </div>
@@ -117,7 +122,11 @@ export function MyReviews() {
       {loading ? (
         <div className="flex flex-col gap-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i} variant="editorial" className="animate-pulse gap-0 p-0">
+            <Card
+              key={i}
+              variant="editorial"
+              className="animate-pulse gap-0 p-0"
+            >
               <div className="h-24 w-full bg-band/30" />
             </Card>
           ))}
@@ -128,7 +137,9 @@ export function MyReviews() {
             <CardTitle className="text-base text-ink">
               We couldn&apos;t load your reviews.
             </CardTitle>
-            <CardDescription>Check your connection and try again.</CardDescription>
+            <CardDescription>
+              Check your connection and try again.
+            </CardDescription>
             <Button type="button" variant="outline" onClick={reload}>
               Try again
             </Button>
@@ -137,7 +148,10 @@ export function MyReviews() {
       ) : reviews.length === 0 ? (
         <Card variant="editorial" className="p-8 text-center">
           <CardContent className="flex flex-col items-center gap-3 p-0">
-            <MessageSquare aria-hidden="true" className="size-8 text-muted-foreground" />
+            <MessageSquare
+              aria-hidden="true"
+              className="size-8 text-muted-foreground"
+            />
             <CardTitle className="text-base text-ink">No reviews yet</CardTitle>
             <CardDescription>
               Review a destination you&apos;ve visited and it will show up here.
@@ -145,6 +159,7 @@ export function MyReviews() {
             <Button
               size="pill"
               variant="outline"
+              nativeButton={false}
               render={<Link href="/destinations" />}
             >
               Browse destinations
@@ -180,11 +195,14 @@ export function MyReviews() {
                       ))}
                     </div>
                     <span className="text-xs text-muted-foreground">
-                      {new Date(review.createdAt).toLocaleDateString(undefined, {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
+                      {new Date(review.createdAt).toLocaleDateString(
+                        undefined,
+                        {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        },
+                      )}
                     </span>
                   </div>
                   <p className="text-sm leading-relaxed text-muted-foreground">
@@ -236,8 +254,6 @@ export function MyReviews() {
         </ul>
       )}
 
-
-
       {!loading && !loadError && totalPages > 1 && (
         <nav
           aria-label="My reviews pages"
@@ -272,7 +288,10 @@ export function MyReviews() {
       )}
 
       {/* Edit dialog */}
-      <Dialog open={editing !== null} onOpenChange={(open) => !open && setEditing(null)}>
+      <Dialog
+        open={editing !== null}
+        onOpenChange={(open) => !open && setEditing(null)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit review</DialogTitle>
@@ -284,7 +303,10 @@ export function MyReviews() {
           </DialogHeader>
           {editing && (
             <ReviewForm
-              initialValues={{ rating: editing.rating, reviewText: editing.reviewText }}
+              initialValues={{
+                rating: editing.rating,
+                reviewText: editing.reviewText,
+              }}
               submitLabel="Save changes"
               onCancel={() => setEditing(null)}
               onSubmit={(values) => handleEdit(editing._id, values)}
@@ -314,7 +336,11 @@ export function MyReviews() {
             >
               Keep review
             </Button>
-            <Button variant="destructive" onClick={handleDeleteReview} disabled={mutating}>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteReview}
+              disabled={mutating}
+            >
               {mutating ? "Deleting…" : "Delete review"}
             </Button>
           </DialogFooter>

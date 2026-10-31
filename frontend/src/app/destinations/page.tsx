@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { DestinationClient } from "@/app/destinations/_components/destination-client";
 import { api, Destination } from "@/lib/api";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Explore Destinations",
   description:

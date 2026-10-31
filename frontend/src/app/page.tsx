@@ -20,8 +20,17 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
-import { api, ContinentStat, Destination, destinationHref } from "@/lib/api";
+import {
+  api,
+  ContinentStat,
+  Destination,
+  destinationHref,
+  shouldBypassImageOptimization,
+} from "@/lib/api";
 import { FavoriteButton } from "@/components/favorite-button";
+
+// Always render with fresh backend data in production as well as in dev.
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Destino AI — Discover & Plan Trips",
@@ -136,6 +145,7 @@ export default async function Page() {
                       src={heroDestination.imageUrls[0]}
                       alt={heroDestination.name}
                       fill
+                      unoptimized={shouldBypassImageOptimization(heroDestination.imageUrls[0])}
                       priority
                       sizes="(max-width: 1024px) 100vw, 1620px"
                       className="object-cover transition-transform duration-700 group-hover:scale-105"
@@ -212,6 +222,7 @@ export default async function Page() {
                         src={destination.imageUrls[0]}
                         alt={destination.name}
                         fill
+                        unoptimized={shouldBypassImageOptimization(destination.imageUrls[0])}
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                         className="object-cover transition-transform duration-500 group-hover:scale-105"
                       />

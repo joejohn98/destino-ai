@@ -12,7 +12,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FavoriteButton } from "@/components/favorite-button";
-import { Destination, destinationHref } from "@/lib/api";
+import {
+  Destination,
+  destinationHref,
+  shouldBypassImageOptimization,
+} from "@/lib/api";
 
 export function DestinationCard({ destination }: { destination: Destination }) {
   return (
@@ -32,6 +36,7 @@ export function DestinationCard({ destination }: { destination: Destination }) {
                 src={destination.imageUrls[0]}
                 alt={destination.name}
                 fill
+                unoptimized={shouldBypassImageOptimization(destination.imageUrls[0])}
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 className="object-cover transition-transform duration-500 group-hover:scale-105"
               />
