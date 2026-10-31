@@ -47,6 +47,29 @@ export const deleteProfile: RequestHandler = catchAsync(async (req, res) => {
   });
 });
 
+export const getMyReviews: RequestHandler = catchAsync(async (req, res) => {
+  const page = Math.max(parseInt(String(req.query.page || "1"), 10) || 1, 1);
+  const limit = Math.min(
+    Math.max(parseInt(String(req.query.limit || "12"), 10) || 12, 1),
+    50,
+  );
+
+  const result = await userService.getMyReviews(
+    getAuthenticatedUserId(req.user?._id.toString()),
+    page,
+    limit,
+  );
+
+  res.status(200).json({
+    status: "success",
+    results: result.data.length,
+    totalReviews: result.totalReviews,
+    totalPages: result.totalPages,
+    currentPage: result.currentPage,
+    data: result.data,
+  });
+});
+
 export const getFavorites: RequestHandler = catchAsync(async (req, res) => {
   const page = Math.max(parseInt(String(req.query.page || "1"), 10) || 1, 1);
   const limit = Math.min(

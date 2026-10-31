@@ -41,7 +41,8 @@ export const getCountry: RequestHandler = catchAsync(async (req, res) => {
 export const createCountry: RequestHandler = catchAsync(async (req, res) => {
   const continentId = req.params.continentId as string;
 
-  let { name, description, imageUrl } = req.body;
+  let { name, description } = req.body;
+  let imageUrl: string | undefined = req.body.imageUrl;
 
   if (!isValidObjectId(continentId)) {
     throw new AppError("Invalid continent ID", 400);
@@ -80,7 +81,8 @@ export const updateCountry: RequestHandler = catchAsync(
       throw new AppError("Invalid country ID", 400);
     }
 
-    let { name, description, imageUrl } = req.body;
+    let { name, description } = req.body;
+    let imageUrl: string | undefined = req.body.imageUrl;
 
     if (req.file) {
       const uploadRes = await uploadImageStream(req.file.buffer, "countries");

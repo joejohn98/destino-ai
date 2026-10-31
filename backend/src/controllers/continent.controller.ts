@@ -41,7 +41,8 @@ export const getContinent: RequestHandler = catchAsync(
 
 export const createContinent: RequestHandler = catchAsync(
   async (req: Request, res: Response) => {
-    let { name, description, imageUrl } = req.body;
+    let { name, description } = req.body;
+    let imageUrl: string | undefined = req.body.imageUrl;
 
     if (req.file) {
       const uploadRes = await uploadImageStream(req.file.buffer, "continents");
@@ -77,7 +78,8 @@ export const updateContinent: RequestHandler = catchAsync(
   async (req: Request, res: Response) => {
     const id = req.params.id as string;
 
-    let { name, description, imageUrl } = req.body;
+    let { name, description } = req.body;
+    let imageUrl: string | undefined = req.body.imageUrl;
 
     if (req.file) {
       const uploadRes = await uploadImageStream(req.file.buffer, "continents");

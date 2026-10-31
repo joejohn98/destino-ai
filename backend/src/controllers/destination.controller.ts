@@ -2,6 +2,22 @@ import type { RequestHandler } from "express";
 import destinationService from "../services/destination.service";
 import { catchAsync } from "../utils/catchAsync";
 import { uploadMultipleImageStreams } from "../services/cloudinary.service";
+import { AppError } from "../utils/AppError";
+
+const assertImageLimit = (req: Parameters<RequestHandler>[0]) => {
+  const urlCount = Array.isArray(req.body.images)
+    ? req.body.images.length
+    : req.body.images
+      ? 1
+      : 0;
+  const fileCount =
+    (req.file ? 1 : 0) +
+    (Array.isArray(req.files) ? req.files.length : 0);
+
+  if (urlCount + fileCount > 5) {
+    throw new AppError("At most 5 images are allowed", 400);
+  }
+};
 
 /**
  * GET /api/destinations
@@ -212,6 +228,7 @@ export const getDestinationBySlug: RequestHandler = catchAsync(
  * Create a new destination (Admin only)
  */
 export const createDestination: RequestHandler = catchAsync(async (req, res) => {
+  assertImageLimit(req);
   let images = req.body.images || [];
   if (typeof images === "string") images = [images];
 
@@ -242,6 +259,7 @@ export const createDestination: RequestHandler = catchAsync(async (req, res) => 
  * Update an existing destination (Admin only)
  */
 export const updateDestination: RequestHandler = catchAsync(async (req, res) => {
+  assertImageLimit(req);
   let images = req.body.images;
 
   if (images !== undefined) {
