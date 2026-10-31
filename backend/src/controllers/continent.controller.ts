@@ -4,7 +4,7 @@ import { catchAsync } from "../utils/catchAsync";
 import continentService from "../services/continent.service";
 import { AppError } from "../utils/AppError";
 import { isValidObjectId } from "../utils/validation";
-import { uploadImageStream } from "../services/cloudinary.service";
+import { uploadImageStream, uploadUrlToCloudinary } from "../services/cloudinary.service";
 import { CreateContinentInput, UpdateContinentInput } from "../validators/continent.validators";
 
 export const getAllContinents: RequestHandler = catchAsync(
@@ -44,21 +44,29 @@ export const createContinent: RequestHandler = catchAsync(
     let { name, description } = req.body;
     let imageUrl: string | undefined = req.body.imageUrl;
 
-    if (req.file) {
-      const uploadRes = await uploadImageStream(req.file.buffer, "continents");
-      imageUrl = uploadRes.url;
-    }
-
-    if (!imageUrl) {
+    if (!req.file && !imageUrl) {
       throw new AppError(
         "An image is required (either upload a file or provide an imageUrl)",
         400,
       );
     }
 
+    if (req.file) {
+      const uploadRes = await uploadImageStream(req.file.buffer, "continents");
+      imageUrl = uploadRes.url;
+    } else if (imageUrl) {
+      // User-supplied URL image — re-host on Cloudinary instead of storing the raw URL.
+      const uploaded = await uploadUrlToCloudinary(
+        imageUrl,
+        "continents",
+        "imageUrl",
+      );
+      imageUrl = uploaded.url;
+    }
+
     const payload: CreateContinentInput = {
       name,
-      imageUrl,
+      imageUrl: imageUrl!,
     };
     if (description) {
       payload.description = description;
@@ -77,6 +85,7 @@ export const createContinent: RequestHandler = catchAsync(
 export const updateContinent: RequestHandler = catchAsync(
   async (req: Request, res: Response) => {
     const id = req.params.id as string;
+    if (!isValidObjectId(id)) throw new AppError("Invalid Continent ID", 400);
 
     let { name, description } = req.body;
     let imageUrl: string | undefined = req.body.imageUrl;
@@ -84,9 +93,15 @@ export const updateContinent: RequestHandler = catchAsync(
     if (req.file) {
       const uploadRes = await uploadImageStream(req.file.buffer, "continents");
       imageUrl = uploadRes.url;
+    } else if (imageUrl) {
+      // User-supplied URL image — re-host on Cloudinary instead of storing the raw URL.
+      const uploaded = await uploadUrlToCloudinary(
+        imageUrl,
+        "continents",
+        "imageUrl",
+      );
+      imageUrl = uploaded.url;
     }
-
-    if (!isValidObjectId(id)) throw new AppError("Invalid Continent ID", 400);
 
     const updatePayload: UpdateContinentInput = {};
     if (name !== undefined) updatePayload.name = name;

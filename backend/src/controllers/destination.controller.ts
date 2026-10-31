@@ -1,8 +1,9 @@
 import type { RequestHandler } from "express";
 import destinationService from "../services/destination.service";
 import { catchAsync } from "../utils/catchAsync";
-import { uploadMultipleImageStreams } from "../services/cloudinary.service";
+import { uploadMultipleImageStreams, uploadUrlToCloudinary } from "../services/cloudinary.service";
 import { AppError } from "../utils/AppError";
+import { isValidObjectId } from "../utils/validation";
 
 const assertImageLimit = (req: Parameters<RequestHandler>[0]) => {
   const urlCount = Array.isArray(req.body.images)
@@ -238,13 +239,25 @@ export const createDestination: RequestHandler = catchAsync(async (req, res) => 
     fileBuffers.push(...req.files.map((f) => f.buffer));
   }
 
+  // 1. Process user-supplied external image URLs (re-hosted on Cloudinary)
+  const urlImages = images.filter((url: unknown): url is string => typeof url === "string");
+  const rehostedResults = await Promise.all(
+    urlImages.map((url: string) =>
+      uploadUrlToCloudinary(url, "destinations", "images")
+    )
+  );
+  const rehostedUrls = rehostedResults.map((r) => r.url);
+
+  // 2. Process file uploads directly
+  let uploadedFileUrls: string[] = [];
   if (fileBuffers.length > 0) {
     const uploadResults = await uploadMultipleImageStreams(fileBuffers, "destinations");
-    const uploadedUrls = uploadResults.map((res) => res.url);
-    images = [...images, ...uploadedUrls];
+    uploadedFileUrls = uploadResults.map((res) => res.url);
   }
 
-  req.body.images = images;
+  // 3. Combine both sources without double-processing uploaded files
+  req.body.images = [...rehostedUrls, ...uploadedFileUrls];
+
   const destination = await destinationService.createDestination(req.body);
 
   res.status(201).json({
@@ -259,14 +272,12 @@ export const createDestination: RequestHandler = catchAsync(async (req, res) => 
  * Update an existing destination (Admin only)
  */
 export const updateDestination: RequestHandler = catchAsync(async (req, res) => {
-  assertImageLimit(req);
-  let images = req.body.images;
-
-  if (images !== undefined) {
-    if (typeof images === "string") images = [images];
-  } else {
-    images = []; // Start with an empty array if undefined but files are uploaded
+  const id = req.params.id as string;
+  if (!isValidObjectId(id)) {
+    throw new AppError("Invalid Destination ID", 400);
   }
+
+  assertImageLimit(req);
 
   let fileBuffers: Buffer[] = [];
   if (req.file) fileBuffers.push(req.file.buffer);
@@ -274,18 +285,33 @@ export const updateDestination: RequestHandler = catchAsync(async (req, res) => 
     fileBuffers.push(...req.files.map((f) => f.buffer));
   }
 
+  let uploadedFileUrls: string[] = [];
   if (fileBuffers.length > 0) {
     const uploadResults = await uploadMultipleImageStreams(fileBuffers, "destinations");
-    const uploadedUrls = uploadResults.map((res) => res.url);
-    images = [...images, ...uploadedUrls];
+    uploadedFileUrls = uploadResults.map((res) => res.url);
   }
 
-  // Only override if we received images in body or files
-  if (req.body.images !== undefined || fileBuffers.length > 0) {
-    req.body.images = images;
+  let finalImages: string[] | undefined = undefined;
+
+  if (req.body.images !== undefined) {
+    const rawImages = Array.isArray(req.body.images) ? req.body.images : [req.body.images];
+    const urlImages = rawImages.filter((url: unknown): url is string => typeof url === "string");
+    // `uploadUrlToCloudinary` short-circuits URLs this account already owns (existing images).
+    const rehostedResults = await Promise.all(
+      urlImages.map((url: string) =>
+        uploadUrlToCloudinary(url, "destinations", "images")
+      )
+    );
+    finalImages = [...rehostedResults.map((r) => r.url), ...uploadedFileUrls];
+  } else if (uploadedFileUrls.length > 0) {
+    finalImages = uploadedFileUrls;
   }
 
-  const destination = await destinationService.updateDestination(req.params.id as string, req.body);
+  if (finalImages !== undefined) {
+    req.body.images = finalImages;
+  }
+
+  const destination = await destinationService.updateDestination(id, req.body);
 
   res.status(200).json({
     status: "success",

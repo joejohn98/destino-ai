@@ -4,7 +4,7 @@ import { catchAsync } from "../utils/catchAsync";
 import countryService from "../services/country.service";
 import { AppError } from "../utils/AppError";
 import { isValidObjectId } from "../utils/validation";
-import { uploadImageStream } from "../services/cloudinary.service";
+import { uploadImageStream, uploadUrlToCloudinary } from "../services/cloudinary.service";
 import { CreateCountryInput, UpdateCountryInput } from "../validators/country.validators";
 
 export const getAllCountries: RequestHandler = catchAsync(async (_req, res) => {
@@ -41,26 +41,30 @@ export const getCountry: RequestHandler = catchAsync(async (req, res) => {
 export const createCountry: RequestHandler = catchAsync(async (req, res) => {
   const continentId = req.params.continentId as string;
 
-  let { name, description } = req.body;
-  let imageUrl: string | undefined = req.body.imageUrl;
-
   if (!isValidObjectId(continentId)) {
     throw new AppError("Invalid continent ID", 400);
   }
 
-  if (req.file) {
-    const uploadRes = await uploadImageStream(req.file.buffer, "countries");
-    imageUrl = uploadRes.url;
-  }
+  let { name, description } = req.body;
+  let imageUrl: string | undefined = req.body.imageUrl;
 
-  if (!imageUrl) {
+  if (!req.file && !imageUrl) {
     throw new AppError(
       "An image is required (either upload a file or provide an imageUrl)",
       400,
     );
   }
 
-  const countryData: CreateCountryInput = { name, imageUrl };
+  if (req.file) {
+    const uploadRes = await uploadImageStream(req.file.buffer, "countries");
+    imageUrl = uploadRes.url;
+  } else if (imageUrl) {
+    // User-supplied URL image — re-host on Cloudinary instead of storing the raw URL.
+    const uploaded = await uploadUrlToCloudinary(imageUrl, "countries", "imageUrl");
+    imageUrl = uploaded.url;
+  }
+
+  const countryData: CreateCountryInput = { name, imageUrl: imageUrl! };
   if (description !== undefined) {
     countryData.description = description;
   }
@@ -87,6 +91,10 @@ export const updateCountry: RequestHandler = catchAsync(
     if (req.file) {
       const uploadRes = await uploadImageStream(req.file.buffer, "countries");
       imageUrl = uploadRes.url;
+    } else if (imageUrl) {
+      // User-supplied URL image — re-host on Cloudinary instead of storing the raw URL.
+      const uploaded = await uploadUrlToCloudinary(imageUrl, "countries", "imageUrl");
+      imageUrl = uploaded.url;
     }
 
     const updateData: UpdateCountryInput = {};
