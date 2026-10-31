@@ -3,6 +3,7 @@ import { CATEGORIES, Destination } from "../models/Destination.model";
 import type { Category, IDestination } from "../models/Destination.model";
 import { Country } from "../models/Country.model";
 import { AppError } from "../utils/AppError";
+import { isValidObjectId } from "../utils/validation";
 import { invalidateKeys, withCache } from "../utils/cache";
 import type {
   CreateDestinationInput,
@@ -503,17 +504,25 @@ const getDestinationBySlug = async (
   );
 };
 
+const resolveCountry = async (countryIdentifier: string) => {
+  if (isValidObjectId(countryIdentifier)) {
+    const countryById = await Country.findById(countryIdentifier);
+    if (countryById) return countryById;
+  }
+  const countryRegex = new RegExp(
+    `^${escapeRegex(countryIdentifier)}$`,
+    "i",
+  );
+  return Country.findOne({ name: countryRegex });
+};
+
 const createDestination = async (data: CreateDestinationInput) => {
   const existingDest = await Destination.findOne({ name: data.name });
   if (existingDest) {
     throw new AppError("Destination with this name already exists", 409);
   }
 
-  const countryRegex = new RegExp(
-    `^${escapeRegex(data.location.country)}$`,
-    "i",
-  );
-  const country = await Country.findOne({ name: countryRegex });
+  const country = await resolveCountry(data.location.country);
   if (!country) {
     throw new AppError(`Country '${data.location.country}' not found`, 404);
   }
@@ -574,11 +583,7 @@ const updateDestination = async (id: string, data: UpdateDestinationInput) => {
   if (data.location?.state !== undefined)
     updatePayload["location.state"] = data.location.state;
   if (data.location?.country !== undefined) {
-    const countryRegex = new RegExp(
-      `^${escapeRegex(data.location.country)}$`,
-      "i",
-    );
-    const country = await Country.findOne({ name: countryRegex });
+    const country = await resolveCountry(data.location.country);
     if (!country)
       throw new AppError(`Country '${data.location.country}' not found`, 404);
     updatePayload["location.country"] = country._id;
