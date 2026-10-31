@@ -16,6 +16,7 @@ export interface IUser extends Document {
   isActive: boolean;
   bio?: string;
   favoriteDestinations: mongoose.Types.ObjectId[];
+  reviewCount: number;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -99,6 +100,12 @@ const userSchema = new mongoose.Schema<IUser>(
     favoriteDestinations: {
       type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Destination" }],
       default: [],
+    },
+
+    reviewCount: {
+      type: Number,
+      default: 0,
+      min: [0, "Review count cannot be negative"],
     },
   },
   {

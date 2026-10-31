@@ -71,6 +71,11 @@ const login = async (email: string, password: string, res: Response) => {
 
   const { password: _, __v, ...userData } = user.toObject();
 
+  await User.findOneAndUpdate(
+    { _id: user._id, reviewCount: { $exists: false } },
+    { $set: { reviewCount: 0 } },
+  );
+
   return {
     user: userData,
   };

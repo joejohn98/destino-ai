@@ -1,4 +1,4 @@
-import { Country, Destination, Review } from "../models";
+import { Country, Destination, Review, User } from "../models";
 import aiService from "./ai.service";
 import { AppError } from "../utils/AppError";
 import {
@@ -60,7 +60,7 @@ const createReview = async (
   const { rating, reviewText } = reviewData;
 
   let sentiment: "positive" | "neutral" | "negative" = "neutral";
-  let themes = [];
+  let themes: string[] = [];
 
   try {
     const aiResult = await aiService.analyzeSentiment(reviewText);
@@ -82,6 +82,8 @@ const createReview = async (
     sentiment,
     themes,
   });
+
+  await User.findByIdAndUpdate(userId, { $inc: { reviewCount: 1 } });
 
   return review;
 };
@@ -120,6 +122,12 @@ const deleteReview = async (reviewId: string, userId: string, role: string) => {
 
   // Use findByIdAndDelete so the findOneAnd* hooks in Review.model.ts are triggered and the average rating is updated
   const deletedReview = await Review.findByIdAndDelete(reviewId);
+
+  if (role === "admin" && deletedReview?.user) {
+    await User.findByIdAndUpdate(deletedReview.user, {
+      $inc: { reviewCount: -1 },
+    });
+  }
 
   return deletedReview;
 };

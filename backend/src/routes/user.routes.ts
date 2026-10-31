@@ -4,6 +4,7 @@ import {
   addFavorite,
   deleteProfile,
   getFavorites,
+  getMyReviews,
   getProfile,
   removeFavorite,
   updateProfile,
@@ -21,6 +22,7 @@ userRoutes.patch("/profile", validate(updateProfileSchema), updateProfile);
 userRoutes.delete("/profile", deleteProfile);
 
 userRoutes.get("/favorites", getFavorites);
+userRoutes.get("/reviews", getMyReviews);
 userRoutes.post("/favorites/:destinationId", addFavorite);
 userRoutes.delete("/favorites/:destinationId", removeFavorite);
 

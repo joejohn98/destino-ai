@@ -169,10 +169,53 @@ const removeFavorite = async (userId: string, destinationId: string) => {
   return toIdStrings(user.favoriteDestinations ?? []);
 };
 
+const getMyReviews = async (userId: string, page: number, limit: number) => {
+  const totalReviews = await Review.countDocuments({ user: userId });
+
+  const reviews = await Review.find({ user: userId })
+    .sort({ createdAt: -1 })
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .select("-__v")
+    .populate({
+      path: "destination",
+      select: "name slug location",
+    })
+    .populate({
+      path: "destination.location.country",
+      select: "name slug",
+    })
+    .lean();
+
+  const data = reviews.map((review: any) => {
+    const destination = review.destination;
+    const country = destination?.location?.country;
+    delete review.destination?.location;
+    return {
+      ...review,
+      destination: {
+        _id: destination?._id ?? null,
+        name: destination?.name ?? "Deleted destination",
+        slug: destination?.slug ?? null,
+        countryName: country?.name ?? null,
+        countrySlug: country?.slug ?? null,
+      },
+    };
+  });
+
+  return {
+    data,
+    totalReviews,
+    totalPages: Math.ceil(totalReviews / limit) || 0,
+    currentPage: page,
+  };
+};
+
 export default {
   getProfile,
   updateProfile,
   deleteProfile,
+  getMyReviews,
   getFavorites,
   addFavorite,
   removeFavorite,
