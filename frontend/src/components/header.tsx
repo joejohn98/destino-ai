@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Bookmark, LogOut } from "lucide-react";
+import { ArrowLeft, Bookmark, LayoutDashboard, LogOut, User } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { buttonVariants } from "@/components/ui/button";
@@ -184,10 +184,23 @@ function AccountNav() {
           </DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
+        <DropdownMenuItem render={<Link href="/profile" />}>
+          <User aria-hidden="true" />
+          Profile
+        </DropdownMenuItem>
         <DropdownMenuItem render={<Link href="/favorites" />}>
           <Bookmark aria-hidden="true" />
           Favorites
         </DropdownMenuItem>
+        {user.role === "admin" && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem render={<Link href="/admin" />}>
+              <LayoutDashboard aria-hidden="true" />
+              Admin dashboard
+            </DropdownMenuItem>
+          </>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut}>
           <LogOut aria-hidden="true" />
