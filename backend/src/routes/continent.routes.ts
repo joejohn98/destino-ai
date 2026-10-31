@@ -17,14 +17,16 @@ import { protect, restrictTo } from "../middleware/auth.middleware";
 
 const router = Router();
 
+// Every route in this namespace operates on data and is admin-only.
+// The dashboard relies on this being enforced before any handler runs.
+router.use(protect, restrictTo("admin"));
+
 router.get("/", getAllContinents);
 router.get("/:slug", getContinent);
 
 router.post(
   "/",
   uploadSingle("image"),
-  protect,
-  restrictTo("admin"),
   validate(createContinentSchema),
   createContinent,
 );
@@ -32,12 +34,10 @@ router.post(
 router.put(
   "/:id",
   uploadSingle("image"),
-  protect,
-  restrictTo("admin"),
   validate(updateContinentSchema),
   updateContinent,
 );
 
-router.delete("/:id", protect, restrictTo("admin"), deleteContinent);
+router.delete("/:id", deleteContinent);
 
 export const continentRoutes = router;

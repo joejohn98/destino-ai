@@ -18,15 +18,17 @@ import { protect, restrictTo } from "../middleware/auth.middleware";
 const countryRoutes = Router();
 const continentCountryRoutes = Router({ mergeParams: true });
 
-continentCountryRoutes.get("/", getAllCountries);
+// Every route in this namespace operates on data and is admin-only.
+// The dashboard relies on this being enforced before any handler runs.
+continentCountryRoutes.use(protect, restrictTo("admin"));
+countryRoutes.use(protect, restrictTo("admin"));
 
+continentCountryRoutes.get("/", getAllCountries);
 continentCountryRoutes.get("/:slug", getCountry);
 
 continentCountryRoutes.post(
   "/",
   uploadSingle("image"),
-  protect,
-  restrictTo("admin"),
   validate(createCountrySchema),
   createCountry,
 );
@@ -34,12 +36,10 @@ continentCountryRoutes.post(
 countryRoutes.put(
   "/:id",
   uploadSingle("image"),
-  protect,
-  restrictTo("admin"),
   validate(updateCountrySchema),
   updateCountry,
 );
 
-countryRoutes.delete("/:id", protect, restrictTo("admin"), deleteCountry);
+countryRoutes.delete("/:id", deleteCountry);
 
 export { countryRoutes, continentCountryRoutes };

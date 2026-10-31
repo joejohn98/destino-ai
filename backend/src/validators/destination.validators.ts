@@ -1,5 +1,6 @@
 import z from "zod";
 import { ATTRACTION_CATEGORIES, CATEGORIES } from "../models/Destination.model";
+import { imageUrlSchema } from "./continent.validators";
 
 const attractionSchema = z.object({
   name: z
@@ -13,6 +14,11 @@ const attractionSchema = z.object({
   openingHours: z.string().max(100).trim().optional(),
   category: z.enum(ATTRACTION_CATEGORIES).optional(),
 });
+
+const imagesSchema = z.preprocess(
+  (value) => (typeof value === "string" ? [value] : value),
+  z.array(imageUrlSchema).max(5, "At most 5 images are allowed").optional(),
+);
 
 const createDestinationSchema = z.object({
   name: z
@@ -35,7 +41,7 @@ const createDestinationSchema = z.object({
     message: `Category must be one of: ${CATEGORIES.join(", ")}`,
   }),
   bestTimeToVisit: z.string().trim().optional(),
-  images: z.array(z.url("Invalid image URL")).optional(),
+  images: imagesSchema,
   attractions: z.array(attractionSchema).optional(),
 });
 
@@ -52,7 +58,7 @@ const updateDestinationSchema = z.object({
   continent: z.string().trim().optional(),
   category: z.enum(CATEGORIES).optional(),
   bestTimeToVisit: z.string().trim().optional(),
-  images: z.array(z.url()).optional(),
+  images: imagesSchema,
   attractions: z.array(attractionSchema).optional(),
 });
 
