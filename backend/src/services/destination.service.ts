@@ -19,6 +19,8 @@ const CACHE_KEYS = {
     `api:dest:paginated:p${page}:l${limit}`,
   destBySlug: (countrySlug: string, destSlug: string) =>
     `api:dest:slug:${countrySlug}:${destSlug}`,
+  countryDestinations: (countrySlug: string) =>
+    `api:dest:country:${countrySlug}`,
 } as const;
 
 const AGG_CACHE_TTL = 30 * 60; // 30 minutes
@@ -368,6 +370,7 @@ const getCountriesByContinent = async (
           $group: {
             _id: {
               country: "$countryDoc.name",
+              slug: "$countryDoc.slug",
               continent: "$continentDoc.name",
             },
             destinationCount: { $sum: 1 },
@@ -378,6 +381,7 @@ const getCountriesByContinent = async (
           $project: {
             _id: 0,
             country: "$_id.country",
+            slug: "$_id.slug",
             continent: "$_id.continent",
             destinationCount: 1,
             averageRating: { $round: ["$avgRating", 1] },
@@ -395,10 +399,11 @@ const getCountriesByContinent = async (
 
       const canonicalContinent = stats[0].continent;
       const countries = stats.map(
-        ({ country, destinationCount, averageRating }) => ({
+        ({ country, slug, destinationCount, averageRating }) => ({
           country,
+          slug: slug || country.toLowerCase().replace(/\s+/g, "-"),
           destinationCount,
-          averageRating,
+          averageRating: averageRating || 0,
         }),
       );
 
@@ -681,6 +686,62 @@ const deleteDestination = async (id: string) => {
   return deletedDest;
 };
 
+const getDestinationsByCountrySlug = async (rawCountrySlug: string) => {
+  const countrySlug = decodeURIComponent(rawCountrySlug).trim().toLowerCase();
+
+  return withCache(
+    CACHE_KEYS.countryDestinations(countrySlug),
+    DETAIL_CACHE_TTL,
+    async () => {
+      const country = await Country.findOne({ slug: countrySlug })
+        .populate({
+          path: "continent",
+          select: "name slug",
+        })
+        .lean();
+
+      if (!country) {
+        throw new AppError(`Country '${countrySlug}' not found`, 404);
+      }
+
+      const destinations = await Destination.find({
+        "location.country": country._id,
+      })
+        .select("-reviews -__v")
+        .sort({ averageRating: -1, name: 1 })
+        .lean();
+
+      const continentObj = country.continent as any;
+      const continentName = continentObj?.name ?? "";
+      const continentSlug = continentObj?.slug ?? "";
+
+      return {
+        country: {
+          _id: country._id,
+          name: country.name,
+          slug: country.slug,
+          description: country.description,
+          imageUrl: country.imageUrl,
+          continent: continentName,
+          continentSlug,
+        },
+        destinations: destinations.map((dest) => ({
+          ...dest,
+          location: {
+            city: dest.location?.city,
+            state: dest.location?.state,
+            country: country.name,
+            countrySlug: country.slug,
+          },
+          continent: continentName,
+          continentSlug,
+        })),
+        totalDestinations: destinations.length,
+      };
+    },
+  );
+};
+
 export default {
   getPaginatedDestinations,
   searchDestinations,
@@ -693,6 +754,7 @@ export default {
   getDestinationByName,
   getDestinationByIdOrSlug: getDestinationByName,
   getDestinationBySlug,
+  getDestinationsByCountrySlug,
   createDestination,
   updateDestination,
   deleteDestination,

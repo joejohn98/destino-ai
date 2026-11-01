@@ -9,7 +9,10 @@ import { authRoutes } from "./routes/auth.routes";
 import { continentRoutes } from "./routes/continent.routes";
 import { continentCountryRoutes, countryRoutes } from "./routes/country.routes";
 import { destinationReviewRoutes, reviewRoutes } from "./routes/review.routes";
-import { getDestinationBySlug } from "./controllers/destination.controller";
+import {
+  getDestinationBySlug,
+  getDestinationsByCountrySlug,
+} from "./controllers/destination.controller";
 import { userRoutes } from "./routes/user.routes";
 import aiRoutes from "./routes/ai.routes";
 import agentRoutes from "./routes/agent.routes";
@@ -39,6 +42,12 @@ app.use(passport.initialize());
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/destinations", destinationRouter);
+
+// Canonical country destinations: resolves all destinations belonging to a country.
+app.get(
+  "/api/countries/:countrySlug/destinations",
+  getDestinationsByCountrySlug,
+);
 
 // Canonical destination detail: resolves unambiguously via the compound unique index.
 app.get(

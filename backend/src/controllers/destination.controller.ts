@@ -208,6 +208,25 @@ export const getDestinationByName: RequestHandler = catchAsync(
  * Resolves via the compound unique index { location.country, slug }
  * so slug collisions across countries are impossible.
  */
+/**
+ * GET /api/countries/:countrySlug/destinations
+ * Canonical country destinations endpoint.
+ * Returns all verified destinations belonging to the country.
+ */
+export const getDestinationsByCountrySlug: RequestHandler = catchAsync(
+  async (req, res) => {
+    const countrySlug = String(req.params.countrySlug || "");
+    const result = await destinationService.getDestinationsByCountrySlug(
+      countrySlug
+    );
+
+    res.status(200).json({
+      status: "success",
+      data: result,
+    });
+  }
+);
+
 export const getDestinationBySlug: RequestHandler = catchAsync(
   async (req, res) => {
     const countrySlug = String(req.params.countrySlug || "");
