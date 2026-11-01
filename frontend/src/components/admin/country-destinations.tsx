@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, ExternalLink, RefreshCw, Loader2, Trash2, Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -22,7 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { api, type AdminContinent, type AdminCountryItem, type Destination } from "@/lib/api";
+import { api, destinationHref, type AdminContinent, type AdminCountryDetail, type AdminCountryItem, type Destination } from "@/lib/api";
 
 interface CountryDestProps {
   continentSlug: string;
@@ -31,7 +32,7 @@ interface CountryDestProps {
 
 interface CountryInfo {
   continent: string;
-  country: AdminCountryItem | null;
+  country: AdminCountryDetail | AdminCountryItem | null;
 }
 
 export function AdminCountryDestinations({
@@ -56,34 +57,27 @@ export function AdminCountryDestinations({
     // Cancellation guard — prevents setState on an unmounted component.
     let cancelled = false;
 
-    // Single call for the continent (includes its countries list).
+    // Fetch the country and its destinations directly via the admin endpoint.
     // Separately fetch all continents for the DestinationForm country dropdown.
     Promise.all([
-      api.getAdminContinent(continentSlug),
+      api.getAdminCountry(continentSlug, countrySlug),
       api.getAdminContinents(),
     ])
-      .then(([single, all]) => {
+      .then(([countryRes, allContinentsRes]) => {
         if (cancelled) return;
 
-        const continent = single.data;
-        const countryItem =
-          continent?.countries.find((c) => c.slug === countrySlug) ?? null;
+        const countryData = countryRes.data;
+        const continentObj =
+          typeof countryData.continent === "object" && countryData.continent !== null
+            ? countryData.continent
+            : null;
 
         setCountry({
-          continent: continent?.name ?? continentSlug,
-          country: countryItem,
+          continent: continentObj?.name ?? continentSlug,
+          country: countryData,
         });
-        setContinents(all.data);
-
-        const countryName = countryItem?.name;
-        if (countryName) {
-          return api.getDestinations({ location: countryName, limit: 100 });
-        }
-        return null;
-      })
-      .then((res) => {
-        if (cancelled) return;
-        setDestinations(res?.data ?? []);
+        setContinents(allContinentsRes.data ?? []);
+        setDestinations(countryData.destinations ?? []);
       })
       .catch(() => {
         if (cancelled) return;
@@ -101,6 +95,15 @@ export function AdminCountryDestinations({
   useEffect(() => {
     return load();
   }, [load]);
+
+  const handleEdit = async (dest: Destination) => {
+    try {
+      const res = await api.getDestinationById(dest._id);
+      setEditing(res.data);
+    } catch {
+      setEditing(dest);
+    }
+  };
 
   const handleDelete = async () => {
     if (!pendingDelete) return;
@@ -223,8 +226,15 @@ export function AdminCountryDestinations({
           >
             <div className="h-20 w-full shrink-0 overflow-hidden rounded-lg bg-canvas sm:w-28">
               {dest.imageUrls?.[0] ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={dest.imageUrls[0]} alt="" className="size-full object-cover" />
+                <div className="relative size-full">
+                  <Image
+                    src={dest.imageUrls[0]}
+                    alt={dest.name}
+                    fill
+                    sizes="112px"
+                    className="object-cover"
+                  />
+                </div>
               ) : null}
             </div>
             <div className="min-w-0 flex-1">
@@ -241,7 +251,7 @@ export function AdminCountryDestinations({
               </p>
             </div>
             <div className="flex flex-wrap items-center justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => setEditing(dest)}>
+              <Button variant="outline" size="sm" onClick={() => handleEdit(dest)}>
                 <Pencil aria-hidden="true" />
                 Edit
               </Button>
@@ -249,7 +259,13 @@ export function AdminCountryDestinations({
                 variant="outline"
                 size="sm"
                 nativeButton={false}
-                render={<Link href={`/destinations/${encodeURIComponent(dest.slug)}`} />}
+                render={
+                  <Link
+                    href={destinationHref(dest, countrySlug)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  />
+                }
               >
                 <ExternalLink aria-hidden="true" />
                 View

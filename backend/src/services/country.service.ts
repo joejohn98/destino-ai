@@ -1,32 +1,59 @@
 import { Continent, Country, Destination, Review } from "../models";
 import { AppError } from "../utils/AppError";
 import { invalidateKeys } from "../utils/cache";
+import { isValidObjectId } from "../utils/validation";
 import type {
   CreateCountryInput,
   UpdateCountryInput,
 } from "../validators/country.validators";
 
-const getAllCountries = async (continentId: string) => {
-  const countries = await Country.find({ continent: continentId })
+const resolveContinent = async (continentIdOrSlug: string) => {
+  if (!continentIdOrSlug) {
+    throw new AppError("Continent identifier is required", 400);
+  }
+  const query = isValidObjectId(continentIdOrSlug)
+    ? { _id: continentIdOrSlug }
+    : { slug: continentIdOrSlug.toLowerCase() };
+
+  const continent = await Continent.findOne(query);
+  if (!continent) {
+    throw new AppError("Continent not found", 404);
+  }
+  return continent;
+};
+
+const getAllCountries = async (continentIdOrSlug: string) => {
+  const continent = await resolveContinent(continentIdOrSlug);
+
+  const countries = await Country.find({ continent: continent._id })
     .select("-__v")
     .populate({
       path: "continent",
-      select: "_id name",
+      select: "_id name slug",
     })
     .populate({
       path: "destinations",
-      select: "_id name",
+      select: "_id name slug",
     })
     .lean();
 
   return countries;
 };
 
-const getCountry = async (continentId: string, slug: string) => {
-  const country = await Country.findOne({ slug, continent: continentId })
+const getCountry = async (continentIdOrSlug: string, slug: string) => {
+  const continent = await resolveContinent(continentIdOrSlug);
+
+  const country = await Country.findOne({
+    slug: slug.toLowerCase(),
+    continent: continent._id,
+  })
     .populate({
       path: "destinations",
-      select: "_id name",
+      select: "-__v",
+    })
+    .populate({
+      path: "continent",
+      select: "_id name slug",
     })
     .lean();
 
@@ -37,15 +64,12 @@ const getCountry = async (continentId: string, slug: string) => {
 };
 
 const createCountry = async (
-  continentId: string,
+  continentIdOrSlug: string,
   countryData: CreateCountryInput,
 ) => {
   const { name, description, imageUrl } = countryData;
 
-  const continent = await Continent.findById(continentId);
-  if (!continent) {
-    throw new AppError("Continent not found with that ID", 404);
-  }
+  const continent = await resolveContinent(continentIdOrSlug);
 
   const existingCountry = await Country.findOne({ name });
 

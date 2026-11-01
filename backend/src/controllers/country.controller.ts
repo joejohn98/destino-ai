@@ -10,8 +10,8 @@ import { CreateCountryInput, UpdateCountryInput } from "../validators/country.va
 export const getAllCountries: RequestHandler = catchAsync(async (_req, res) => {
   const continentId = _req.params.continentId as string;
 
-  if (!isValidObjectId(continentId)) {
-    throw new AppError("Invalid continent ID", 400);
+  if (!continentId) {
+    throw new AppError("Continent ID or slug is required", 400);
   }
 
   const countries = await countryService.getAllCountries(continentId);
@@ -26,8 +26,8 @@ export const getCountry: RequestHandler = catchAsync(async (req, res) => {
   const continentId = req.params.continentId as string;
   const slug = req.params.slug as string;
 
-  if (!isValidObjectId(continentId)) {
-    throw new AppError("Invalid continent ID", 400);
+  if (!continentId) {
+    throw new AppError("Continent ID or slug is required", 400);
   }
 
   const country = await countryService.getCountry(continentId, slug);
@@ -41,8 +41,8 @@ export const getCountry: RequestHandler = catchAsync(async (req, res) => {
 export const createCountry: RequestHandler = catchAsync(async (req, res) => {
   const continentId = req.params.continentId as string;
 
-  if (!isValidObjectId(continentId)) {
-    throw new AppError("Invalid continent ID", 400);
+  if (!continentId) {
+    throw new AppError("Continent ID or slug is required", 400);
   }
 
   let { name, description } = req.body;

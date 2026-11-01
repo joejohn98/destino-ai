@@ -407,13 +407,19 @@ const getCountriesByContinent = async (
   );
 };
 
-const getDestinationByName = async (rawName: string): Promise<any> => {
-  const nameParam = decodeURIComponent(rawName).trim();
-  const regex = new RegExp(`^${escapeRegex(nameParam)}$`, "i");
+const getDestinationByName = async (rawIdentifier: string): Promise<any> => {
+  const param = decodeURIComponent(rawIdentifier).trim();
 
-  const destination = await Destination.findOne({
-    $or: [{ name: regex }, { slug: nameParam.toLowerCase() }],
-  })
+  const query = isValidObjectId(param)
+    ? { _id: param }
+    : {
+        $or: [
+          { name: new RegExp(`^${escapeRegex(param)}$`, "i") },
+          { slug: param.toLowerCase() },
+        ],
+      };
+
+  const destination = await Destination.findOne(query)
     .populate({
       path: "location.country",
       select: "name slug",
@@ -685,6 +691,7 @@ export default {
   getContinentStats,
   getCountriesByContinent,
   getDestinationByName,
+  getDestinationByIdOrSlug: getDestinationByName,
   getDestinationBySlug,
   createDestination,
   updateDestination,

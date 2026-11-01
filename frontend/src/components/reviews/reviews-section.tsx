@@ -96,9 +96,10 @@ export function ReviewsSection({
     }
   };
 
-  const signInHref = `/signin?next=${encodeURIComponent(
-    `/destinations/${destinationSlug}${countrySlug ? `?country=${countrySlug}` : ""}`,
-  )}`;
+  const destPath = countrySlug
+    ? `/destinations/${encodeURIComponent(countrySlug)}/${encodeURIComponent(destinationSlug)}`
+    : `/destinations/${encodeURIComponent(destinationSlug)}`;
+  const signInHref = `/signin?next=${encodeURIComponent(destPath)}`;
 
   return (
     <section aria-labelledby="reviews-heading" className="mt-14">

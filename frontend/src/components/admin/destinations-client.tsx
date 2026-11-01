@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import {
   ExternalLink,
@@ -35,7 +36,7 @@ import {
   FieldControl,
   FieldLabel,
 } from "@/components/ui/field";
-import { api, type AdminContinent, type Destination } from "@/lib/api";
+import { api, destinationHref, type AdminContinent, type Destination } from "@/lib/api";
 
 const CATEGORIES = [
   { value: "all", label: "All" },
@@ -122,6 +123,15 @@ export function AdminDestinationsHome() {
       if (cleanup) cleanup();
     };
   }, [load, page, search]);
+
+  const handleEdit = async (dest: Destination) => {
+    try {
+      const res = await api.getDestinationById(dest._id);
+      setEditing(res.data);
+    } catch {
+      setEditing(dest);
+    }
+  };
 
   const handleDelete = async () => {
     if (!pendingDelete) return;
@@ -231,8 +241,15 @@ export function AdminDestinationsHome() {
           <Card key={dest._id} variant="app" className="gap-3 p-4 sm:flex-row sm:items-center">
             <div className="h-20 w-full shrink-0 overflow-hidden rounded-lg bg-canvas sm:w-28">
               {dest.imageUrls?.[0] ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={dest.imageUrls[0]} alt="" className="size-full object-cover" />
+                <div className="relative size-full">
+                  <Image
+                    src={dest.imageUrls[0]}
+                    alt={dest.name}
+                    fill
+                    sizes="112px"
+                    className="object-cover"
+                  />
+                </div>
               ) : null}
             </div>
 
@@ -259,7 +276,7 @@ export function AdminDestinationsHome() {
             </div>
 
             <div className="flex flex-wrap items-center justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => setEditing(dest)}>
+              <Button variant="outline" size="sm" onClick={() => handleEdit(dest)}>
                 <Pencil aria-hidden="true" />
                 Edit
               </Button>
@@ -267,7 +284,13 @@ export function AdminDestinationsHome() {
                 variant="outline"
                 size="sm"
                 nativeButton={false}
-                render={<Link href={`/destinations/${encodeURIComponent(dest.slug)}`} />}
+                render={
+                  <Link
+                    href={destinationHref(dest)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  />
+                }
               >
                 <ExternalLink aria-hidden="true" />
                 View

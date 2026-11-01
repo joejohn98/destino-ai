@@ -56,10 +56,10 @@ export function destinationHref(
   destination: Destination,
   countrySlug = destination.location?.countrySlug,
 ): string {
-  const href = `/destinations/${encodeURIComponent(destination.slug || destination._id)}`;
-  return countrySlug && destination.slug
-    ? `${href}?country=${encodeURIComponent(countrySlug)}`
-    : href;
+  if (countrySlug && destination.slug) {
+    return `/destinations/${encodeURIComponent(countrySlug)}/${encodeURIComponent(destination.slug)}`;
+  }
+  return `/destinations/${encodeURIComponent(destination.slug || destination._id)}`;
 }
 
 const nextOptimizedImageHosts = new Set([
@@ -233,12 +233,29 @@ export interface AdminCountryItem {
   _id: string;
   name: string;
   slug: string;
-  continent: string;
-  destinations: AdminDestShort[];
+  continent: string | { _id: string; name: string; slug: string };
+  destinations: AdminDestShort[] | Destination[];
   destinationCount?: number;
   /** Present when the country is fetched via the full /countries admin route. */
   imageUrl?: string;
   description?: string;
+}
+
+export interface AdminCountryDetail {
+  _id: string;
+  name: string;
+  slug: string;
+  imageUrl?: string;
+  description?: string;
+  continent: {
+    _id: string;
+    name: string;
+    slug: string;
+  } | string;
+  destinations: Destination[];
+  destinationCount?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface AdminContinent {
@@ -625,6 +642,16 @@ export const api = {
   },
 
   // ─── Country Admin Endpoints ────────────────────────────────────────────────
+  async getAdminCountry(
+    continentIdOrSlug: string,
+    countrySlug: string,
+  ): Promise<{ status: string; data: AdminCountryDetail }> {
+    return fetchApi<{ status: string; data: AdminCountryDetail }>(
+      `/api/admin/continents/${encodeURIComponent(continentIdOrSlug)}/countries/${encodeURIComponent(countrySlug)}`,
+      { credentials: "include" },
+    );
+  },
+
   async getAdminCountries(continentId: string): Promise<{ status: string; results?: number; data: AdminCountryItem[] }> {
     return fetchApi<{ status: string; results?: number; data: AdminCountryItem[] }>(
       `/api/admin/continents/${encodeURIComponent(continentId)}/countries`,
@@ -741,6 +768,14 @@ export const api = {
   ): Promise<SingleDestinationResponse> {
     return fetchApi<SingleDestinationResponse>(
       `/api/destinations/${encodeURIComponent(nameOrSlug)}`,
+    );
+  },
+
+  async getDestinationById(
+    id: string,
+  ): Promise<SingleDestinationResponse> {
+    return fetchApi<SingleDestinationResponse>(
+      `/api/destinations/${encodeURIComponent(id)}`,
     );
   },
 

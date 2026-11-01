@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { ImagePlus, Link2, Trash2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -84,14 +85,16 @@ function ImageThumb({
             </p>
           </div>
         ) : (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={src}
-            alt={alt}
-            loading="lazy"
-            onError={() => setErroredSrc(src)}
-            className="size-full object-cover"
-          />
+          <div className="relative size-full">
+            <Image
+              src={src}
+              alt={alt}
+              fill
+              sizes="112px"
+              className="object-cover"
+              onError={() => setErroredSrc(src)}
+            />
+          </div>
         )}
         {pending && (
           <span className="absolute bottom-1 left-1 rounded-sm bg-primary/80 px-1 py-0.5 text-[10px] font-semibold text-primary-foreground">
