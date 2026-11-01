@@ -113,12 +113,16 @@ export default async function ContinentDetailPage({ params }: ContinentPageProps
 
           {/* Country Cards Grid */}
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {countriesList.map((countryItem) => (
-              <Link
-                key={countryItem.country}
-                href={`/destinations?location=${encodeURIComponent(countryItem.country)}`}
-                className="group block rounded-marketing focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
-              >
+            {countriesList.map((countryItem) => {
+              const countrySlug =
+                countryItem.slug ||
+                countryItem.country.toLowerCase().replace(/\s+/g, "-");
+              return (
+                <Link
+                  key={countryItem.country}
+                  href={`/continents/${encodeURIComponent(continent)}/countries/${encodeURIComponent(countrySlug)}`}
+                  className="group block rounded-marketing focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+                >
                 <Card
                   variant="editorial"
                   className="h-full transition-transform duration-300 group-hover:-translate-y-1 motion-reduce:transition-none"
@@ -163,7 +167,8 @@ export default async function ContinentDetailPage({ params }: ContinentPageProps
                   </CardFooter>
                 </Card>
               </Link>
-            ))}
+              );
+            })}
           </div>
         </section>
       </main>

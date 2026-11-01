@@ -55,7 +55,14 @@ export interface Destination {
 export function destinationHref(
   destination: Destination,
   countrySlug = destination.location?.countrySlug,
+  continentSlug = destination.continentSlug ||
+    (destination.continent
+      ? destination.continent.toLowerCase().replace(/\s+/g, "-")
+      : undefined),
 ): string {
+  if (continentSlug && countrySlug && destination.slug) {
+    return `/continents/${encodeURIComponent(continentSlug)}/countries/${encodeURIComponent(countrySlug)}/${encodeURIComponent(destination.slug)}`;
+  }
   if (countrySlug && destination.slug) {
     return `/destinations/${encodeURIComponent(countrySlug)}/${encodeURIComponent(destination.slug)}`;
   }
@@ -124,8 +131,28 @@ export interface ContinentStat {
 
 export interface CountryContinentStat {
   country: string;
+  slug?: string;
   destinationCount: number;
   averageRating: number;
+}
+
+export interface CountryDestinationsData {
+  country: {
+    _id: string;
+    name: string;
+    slug: string;
+    description?: string;
+    imageUrl?: string;
+    continent: string;
+    continentSlug: string;
+  };
+  destinations: Destination[];
+  totalDestinations: number;
+}
+
+export interface CountryDestinationsResponse {
+  status: string;
+  data: CountryDestinationsData;
 }
 
 export interface PaginatedDestinationsResponse {
@@ -779,6 +806,14 @@ export const api = {
     );
   },
 
+  async getCountryDestinations(
+    countrySlug: string,
+  ): Promise<CountryDestinationsResponse> {
+    return fetchApi<CountryDestinationsResponse>(
+      `/api/countries/${encodeURIComponent(countrySlug)}/destinations`,
+    );
+  },
+
   async getCanonicalDestination(
     countrySlug: string,
     destinationSlug: string,
@@ -864,6 +899,7 @@ export const api = {
       {
         method: "POST",
         body: JSON.stringify({ query }),
+        credentials: "include",
         cache: "no-store",
       },
     );
@@ -875,6 +911,7 @@ export const api = {
       {
         method: "POST",
         body: JSON.stringify({ query }),
+        credentials: "include",
         cache: "no-store",
       },
     );
