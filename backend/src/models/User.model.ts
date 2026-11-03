@@ -13,7 +13,6 @@ export interface IUser extends Document {
   }[];
   role: "user" | "admin";
   avatarUrl?: string;
-  isActive: boolean;
   bio?: string;
   favoriteDestinations: mongoose.Types.ObjectId[];
   reviewCount: number;
@@ -86,10 +85,6 @@ const userSchema = new mongoose.Schema<IUser>(
       default: undefined,
     },
 
-    isActive: {
-      type: Boolean,
-      default: true,
-    },
     bio: {
       type: String,
       maxlength: [500, "Bio cannot exceed 500 characters"],
