@@ -573,16 +573,15 @@ Intercity total = `(destinations.length - 1) * rate.intercityTransport * travell
 
 ## 11. Redis Cache Keys Catalog
 
-Defined inside `src/services/destination.service.ts` as local constant `CACHE_KEYS` (not exported).
+Defined in `src/utils/cache.ts` as exported constant `CACHE_KEYS` along with `AGG_CACHE_TTL`, `LISTING_CACHE_TTL`, and `DETAIL_CACHE_TTL`.
 
 | Key Pattern | TTL | Invalidated by |
 |-------------|-----|----------------|
 | `agg:continent:stats` | 30 min | Any destination/country/continent write |
-| `agg:continent:{slug}:countries` | 30 min | Same |
-| `api:dest:paginated:p{n}:l{n}` | 3 min | Destination create/update/delete (only p1 variants are cleared — known bug) |
-| `api:dest:slug:{countrySlug}:{destSlug}` | 10 min | Destination update/delete |
-
-**Known bug:** `continent.service.ts` and `country.service.ts` hardcode `"agg:continent:stats"` as a string literal instead of referencing the constant — works currently but fragile.
+| `agg:continent:{slug}:countries` | 30 min | Continent/country writes |
+| `api:dest:paginated:p{n}:l{n}` | 3 min | Destination create/update/delete, review mutations (pattern: `api:dest:paginated:*`) |
+| `api:dest:slug:{countrySlug}:{destSlug}` | 10 min | Destination update/delete, review create/update/delete |
+| `api:dest:country:{countrySlug}` | 10 min | Destination and country write operations |
 
 ---
 
