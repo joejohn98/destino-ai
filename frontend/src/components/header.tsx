@@ -32,9 +32,7 @@ export function Header() {
       ? { href: "/", label: "Back home" }
       : pathname.startsWith("/continents/")
         ? { href: "/continents", label: "All regions" }
-        : pathname.startsWith("/destinations/")
-          ? { href: "/destinations", label: "All destinations" }
-          : undefined;
+        : undefined;
 
   return (
     <header className="bg-cream">

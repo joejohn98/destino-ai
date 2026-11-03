@@ -86,17 +86,12 @@ export default async function DestinationDetailPage({
     // Reviews might be empty
   }
 
-  // Fetch related destinations in same country or category
+  // Fetch related destinations from the same canonical country
   try {
-    if (destination.location?.country) {
-      const relatedRes = await api.getDestinations({
-        limit: 4,
-        location: destination.location.country,
-      });
-      relatedDestinations = (relatedRes.data || [])
-        .filter((d) => d._id !== destination?._id)
-        .slice(0, 3);
-    }
+    const countryRes = await api.getCountryDestinations(countrySlug);
+    relatedDestinations = (countryRes.data?.destinations || [])
+      .filter((d) => d._id !== destination?._id)
+      .slice(0, 3);
   } catch {
     // ignore
   }
