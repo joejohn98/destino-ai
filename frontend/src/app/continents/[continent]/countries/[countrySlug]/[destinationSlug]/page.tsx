@@ -66,6 +66,8 @@ export default async function DestinationDetailPage({
 
   let destination: Destination | null = null;
   let reviews: Review[] = [];
+  let totalReviews = 0;
+  let totalReviewPages = 0;
   let relatedDestinations: Destination[] = [];
 
   try {
@@ -82,6 +84,8 @@ export default async function DestinationDetailPage({
   try {
     const reviewRes = await api.getDestinationReviews(countrySlug, destinationSlug);
     reviews = reviewRes.data || [];
+    totalReviews = reviewRes.totalReviews ?? reviews.length;
+    totalReviewPages = reviewRes.totalPages ?? 0;
   } catch {
     // Reviews might be empty
   }
@@ -422,6 +426,8 @@ export default async function DestinationDetailPage({
             countrySlug={countrySlug}
             destinationSlug={destination.slug}
             initialReviews={reviews}
+            initialTotalReviews={totalReviews}
+            initialTotalPages={totalReviewPages}
           />
 
           {/* Related Destinations */}

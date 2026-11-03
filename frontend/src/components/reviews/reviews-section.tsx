@@ -27,21 +27,32 @@ interface ReviewsSectionProps {
   countrySlug?: string;
   destinationSlug: string;
   initialReviews: Review[];
+  initialTotalReviews: number;
+  initialTotalPages: number;
 }
 
+const PAGE_SIZE = 12;
+
 const byNewest = (a: Review, b: Review) =>
-  new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() ||
+  b._id.localeCompare(a._id);
 
 export function ReviewsSection({
   destinationName,
   countrySlug,
   destinationSlug,
   initialReviews,
+  initialTotalReviews,
+  initialTotalPages,
 }: ReviewsSectionProps) {
   const router = useRouter();
   const { user, status } = useAuth();
 
   const [reviews, setReviews] = useState(() => [...initialReviews].sort(byNewest));
+  const [page, setPage] = useState(1);
+  const [totalReviews, setTotalReviews] = useState(initialTotalReviews);
+  const [totalPages, setTotalPages] = useState(initialTotalPages);
+  const [loadingReviews, setLoadingReviews] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Review | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -54,11 +65,33 @@ export function ReviewsSection({
   // Re-read the list after any change (the API returns the user as an id on
   // create/update), then refresh the server-rendered header so the average
   // rating and review count stay in sync.
-  const reload = async () => {
-    if (countrySlug) {
-      const res = await api.getDestinationReviews(countrySlug, destinationSlug);
+  const loadReviews = async (requestedPage: number) => {
+    if (!countrySlug) return;
+
+    setLoadingReviews(true);
+    try {
+      const res = await api.getDestinationReviews(countrySlug, destinationSlug, {
+        page: requestedPage,
+        limit: PAGE_SIZE,
+      });
       setReviews([...(res.data ?? [])].sort(byNewest));
+      setPage(res.currentPage);
+      setTotalReviews(res.totalReviews);
+      setTotalPages(res.totalPages);
+    } catch (error) {
+      toast.error("Couldn't load reviews", {
+        description:
+          error instanceof ApiError
+            ? error.message
+            : "Check your connection and try again.",
+      });
+    } finally {
+      setLoadingReviews(false);
     }
+  };
+
+  const reload = async (requestedPage = page) => {
+    await loadReviews(requestedPage);
     router.refresh();
   };
 
@@ -66,7 +99,7 @@ export function ReviewsSection({
     if (!countrySlug) return;
     await api.createReview(countrySlug, destinationSlug, values);
     toast.success("Thanks for your review!");
-    await reload();
+    await reload(1);
   };
 
   const handleUpdate = async (reviewId: string, values: ReviewFormData) => {
@@ -83,7 +116,11 @@ export function ReviewsSection({
       await api.deleteReview(pendingDelete._id);
       toast.success("Review deleted");
       setPendingDelete(null);
-      await reload();
+      const pageAfterDelete =
+        page > 1 && (page - 1) * PAGE_SIZE >= totalReviews - 1
+          ? page - 1
+          : page;
+      await reload(pageAfterDelete);
     } catch (error) {
       toast.error("Couldn't delete the review", {
         description:
@@ -116,7 +153,7 @@ export function ReviewsSection({
           </h2>
         </div>
         <span className="text-sm text-muted-foreground">
-          {reviews.length} {reviews.length === 1 ? "review" : "reviews"} recorded
+          {totalReviews} {totalReviews === 1 ? "review" : "reviews"} recorded
         </span>
       </div>
 
@@ -311,6 +348,38 @@ export function ReviewsSection({
             Be among the first explorers to share verified impressions.
           </p>
         </Card>
+      )}
+
+      {totalPages > 1 && (
+        <nav
+          aria-label="Review pages"
+          className="mt-6 flex items-center justify-center gap-3"
+        >
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void loadReviews(page - 1)}
+            disabled={page <= 1 || loadingReviews}
+          >
+            Previous
+          </Button>
+          <span
+            className="min-w-24 text-center text-sm text-muted-foreground"
+            aria-live="polite"
+          >
+            Page {page} of {totalPages}
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void loadReviews(page + 1)}
+            disabled={page >= totalPages || loadingReviews}
+          >
+            Next
+          </Button>
+        </nav>
       )}
 
       <Dialog
