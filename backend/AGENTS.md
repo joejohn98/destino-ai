@@ -31,7 +31,6 @@ backend/
 ├── src/
 │   ├── index.ts              ← process entry, graceful shutdown, server bootstrap
 │   ├── app.ts                ← Express app factory, middleware stack, route mounts
-│   ├── seed.ts               ← standalone DB seed script (run via: npm run seed)
 │   │
 │   ├── config/
 │   │   ├── config.ts         ← centralised env var access (dotenv.config here)
@@ -114,7 +113,7 @@ backend/
 │   │   └── validation.ts        ← isValidObjectId()
 │   │
 │   └── scripts/
-│       └── seed.ts              ← (NOTE: package.json "seed" script points to src/seed.ts, not here)
+│       └── seed.ts              ← standalone destructive DB seed script (run via: npm run seed)
 │
 ├── dist/                        ← compiled output (gitignored)
 ├── package.json
@@ -169,7 +168,6 @@ GITHUB_CALLBACK_URL           # OAuth (required for GitHub login)
 | `authProviders` | `[{ provider, providerId }]` | `provider` in `["google", "github"]` |
 | `role` | `String` | `"user"` or `"admin"`, default `"user"` |
 | `avatarUrl` | `String?` | optional |
-| `isActive` | `Boolean` | default `true` |
 | `bio` | `String?` | max 500 chars |
 | `favoriteDestinations` | `ObjectId[]` | ref `Destination` |
 | `createdAt`, `updatedAt` | `Date` | timestamps |
@@ -720,7 +718,6 @@ Same structure as continent validators.
 | **PERF-04** | MED | Mongoose connection pool not configured (default is 5 connections) |
 | **API-01** | MED | `/api/ai` mounted before `/api/ai/agents` in app.ts — should be reversed |
 | **API-03** | LOW | `continent` field in createDestinationSchema is silently ignored by service |
-| **DX-03** | LOW | `package.json "seed"` script path is wrong (points to `src/scripts/seed.ts` not `src/seed.ts`) |
 
 ---
 
@@ -751,7 +748,7 @@ npm run dev         # tsx watch src/index.ts — hot reload dev server
 npm run build       # tsc — compile to dist/
 npm run start       # node dist/index.js — production
 npm run type-check  # tsc --noEmit — type check only
-npm run seed        # tsx src/scripts/seed.ts ← WRONG PATH (bug); actual file: src/seed.ts
+npm run seed        # tsx src/scripts/seed.ts (requires SEED_ALLOW_DESTRUCTIVE=1; disabled in production)
 ```
 
 ---

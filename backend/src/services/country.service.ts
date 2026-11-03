@@ -113,6 +113,9 @@ const updateCountry = async (id: string, updateData: UpdateCountryInput) => {
   if (!country) {
     throw new AppError("Country not found", 404);
   }
+  const previousCountrySlug = country.slug;
+  const continentSlug = country.continent?.slug;
+
   // Check if another country has the same name (if name is being updated)
   if (updateData.name && updateData.name !== country.name) {
     const existingCountry = await Country.findOne({
@@ -132,11 +135,22 @@ const updateCountry = async (id: string, updateData: UpdateCountryInput) => {
   // Save changes
   await country.save();
 
-  const keys: string[] = [CACHE_KEYS.continentStats];
-  if (country.continent?.slug) {
-    keys.push(CACHE_KEYS.continentCountries(country.continent.slug));
+  const countrySlugs = new Set([previousCountrySlug, country.slug]);
+  const keys = new Set<string>([CACHE_KEYS.continentStats]);
+  if (continentSlug) {
+    keys.add(CACHE_KEYS.continentCountries(continentSlug));
   }
+  for (const slug of countrySlugs) {
+    keys.add(CACHE_KEYS.countryDestinations(slug));
+  }
+
   await invalidateKeys(...keys);
+  await Promise.all(
+    Array.from(countrySlugs, (slug) =>
+      invalidatePattern(CACHE_KEYS.destByCountryPattern(slug)),
+    ),
+  );
+  await invalidatePattern("api:dest:paginated:*");
 
   return country;
 };

@@ -541,6 +541,20 @@ const createDestination = async (data: CreateDestinationInput) => {
 };
 
 const updateDestination = async (id: string, data: UpdateDestinationInput) => {
+  const previousDestination = await Destination.findById(id)
+    .select("slug location.country")
+    .populate<{ location: { country: { slug: string } } }>(
+      "location.country",
+      "slug",
+    )
+    .lean();
+
+  if (!previousDestination) {
+    throw new AppError("Destination not found", 404);
+  }
+
+  const previousCountrySlug = previousDestination.location?.country?.slug;
+
   const updatePayload: Record<string, unknown> = {};
 
   if (data.name !== undefined) {
@@ -601,12 +615,26 @@ const updateDestination = async (id: string, data: UpdateDestinationInput) => {
     .select("slug")
     .lean();
 
-  // A destination update affects the listing, country destinations, continent stats, and its own detail page
-  const keysToInvalidate: string[] = [CACHE_KEYS.continentStats];
+  // Invalidate cache entries for both the previous and updated route locations.
+  const keysToInvalidate = new Set<string>([
+    CACHE_KEYS.continentStats,
+    ...(previousCountrySlug
+      ? [CACHE_KEYS.countryDestinations(previousCountrySlug)]
+      : []),
+    ...(previousCountrySlug && previousDestination.slug
+      ? [
+          CACHE_KEYS.destBySlug(
+            previousCountrySlug,
+            previousDestination.slug,
+          ),
+        ]
+      : []),
+  ]);
+
   if (updatedCountry?.slug) {
-    keysToInvalidate.push(CACHE_KEYS.countryDestinations(updatedCountry.slug));
+    keysToInvalidate.add(CACHE_KEYS.countryDestinations(updatedCountry.slug));
     if (updatedDest.slug) {
-      keysToInvalidate.push(
+      keysToInvalidate.add(
         CACHE_KEYS.destBySlug(updatedCountry.slug, updatedDest.slug),
       );
     }

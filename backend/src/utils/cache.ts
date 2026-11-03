@@ -8,6 +8,8 @@ export const CACHE_KEYS = {
     `api:dest:paginated:p${page}:l${limit}`,
   destBySlug: (countrySlug: string, destSlug: string) =>
     `api:dest:slug:${countrySlug}:${destSlug}`,
+  destByCountryPattern: (countrySlug: string) =>
+    `api:dest:slug:${countrySlug}:*`,
   countryDestinations: (countrySlug: string) =>
     `api:dest:country:${countrySlug}`,
 } as const;
