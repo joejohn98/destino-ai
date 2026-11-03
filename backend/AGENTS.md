@@ -710,7 +710,6 @@ Same structure as continent validators.
 | **TYPE-01** | MED | `config.ts` uses `as string` casts — env vars can silently be `undefined` |
 | **TYPE-04** | MED | `"types": []` in tsconfig disables all `@types/*` |
 | **QUAL-01** | MED | `auth.service` accepts `Response` object — violates SRP, untestable |
-| **QUAL-03** | MED | Cascade deletes in continent/country services are not wrapped in transactions |
 | **QUAL-04** | LOW | `escapeRegex` is duplicated in destination.service.ts and destination.tools.ts |
 | **PERF-01** | MED | `getAllContinents` uses deep nested virtual populate — N+1 DB query risk |
 | **PERF-02** | MED | AI tip/summary GET endpoints have no rate limit |
@@ -736,7 +735,7 @@ Same structure as continent validators.
 11. **Slugs:** Never set slugs manually. Pre-validate hooks auto-generate them from `name`. Do not include `slug` in create payloads.
 12. **Password field:** `select: false` on User model. To read it in a query: `.select("+password")`.
 13. **Soft deletes:** Do not exist in this codebase. All deletes are hard (permanent).
-14. **Transactions:** Cascade deletes currently do not use transactions (known bug). When adding new cascade operations, add session/transaction support.
+14. **Transactions:** Multi-document deletes must use `withMongoTransaction` and pass its session to every read and write. MongoDB must run as a replica set or sharded cluster for these operations.
 15. **Bulk delete hooks:** `deleteMany()` does NOT trigger Mongoose post hooks. If `refreshDestinationRatings` needs to run, use `findByIdAndDelete` in a loop or run the aggregation manually.
 
 ---

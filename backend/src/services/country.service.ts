@@ -1,7 +1,7 @@
-import mongoose from "mongoose";
-import { Continent, Country, Destination, Review } from "../models";
+import { Continent, Country, Destination, Review, User } from "../models";
 import { AppError } from "../utils/AppError";
 import { CACHE_KEYS, invalidateKeys, invalidatePattern } from "../utils/cache";
+import { withMongoTransaction } from "../utils/mongo-transactions";
 import { isValidObjectId } from "../utils/validation";
 import type {
   CreateCountryInput,
@@ -161,37 +161,38 @@ const deleteCountry = async (id: string) => {
     throw new AppError("Country not found", 404);
   }
 
-  // Cascade delete destinations in transaction with standalone fallback
-  const destinations = await Destination.find({
-    "location.country": country._id,
-  });
+  await withMongoTransaction(async (session) => {
+    const destinations = await Destination.find({
+      "location.country": country._id,
+    })
+      .select("_id")
+      .session(session)
+      .lean();
+    const destinationIds = destinations.map((destination) => destination._id);
 
-  const destinationIds = destinations.map((d) => d._id);
-
-  const session = await mongoose.startSession();
-  try {
-    await session.withTransaction(async () => {
-      if (destinationIds.length > 0) {
-        await Review.deleteMany({ destination: { $in: destinationIds } }, { session });
-        await Destination.deleteMany({ _id: { $in: destinationIds } }, { session });
-      }
-
-      await Country.findByIdAndDelete(country._id, { session });
-    });
-  } catch (error: any) {
-    if (error?.message?.includes("replica set")) {
-      if (destinationIds.length > 0) {
-        await Review.deleteMany({ destination: { $in: destinationIds } });
-        await Destination.deleteMany({ _id: { $in: destinationIds } });
-      }
-
-      await Country.findByIdAndDelete(country._id);
-    } else {
-      throw error;
+    if (destinationIds.length > 0) {
+      await Review.deleteMany(
+        { destination: { $in: destinationIds } },
+        { session },
+      );
+      await User.updateMany(
+        { favoriteDestinations: { $in: destinationIds } },
+        { $pull: { favoriteDestinations: { $in: destinationIds } } },
+        { session },
+      );
+      await Destination.deleteMany(
+        { _id: { $in: destinationIds } },
+        { session },
+      );
     }
-  } finally {
-    await session.endSession();
-  }
+
+    const deletedCountry = await Country.findByIdAndDelete(country._id, {
+      session,
+    });
+    if (!deletedCountry) {
+      throw new AppError("Country not found", 404);
+    }
+  });
 
   const keys: string[] = [CACHE_KEYS.continentStats];
   if (country.continent?.slug) {

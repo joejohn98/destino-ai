@@ -13,15 +13,12 @@ import {
   LISTING_CACHE_TTL,
   withCache,
 } from "../utils/cache";
+import { withMongoTransaction } from "../utils/mongo-transactions";
 import type {
   CreateDestinationInput,
   UpdateDestinationInput,
 } from "../validators/destination.validators";
 import { Review, User } from "../models";
-
-
-
-
 
 export interface PaginatedOptions {
   page: number;
@@ -187,7 +184,7 @@ const getPaginatedDestinations = async (
   );
 };
 
-const searchDestinations = async (q: string): Promise<any[]> => {
+const searchDestinations = async (q: string): Promise<IDestination[]> => {
   const trimmedQ = q.trim();
   if (!trimmedQ || trimmedQ.length < 2) {
     throw new AppError(
@@ -203,7 +200,7 @@ const searchDestinations = async (q: string): Promise<any[]> => {
     .lean();
   const countryIds = matchingCountries.map((c) => c._id);
 
-  const $or: any[] = [
+  const $or: QueryFilter<IDestination>[] = [
     { name: regex },
     { description: regex },
     { "location.city": regex },
@@ -218,7 +215,7 @@ const searchDestinations = async (q: string): Promise<any[]> => {
 
 const getDestinationsByLocation = async (
   rawLocation: string,
-): Promise<any[]> => {
+): Promise<IDestination[]> => {
   const locParam = decodeURIComponent(rawLocation).trim();
   const regex = new RegExp(escapeRegex(locParam), "i");
 
@@ -227,7 +224,7 @@ const getDestinationsByLocation = async (
     .lean();
   const countryIds = matchingCountries.map((c) => c._id);
 
-  const $or: any[] = [{ "location.city": regex }];
+  const $or: QueryFilter<IDestination>[] = [{ "location.city": regex }];
   if (countryIds.length > 0) {
     $or.push({ "location.country": { $in: countryIds } });
   }
@@ -493,10 +490,7 @@ const resolveCountry = async (countryIdentifier: string) => {
     const countryById = await Country.findById(countryIdentifier);
     if (countryById) return countryById;
   }
-  const countryRegex = new RegExp(
-    `^${escapeRegex(countryIdentifier)}$`,
-    "i",
-  );
+  const countryRegex = new RegExp(`^${escapeRegex(countryIdentifier)}$`, "i");
   return Country.findOne({ name: countryRegex });
 };
 
@@ -622,12 +616,7 @@ const updateDestination = async (id: string, data: UpdateDestinationInput) => {
       ? [CACHE_KEYS.countryDestinations(previousCountrySlug)]
       : []),
     ...(previousCountrySlug && previousDestination.slug
-      ? [
-          CACHE_KEYS.destBySlug(
-            previousCountrySlug,
-            previousDestination.slug,
-          ),
-        ]
+      ? [CACHE_KEYS.destBySlug(previousCountrySlug, previousDestination.slug)]
       : []),
   ]);
 
@@ -646,22 +635,26 @@ const updateDestination = async (id: string, data: UpdateDestinationInput) => {
 };
 
 const deleteDestination = async (id: string) => {
-  const destination = await Destination.findById(id).select("-__v").lean();
-  if (!destination) {
-    throw new AppError("Destination not found", 404);
-  }
+  const deletedDest = await withMongoTransaction(async (session) => {
+    const destination = await Destination.findById(id).session(session);
+    if (!destination) {
+      throw new AppError("Destination not found", 404);
+    }
 
-  await Review.deleteMany({ destination: destination._id });
-  await User.updateMany(
-    { favoriteDestinations: destination._id },
-    { $pull: { favoriteDestinations: destination._id } },
-  );
+    await Review.deleteMany({ destination: destination._id }, { session });
+    await User.updateMany(
+      { favoriteDestinations: destination._id },
+      { $pull: { favoriteDestinations: destination._id } },
+      { session },
+    );
 
-  const deletedDest = await Destination.findByIdAndDelete(id);
+    const deleted = await Destination.findByIdAndDelete(id, { session });
+    if (!deleted) {
+      throw new AppError("Failed to delete destination", 500);
+    }
 
-  if (!deletedDest) {
-    throw new AppError("Failed to delete destination", 500);
-  }
+    return deleted;
+  });
 
   // Resolve country slug to build the exact detail cache key
   const deletedCountry = await Country.findById(deletedDest.location?.country)

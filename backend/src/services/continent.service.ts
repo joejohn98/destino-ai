@@ -1,4 +1,3 @@
-import mongoose from "mongoose";
 import {
   Continent,
   Country,
@@ -6,9 +5,11 @@ import {
   IContinent,
   ICountry,
   Review,
+  User,
 } from "../models";
 import { AppError } from "../utils/AppError";
 import { CACHE_KEYS, invalidateKeys, invalidatePattern } from "../utils/cache";
+import { withMongoTransaction } from "../utils/mongo-transactions";
 import {
   CreateContinentInput,
   UpdateContinentInput,
@@ -157,53 +158,48 @@ const deleteContinent = async (id: string) => {
     throw new AppError("No continent found with that ID", 404);
   }
 
-  // 1. Find all countries in this continent
-  const countries = await Country.find({ continent: continent._id })
-    .select("_id")
-    .lean();
-  const countryIds = countries.map((c) => c._id);
+  await withMongoTransaction(async (session) => {
+    const countries = await Country.find({ continent: continent._id })
+      .select("_id")
+      .session(session)
+      .lean();
+    const countryIds = countries.map((country) => country._id);
 
-  // 2. Find all destinations in those countries
-  const destinations = await Destination.find({
-    "location.country": { $in: countryIds },
-  })
-    .select("_id")
-    .lean();
-  const destinationIds = destinations.map((d) => d._id);
+    const destinations = await Destination.find({
+      "location.country": { $in: countryIds },
+    })
+      .select("_id")
+      .session(session)
+      .lean();
+    const destinationIds = destinations.map((destination) => destination._id);
 
-  // 3. Cascade delete in transaction with standalone fallback
-  const session = await mongoose.startSession();
-  try {
-    await session.withTransaction(async () => {
-      if (destinationIds.length > 0) {
-        await Review.deleteMany({ destination: { $in: destinationIds } }, { session });
-        await Destination.deleteMany({ _id: { $in: destinationIds } }, { session });
-      }
-
-      if (countryIds.length > 0) {
-        await Country.deleteMany({ _id: { $in: countryIds } }, { session });
-      }
-
-      await Continent.findByIdAndDelete(continent._id, { session });
-    });
-  } catch (error: any) {
-    if (error?.message?.includes("replica set")) {
-      if (destinationIds.length > 0) {
-        await Review.deleteMany({ destination: { $in: destinationIds } });
-        await Destination.deleteMany({ _id: { $in: destinationIds } });
-      }
-
-      if (countryIds.length > 0) {
-        await Country.deleteMany({ _id: { $in: countryIds } });
-      }
-
-      await Continent.findByIdAndDelete(continent._id);
-    } else {
-      throw error;
+    if (destinationIds.length > 0) {
+      await Review.deleteMany(
+        { destination: { $in: destinationIds } },
+        { session },
+      );
+      await User.updateMany(
+        { favoriteDestinations: { $in: destinationIds } },
+        { $pull: { favoriteDestinations: { $in: destinationIds } } },
+        { session },
+      );
+      await Destination.deleteMany(
+        { _id: { $in: destinationIds } },
+        { session },
+      );
     }
-  } finally {
-    await session.endSession();
-  }
+
+    if (countryIds.length > 0) {
+      await Country.deleteMany({ _id: { $in: countryIds } }, { session });
+    }
+
+    const deletedContinent = await Continent.findByIdAndDelete(continent._id, {
+      session,
+    });
+    if (!deletedContinent) {
+      throw new AppError("No continent found with that ID", 404);
+    }
+  });
 
   await invalidateKeys(CACHE_KEYS.continentStats);
   await invalidatePattern("agg:continent:*");
