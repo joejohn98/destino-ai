@@ -6,23 +6,26 @@ import { redisClient } from "../config/redis";
  * - On a cache miss: runs `fn`, stores the result, then returns it.
  * - If Redis is unavailable: falls through to `fn` so the app keeps working.
  */
+
 export const withCache = async <T>(
   key: string,
   ttlSeconds: number,
   fn: () => Promise<T>,
 ): Promise<T> => {
+  let result: T | undefined;
+
   try {
     const cached = await redisClient.get(key);
-    if (cached) {
-      return JSON.parse(cached) as T;
-    }
 
-    const result = await fn();
+    if (cached) return JSON.parse(cached) as T;
+
+    result = await fn();
+
     await redisClient.setEx(key, ttlSeconds, JSON.stringify(result));
+
     return result;
   } catch {
-    // Redis unavailable — fall through to the database (graceful degradation)
-    return fn();
+    return result ?? fn();
   }
 };
 

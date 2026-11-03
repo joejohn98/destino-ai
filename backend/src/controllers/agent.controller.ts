@@ -67,6 +67,8 @@ export const compareDestinations = catchAsync(
     const comparison = await agentService.compareDestinations(query);
     if (comparison.output?.status === "invalid_request") {
       res.status(422).json({
+        status: "fail",
+        message: comparison.output.message || "Requested parameters exceed supported limits",
         data: {
           query,
           result: comparison.output,
