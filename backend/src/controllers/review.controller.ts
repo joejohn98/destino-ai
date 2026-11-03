@@ -2,6 +2,7 @@ import { catchAsync } from "../utils/catchAsync";
 import reviewService from "../services/review.service";
 import { AppError } from "../utils/AppError";
 import { isValidObjectId } from "../utils/validation";
+import { reviewPaginationSchema } from "../validators/review.validators";
 
 export const getDestinationReviews = catchAsync(async (req, res) => {
   const { countrySlug, destinationSlug } = req.params as { countrySlug?: string; destinationSlug?: string };
@@ -10,11 +11,26 @@ export const getDestinationReviews = catchAsync(async (req, res) => {
     throw new AppError("Country and Destination slugs are required", 400);
   }
 
-  const reviews = await reviewService.getDestinationReviews(countrySlug, destinationSlug);
+  const pagination = reviewPaginationSchema.safeParse(req.query);
+  if (!pagination.success) {
+    throw new AppError(
+      pagination.error.issues[0]?.message || "Invalid pagination parameters",
+      400,
+    );
+  }
+
+  const result = await reviewService.getDestinationReviews(
+    countrySlug,
+    destinationSlug,
+    pagination.data,
+  );
   res.status(200).json({
     status: "success",
-    results: reviews.length,
-    data: reviews,
+    results: result.data.length,
+    totalReviews: result.totalReviews,
+    totalPages: result.totalPages,
+    currentPage: result.currentPage,
+    data: result.data,
   });
 });
 

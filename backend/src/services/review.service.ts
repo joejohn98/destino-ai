@@ -4,12 +4,14 @@ import { AppError } from "../utils/AppError";
 import { CACHE_KEYS, invalidateKeys, invalidatePattern } from "../utils/cache";
 import {
   CreateReviewInput,
+  ReviewPaginationInput,
   UpdateReviewInput,
 } from "../validators/review.validators";
 
 const getDestinationReviews = async (
   countrySlug: string,
   destinationSlug: string,
+  { page, limit }: ReviewPaginationInput,
 ) => {
   const country = await Country.findOne({ slug: countrySlug });
   if (!country) throw new AppError("Country not found", 404);
@@ -22,11 +24,22 @@ const getDestinationReviews = async (
   if (!destination)
     throw new AppError("Destination not found in this country", 404);
 
-  const reviews = await Review.find({ destination: destination._id })
-    .populate("user", "firstName lastName avatarUrl")
-    .sort({ createdAt: -1 });
+  const filter = { destination: destination._id };
+  const [totalReviews, reviews] = await Promise.all([
+    Review.countDocuments(filter),
+    Review.find(filter)
+      .populate("user", "firstName lastName avatarUrl")
+      .sort({ createdAt: -1, _id: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit),
+  ]);
 
-  return reviews;
+  return {
+    data: reviews,
+    totalReviews,
+    totalPages: Math.ceil(totalReviews / limit),
+    currentPage: page,
+  };
 };
 
 const createReview = async (

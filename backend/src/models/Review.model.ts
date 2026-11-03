@@ -65,7 +65,7 @@ reviewSchema.index(
     partialFilterExpression: { user: { $type: "objectId" } },
   },
 );
-reviewSchema.index({ destination: 1, createdAt: -1 });
+reviewSchema.index({ destination: 1, createdAt: -1, _id: -1 });
 
 async function refreshDestinationRatings(
   destinationId: mongoose.Types.ObjectId,
