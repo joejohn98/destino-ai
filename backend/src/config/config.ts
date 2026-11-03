@@ -2,6 +2,33 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+const parseTrustProxy = (
+  value: string | undefined,
+): false | number | string[] => {
+  const normalized = value?.trim();
+  if (!normalized || normalized.toLowerCase() === "false") return false;
+
+  if (normalized.toLowerCase() === "true") {
+    console.warn(
+      "WARNING: TRUST_PROXY=true is set. In production behind a single reverse proxy (e.g. AWS ALB), prefer TRUST_PROXY=1 to prevent IP spoofing.",
+    );
+    return 1;
+  }
+
+  const hopCount = Number(normalized);
+  if (Number.isSafeInteger(hopCount) && hopCount >= 0) return hopCount;
+
+  const proxyAddresses = normalized
+    .split(",")
+    .map((address) => address.trim())
+    .filter(Boolean);
+  if (proxyAddresses.length === 0) {
+    return false;
+  }
+
+  return proxyAddresses;
+};
+
 export const config = {
   port: parseInt(process.env.PORT || "3000", 10),
   nodeEnv: process.env.NODE_ENV ?? "development",
@@ -9,6 +36,7 @@ export const config = {
   jwtSecret: process.env.JWT_SECRET || "",
   jwtExpiration: process.env.JWT_EXPIRATION || "7d",
   redisUrl: process.env.REDIS_URL || "redis://localhost:6379",
+  trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
   geminiApiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY || "",
   clientUrl: process.env.CLIENT_URL || "http://localhost:3000",
   cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME || "",

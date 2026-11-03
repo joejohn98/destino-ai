@@ -24,6 +24,7 @@ import { config } from "./config/config";
 import passport from "./config/passport";
 
 const app = express();
+app.set("trust proxy", config.trustProxy);
 
 app.use(
   cors({

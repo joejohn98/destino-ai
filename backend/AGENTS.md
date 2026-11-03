@@ -127,7 +127,6 @@ backend/
 ## 3. Environment Variables (All Required Unless Marked Optional)
 
 Read exclusively from `src/config/config.ts` (which calls `dotenv.config()`).
-**Exception (known bug):** `src/config/redis.ts` reads `process.env.REDIS_URL` directly.
 **Exception (known bug):** `src/config/passport.ts` reads OAuth vars directly from `process.env` with `!` non-null assertions.
 
 ```
@@ -137,6 +136,7 @@ DATABASE_URL                  # MongoDB connection string (required)
 JWT_SECRET                    # min 32 chars (required)
 JWT_EXPIRATION                # e.g. "7d" (required; cookie maxAge is hardcoded 7d — known bug)
 REDIS_URL                     # default: redis://localhost:6379
+TRUST_PROXY                   # default: false; set proxy hop count or trusted IP/CIDRs behind a reverse proxy
 GOOGLE_GENERATIVE_AI_API_KEY  # Gemini API key (required for AI features)
 CLIENT_URL                    # e.g. http://localhost:5173 (CORS / OAuth redirect base)
 CLOUDINARY_CLOUD_NAME         # required for image uploads
@@ -370,20 +370,20 @@ All routes guarded by `router.use(protect)`.
 ### AI — `/api/ai`
 | Method | Path | Auth | Notes |
 |--------|------|------|-------|
-| GET | `/destinations/:destinationId/tips` | None | No rate limit (known bug) |
-| GET | `/destinations/:destinationId/summary` | None | No rate limit (known bug) |
+| GET | `/destinations/:destinationId/tips` | None | aiLimiter (20 req/min/IP, Redis-backed) |
+| GET | `/destinations/:destinationId/summary` | None | aiLimiter (20 req/min/IP, Redis-backed) |
 | POST | `/destinations/:destinationId/summary/regenerate` | JWT + admin | Force regenerate |
 
 ### AI Agents — `/api/ai/agents`
 | Method | Path | Auth | Rate Limit |
 |--------|------|------|-----------|
-| POST | `/plan-itinerary` | None | agentLimiter (5 req/min/IP, in-memory) |
-| POST | `/compare` | None | agentLimiter (5 req/min/IP, in-memory) |
+| POST | `/plan-itinerary` | JWT | agentLimiter (5 req/min/IP, Redis-backed) |
+| POST | `/compare` | JWT | agentLimiter (5 req/min/IP, Redis-backed) |
 
 **Route mount order in app.ts:**
 ```ts
-app.use("/api/ai", aiRoutes);           // mounted BEFORE agents (known bug — should be after)
-app.use("/api/ai/agents", agentRoutes); // should be mounted first
+app.use("/api/ai/agents", agentRoutes);
+app.use("/api/ai", aiRoutes);
 ```
 
 ---
@@ -701,7 +701,6 @@ Same structure as continent validators.
 | **CRASH-03** | HIGH | `createReview` throws 500 on AI sentiment failure — review is NOT saved |
 | **CRASH-04** | HIGH | `updateReview` does not re-run sentiment analysis when `reviewText` changes |
 | **SEC-04** | HIGH | Cookie `maxAge` hardcoded to 7 days regardless of `JWT_EXPIRATION` env var |
-| **SEC-05** | HIGH | Rate limiters use in-memory store — bypassed in multi-process deployments |
 | **BUG-02** | HIGH | `getDestinationsByRating`, `getDestinationsByLocation`, etc. have no `.limit()` |
 | **BUG-03** | MED | Search uses regex scan instead of `$text` operator — ignores text index |
 | **BUG-04** | MED | Cache invalidation only clears page 1 variants of paginated keys |
@@ -712,7 +711,6 @@ Same structure as continent validators.
 | **QUAL-01** | MED | `auth.service` accepts `Response` object — violates SRP, untestable |
 | **QUAL-04** | LOW | `escapeRegex` is duplicated in destination.service.ts and destination.tools.ts |
 | **PERF-01** | MED | `getAllContinents` uses deep nested virtual populate — N+1 DB query risk |
-| **PERF-02** | MED | AI tip/summary GET endpoints have no rate limit |
 | **PERF-03** | LOW | `withCache` calls `fn()` twice on Redis write error |
 | **PERF-04** | MED | Mongoose connection pool not configured (default is 5 connections) |
 | **API-01** | MED | `/api/ai` mounted before `/api/ai/agents` in app.ts — should be reversed |
@@ -773,7 +771,7 @@ morgan@^1.12.1              HTTP request logging
 cors@^2.8.6                 CORS headers
 cookie-parser@^1.4.7        Cookie parsing
 dotenv@^18.0.4              Env file loading
-express-rate-limit@^8.7.1   Rate limiting (in-memory by default)
+express-rate-limit@^8.7.1   Rate limiting (shared Redis-backed store)
 
 DevDependencies:
 typescript@^5.9.3
