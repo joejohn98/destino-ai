@@ -5,7 +5,7 @@ import rateLimit from "express-rate-limit";
  *
  * Agent requests are expensive — each one can trigger up to 10 LLM steps
  * and multiple DB queries. 5 requests per minute per IP is a generous limit
- * that prevents accidental hammering while not blocking normal usage..
+ * that prevents accidental hammering while not blocking normal usage.
  */
 export const agentLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
@@ -16,6 +16,22 @@ export const agentLimiter = rateLimit({
     status: "failed",
     message:
       "Agent rate limit reached. Please wait before making another agent request.",
+  },
+});
+
+/**
+ * Rate limiter for general AI endpoints (/api/ai/* tips and summaries).
+ * 20 requests per minute per IP protects Gemini quota from exhaustion.
+ */
+export const aiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    status: "failed",
+    message:
+      "AI request rate limit reached. Please wait before making another request.",
   },
 });
 

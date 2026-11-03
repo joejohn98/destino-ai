@@ -54,7 +54,6 @@ const updateDestinationSchema = z.object({
       country: z.string().min(1).trim().optional(),
     })
     .optional(),
-  continent: z.string().trim().optional(),
   category: z.enum(CATEGORIES).optional(),
   bestTimeToVisit: z.string().trim().optional(),
   images: imagesSchema,

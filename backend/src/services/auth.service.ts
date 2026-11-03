@@ -1,7 +1,5 @@
 import { IUser, User } from "../models";
 import { AppError } from "../utils/AppError";
-import { Response } from "express";
-import { createSendToken } from "../utils/utils";
 
 export interface SocialProfile {
   provider: "google" | "github";
@@ -18,8 +16,7 @@ const register = async (
   email: string,
   username: string,
   password: string,
-  res: Response,
-) => {
+): Promise<IUser> => {
   // Check if user with email or username already exists
   const existingUser = await User.findOne({
     $or: [{ email }, { username }],
@@ -42,17 +39,10 @@ const register = async (
 
   // Save user to database before issuing token and setting cookie
   await newUser.save();
-
-  createSendToken(newUser, res);
-
-  const { password: _, __v, ...userData } = newUser.toObject();
-
-  return {
-    user: userData,
-  };
+  return newUser;
 };
 
-const login = async (email: string, password: string, res: Response) => {
+const login = async (email: string, password: string): Promise<IUser> => {
   // Check if user with email exists
   const user = await User.findOne({ email }).select("+password");
 
@@ -66,32 +56,12 @@ const login = async (email: string, password: string, res: Response) => {
     throw new AppError("Invalid email or password", 401);
   }
 
-  // Create token
-  createSendToken(user, res);
-
-  const { password: _, __v, ...userData } = user.toObject();
-
   await User.findOneAndUpdate(
     { _id: user._id, reviewCount: { $exists: false } },
     { $set: { reviewCount: 0 } },
   );
 
-  return {
-    user: userData,
-  };
-};
-
-const logout = async (res: Response) => {
-  res.cookie("token", "", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-    expires: new Date(0),
-  });
-
-  return {
-    message: "Logged out successfully",
-  };
+  return user;
 };
 
 const findOrCreateSocialUser = async (
@@ -149,6 +119,5 @@ const findOrCreateSocialUser = async (
 export default {
   register,
   login,
-  logout,
   findOrCreateSocialUser,
 };
