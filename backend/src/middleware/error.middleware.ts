@@ -132,7 +132,7 @@ export const globalErrorHandler = (
   req: Request,
   res: Response,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  next: NextFunction
+  _next: NextFunction
 ): void => {
   const isDev = process.env.NODE_ENV === "development";
   const appError = normalizeError(err);
@@ -184,7 +184,7 @@ export const globalErrorHandler = (
 // 404 Not Found Handler for unmatched routes
 export const notFoundHandler = (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ): void => {
   next(

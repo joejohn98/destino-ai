@@ -8,7 +8,7 @@ import { uploadImageStream, uploadUrlToCloudinary } from "../services/cloudinary
 import { CreateContinentInput, UpdateContinentInput } from "../validators/continent.validators";
 
 export const getAllContinents: RequestHandler = catchAsync(
-  async (req: Request, res: Response) => {
+  async (_req: Request, res: Response) => {
     // Get all continents
     const continents = await continentService.getAllContinents();
 

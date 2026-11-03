@@ -3,7 +3,7 @@ import aiService from "../services/ai.service";
 import { isValidObjectId } from "../utils/validation";
 import { AppError } from "../utils/AppError";
 
-export const generateDestinationTips = catchAsync(async (req, res, next) => {
+export const generateDestinationTips = catchAsync(async (req, res, _next) => {
   const destinationId = String(req.params.destinationId);
 
   if (!isValidObjectId(destinationId)) {

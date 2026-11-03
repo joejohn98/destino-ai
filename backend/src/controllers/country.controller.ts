@@ -119,7 +119,7 @@ export const deleteCountry: RequestHandler = catchAsync(
       throw new AppError("Invalid country ID", 400);
     }
 
-    const deletedCountry = await countryService.deleteCountry(id);
+    await countryService.deleteCountry(id);
     res.status(200).json({
       status: "success",
       message: "Country deleted successfully",

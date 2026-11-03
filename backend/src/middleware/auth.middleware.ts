@@ -16,7 +16,7 @@ declare global {
 
 export const protect = async (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction,
 ): Promise<void> => {
   // Get token from header or cookie
@@ -76,7 +76,7 @@ export const protect = async (
 };
 
 export const restrictTo = (...roles: string[]) => {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, _res: Response, next: NextFunction) => {
     if (!req.user) {
       return next(
         new AppError(
