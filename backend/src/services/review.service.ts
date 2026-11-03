@@ -62,8 +62,9 @@ const createReview = async (
   let sentiment: "positive" | "neutral" | "negative" = "neutral";
   let themes: string[] = [];
 
+  const sanitizedText = reviewText.replace(/[\x00-\x1F\x7F]/g, " ").trim();
   try {
-    const aiResult = await aiService.analyzeSentiment(reviewText);
+    const aiResult = await aiService.analyzeSentiment(sanitizedText);
     sentiment = aiResult.sentiment;
     themes = aiResult.themes;
   } catch (error) {
@@ -75,7 +76,7 @@ const createReview = async (
 
   const review = await Review.create({
     rating,
-    reviewText,
+    reviewText: sanitizedText,
     destination: destination._id,
     user: userId,
     authorName,
@@ -102,8 +103,22 @@ const updateReview = async (
     throw new AppError("You do not have permission to update this review", 403);
 
   if (updateData.rating !== undefined) review.rating = updateData.rating;
-  if (updateData.reviewText !== undefined)
-    review.reviewText = updateData.reviewText;
+  if (updateData.reviewText !== undefined) {
+    const sanitizedText = updateData.reviewText
+      .replace(/[\x00-\x1F\x7F]/g, " ")
+      .trim();
+    review.reviewText = sanitizedText;
+    try {
+      const aiResult = await aiService.analyzeSentiment(sanitizedText);
+      review.sentiment = aiResult.sentiment;
+      review.themes = aiResult.themes;
+    } catch (error) {
+      console.warn(
+        "[updateReview] Sentiment analysis skipped due to AI error:",
+        error,
+      );
+    }
+  }
 
   // post("save") hook on Review.model.ts will automatically recalculate destination averageRating
   await review.save();

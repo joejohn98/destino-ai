@@ -36,7 +36,6 @@ const createDestinationSchema = z.object({
     state: z.string().min(1, "State is required").trim().optional(),
     country: z.string().min(1, "Country is required").trim(),
   }),
-  continent: z.string().min(1, "Continent is required").trim(),
   category: z.enum(CATEGORIES, {
     message: `Category must be one of: ${CATEGORIES.join(", ")}`,
   }),

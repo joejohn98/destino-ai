@@ -21,7 +21,7 @@ const getReviewerName = (
     .trim();
   if (fullName) return fullName;
 
-  return fullName || fallbackAuthorName;
+  return fallbackAuthorName;
 };
 
 const getDestinationReviewsInput = z.object({
