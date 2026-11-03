@@ -2,7 +2,7 @@ export class AppError extends Error {
   public statusCode: number;
   public status: string;
   public isOperational: boolean;
-  public cause?: unknown;
+  public override cause?: unknown;
 
   constructor(message: string, statusCode: number, cause?: unknown) {
     super(message);

@@ -94,42 +94,6 @@ export const getDestinationsByLocation: RequestHandler = catchAsync(
 );
 
 /**
- * GET /api/destinations/rating
- * All destinations sorted by averageRating descending.
- */
-export const getDestinationsByRating: RequestHandler = catchAsync(
-  async (req, res) => {
-    const destinations = await destinationService.getDestinationsByRating();
-
-    res.status(200).json({
-      status: "success",
-      results: destinations.length,
-      data: destinations,
-    });
-  }
-);
-
-/**
- * GET /api/destinations/filter/:minRating
- * Destinations with averageRating >= minRating.
- */
-export const getDestinationsByMinRating: RequestHandler = catchAsync(
-  async (req, res) => {
-    const rawMin = String(req.params.minRating || "");
-    const destinations = await destinationService.getDestinationsByMinRating(
-      rawMin
-    );
-
-    res.status(200).json({
-      status: "success",
-      results: destinations.length,
-      data: destinations,
-    });
-  }
-);
-
-
-/**
  * GET /api/destinations/category/:category
  * Destinations filtered by category.
  */
@@ -153,7 +117,7 @@ export const getDestinationsByCategory: RequestHandler = catchAsync(
  * All continents that have at least one destination, with stats.
  */
 export const getContinentStats: RequestHandler = catchAsync(
-  async (req, res) => {
+  async (_req, res) => {
     const stats = await destinationService.getContinentStats();
 
     res.status(200).json({
@@ -203,12 +167,6 @@ export const getDestinationByName: RequestHandler = catchAsync(
 );
 
 /**
- * GET /api/countries/:countrySlug/destinations/:destinationSlug
- * Canonical, unambiguous destination detail endpoint.
- * Resolves via the compound unique index { location.country, slug }
- * so slug collisions across countries are impossible.
- */
-/**
  * GET /api/countries/:countrySlug/destinations
  * Canonical country destinations endpoint.
  * Returns all verified destinations belonging to the country.
@@ -227,6 +185,12 @@ export const getDestinationsByCountrySlug: RequestHandler = catchAsync(
   }
 );
 
+/**
+ * GET /api/countries/:countrySlug/destinations/:destinationSlug
+ * Canonical, unambiguous destination detail endpoint.
+ * Resolves via the compound unique index { location.country, slug }
+ * so slug collisions across countries are impossible.
+ */
 export const getDestinationBySlug: RequestHandler = catchAsync(
   async (req, res) => {
     const countrySlug = String(req.params.countrySlug || "");

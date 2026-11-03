@@ -43,7 +43,7 @@ const register = async (
   // Save user to database before issuing token and setting cookie
   await newUser.save();
 
-  const _token = createSendToken(newUser, res);
+  createSendToken(newUser, res);
 
   const { password: _, __v, ...userData } = newUser.toObject();
 
@@ -67,7 +67,7 @@ const login = async (email: string, password: string, res: Response) => {
   }
 
   // Create token
-  const _token = createSendToken(user, res);
+  createSendToken(user, res);
 
   const { password: _, __v, ...userData } = user.toObject();
 
