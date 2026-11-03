@@ -1,6 +1,7 @@
 import z from "zod";
 import { Destination } from "../models/Destination.model";
 import mongoose from "mongoose";
+import { escapeRegex } from "../utils/validation";
 
 const searchDestinationsInput = z.object({
   query: z.string().trim().min(2).max(200),
@@ -31,8 +32,7 @@ const getDestinationDetailsInput = z.object({
   destinationId: z.string().describe("The MongoDB ObjectId of the destination"),
 });
 
-const escapeRegex = (value: string) =>
-  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 
 export const destinationTools = {
   // ─── Tool 1: Search destinations ───────────────────────────────────────────

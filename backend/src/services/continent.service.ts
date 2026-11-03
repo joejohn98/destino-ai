@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import {
   Continent,
   Country,
@@ -7,7 +8,7 @@ import {
   Review,
 } from "../models";
 import { AppError } from "../utils/AppError";
-import { invalidateKeys } from "../utils/cache";
+import { CACHE_KEYS, invalidateKeys, invalidatePattern } from "../utils/cache";
 import {
   CreateContinentInput,
   UpdateContinentInput,
@@ -107,7 +108,8 @@ const createContinent = async (continentData: CreateContinentInput) => {
   // Create new continent
   const newContinent = await Continent.create(payload);
 
-  await invalidateKeys("agg:continent:stats");
+  await invalidateKeys(CACHE_KEYS.continentStats);
+  await invalidatePattern("agg:continent:*");
 
   return newContinent;
 };
@@ -143,7 +145,8 @@ const updateContinent = async (
   // Save changes
   await continent.save();
 
-  await invalidateKeys("agg:continent:stats");
+  await invalidateKeys(CACHE_KEYS.continentStats);
+  await invalidatePattern("agg:continent:*");
 
   return continent;
 };
@@ -168,20 +171,43 @@ const deleteContinent = async (id: string) => {
     .lean();
   const destinationIds = destinations.map((d) => d._id);
 
-  // 3. Cascade delete reviews, destinations, and countries
-  if (destinationIds.length > 0) {
-    await Review.deleteMany({ destination: { $in: destinationIds } });
-    await Destination.deleteMany({ _id: { $in: destinationIds } });
+  // 3. Cascade delete in transaction with standalone fallback
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      if (destinationIds.length > 0) {
+        await Review.deleteMany({ destination: { $in: destinationIds } }, { session });
+        await Destination.deleteMany({ _id: { $in: destinationIds } }, { session });
+      }
+
+      if (countryIds.length > 0) {
+        await Country.deleteMany({ _id: { $in: countryIds } }, { session });
+      }
+
+      await Continent.findByIdAndDelete(continent._id, { session });
+    });
+  } catch (error: any) {
+    if (error?.message?.includes("replica set")) {
+      if (destinationIds.length > 0) {
+        await Review.deleteMany({ destination: { $in: destinationIds } });
+        await Destination.deleteMany({ _id: { $in: destinationIds } });
+      }
+
+      if (countryIds.length > 0) {
+        await Country.deleteMany({ _id: { $in: countryIds } });
+      }
+
+      await Continent.findByIdAndDelete(continent._id);
+    } else {
+      throw error;
+    }
+  } finally {
+    await session.endSession();
   }
 
-  if (countryIds.length > 0) {
-    await Country.deleteMany({ _id: { $in: countryIds } });
-  }
-
-  // 4. Delete the continent itself
-  await Continent.findByIdAndDelete(continent._id);
-
-  await invalidateKeys("agg:continent:stats");
+  await invalidateKeys(CACHE_KEYS.continentStats);
+  await invalidatePattern("agg:continent:*");
+  await invalidatePattern("api:dest:*");
 
   return continent;
 };

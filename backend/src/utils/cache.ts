@@ -1,5 +1,21 @@
 import { redisClient } from "../config/redis";
 
+// ─── Cache keys & TTL constants ───────────────────────────────────────────────
+export const CACHE_KEYS = {
+  continentStats: "agg:continent:stats",
+  continentCountries: (slug: string) => `agg:continent:${slug}:countries`,
+  paginatedPage: (page: number, limit: number) =>
+    `api:dest:paginated:p${page}:l${limit}`,
+  destBySlug: (countrySlug: string, destSlug: string) =>
+    `api:dest:slug:${countrySlug}:${destSlug}`,
+  countryDestinations: (countrySlug: string) =>
+    `api:dest:country:${countrySlug}`,
+} as const;
+
+export const AGG_CACHE_TTL = 30 * 60; // 30 minutes
+export const LISTING_CACHE_TTL = 3 * 60; // 3 minutes
+export const DETAIL_CACHE_TTL = 10 * 60; // 10 minutes
+
 /**
  * Read-through cache wrapper.
  * - On a cache hit: returns the parsed value immediately.
@@ -35,6 +51,23 @@ export const withCache = async <T>(
  */
 export const invalidateKeys = async (...keys: string[]): Promise<void> => {
   try {
+    if (keys.length > 0) {
+      await redisClient.del(keys);
+    }
+  } catch {
+    // Non-fatal — stale data will expire on its own TTL
+  }
+};
+
+/**
+ * Delete all keys matching a pattern (e.g. "api:dest:paginated:*").
+ */
+export const invalidatePattern = async (pattern: string): Promise<void> => {
+  try {
+    const keys: string[] = [];
+    for await (const key of (redisClient as any).scanIterator({ MATCH: pattern })) {
+      keys.push(key);
+    }
     if (keys.length > 0) {
       await redisClient.del(keys);
     }

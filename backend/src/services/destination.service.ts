@@ -3,31 +3,25 @@ import { CATEGORIES, Destination } from "../models/Destination.model";
 import type { Category, IDestination } from "../models/Destination.model";
 import { Country } from "../models/Country.model";
 import { AppError } from "../utils/AppError";
-import { isValidObjectId } from "../utils/validation";
-import { invalidateKeys, withCache } from "../utils/cache";
+import { escapeRegex, isValidObjectId } from "../utils/validation";
+import {
+  AGG_CACHE_TTL,
+  CACHE_KEYS,
+  DETAIL_CACHE_TTL,
+  invalidateKeys,
+  invalidatePattern,
+  LISTING_CACHE_TTL,
+  withCache,
+} from "../utils/cache";
 import type {
   CreateDestinationInput,
   UpdateDestinationInput,
 } from "../validators/destination.validators";
 import { Review, User } from "../models";
 
-// ─── Cache keys ───────────────────────────────────────────────────────────────
-const CACHE_KEYS = {
-  continentStats: "agg:continent:stats",
-  continentCountries: (slug: string) => `agg:continent:${slug}:countries`,
-  paginatedPage: (page: number, limit: number) =>
-    `api:dest:paginated:p${page}:l${limit}`,
-  destBySlug: (countrySlug: string, destSlug: string) =>
-    `api:dest:slug:${countrySlug}:${destSlug}`,
-  countryDestinations: (countrySlug: string) =>
-    `api:dest:country:${countrySlug}`,
-} as const;
 
-const AGG_CACHE_TTL = 30 * 60; // 30 minutes
-const LISTING_CACHE_TTL = 3 * 60; // 3 minutes
-const DETAIL_CACHE_TTL = 10 * 60; // 10 minutes
 
-const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 
 export interface PaginatedOptions {
   page: number;
@@ -219,7 +213,7 @@ const searchDestinations = async (q: string): Promise<any[]> => {
     $or.push({ "location.country": { $in: countryIds } });
   }
 
-  return Destination.find({ $or }).select("-reviews -__v").lean();
+  return Destination.find({ $or }).select("-reviews -__v").limit(50).lean();
 };
 
 const getDestinationsByLocation = async (
@@ -238,7 +232,7 @@ const getDestinationsByLocation = async (
     $or.push({ "location.country": { $in: countryIds } });
   }
 
-  return Destination.find({ $or }).select("-reviews -__v").lean();
+  return Destination.find({ $or }).select("-reviews -__v").limit(50).lean();
 };
 
 const getDestinationsByCategory = async (
@@ -263,6 +257,7 @@ const getDestinationsByCategory = async (
 
   const destinations = await Destination.find({ category })
     .select("-reviews -__v")
+    .limit(50)
     .lean();
 
   return { category, destinations };
@@ -535,13 +530,12 @@ const createDestination = async (data: CreateDestinationInput) => {
   const newDest = await Destination.create(payload);
   const { __v, ...rest } = newDest.toObject();
 
-  // A new destination changes listing pages and continent/country counts
+  // A new destination changes listing pages, country destinations, and continent/country counts
   await invalidateKeys(
     CACHE_KEYS.continentStats,
-    CACHE_KEYS.paginatedPage(1, 12),
-    CACHE_KEYS.paginatedPage(1, 24),
-    CACHE_KEYS.paginatedPage(1, 50),
+    CACHE_KEYS.countryDestinations(country.slug),
   );
+  await invalidatePattern("api:dest:paginated:*");
 
   return rest;
 };
@@ -607,19 +601,18 @@ const updateDestination = async (id: string, data: UpdateDestinationInput) => {
     .select("slug")
     .lean();
 
-  // A destination update affects the listing, continent stats, and its own detail page
-  const keysToInvalidate: string[] = [
-    CACHE_KEYS.continentStats,
-    CACHE_KEYS.paginatedPage(1, 12),
-    CACHE_KEYS.paginatedPage(1, 24),
-    CACHE_KEYS.paginatedPage(1, 50),
-  ];
-  if (updatedCountry?.slug && updatedDest.slug) {
-    keysToInvalidate.push(
-      CACHE_KEYS.destBySlug(updatedCountry.slug, updatedDest.slug),
-    );
+  // A destination update affects the listing, country destinations, continent stats, and its own detail page
+  const keysToInvalidate: string[] = [CACHE_KEYS.continentStats];
+  if (updatedCountry?.slug) {
+    keysToInvalidate.push(CACHE_KEYS.countryDestinations(updatedCountry.slug));
+    if (updatedDest.slug) {
+      keysToInvalidate.push(
+        CACHE_KEYS.destBySlug(updatedCountry.slug, updatedDest.slug),
+      );
+    }
   }
   await invalidateKeys(...keysToInvalidate);
+  await invalidatePattern("api:dest:paginated:*");
 
   return updatedDest;
 };
@@ -647,19 +640,18 @@ const deleteDestination = async (id: string) => {
     .select("slug")
     .lean();
 
-  // A deleted destination changes the listing, continent/country counts, and its own detail page
-  const keysToInvalidate: string[] = [
-    CACHE_KEYS.continentStats,
-    CACHE_KEYS.paginatedPage(1, 12),
-    CACHE_KEYS.paginatedPage(1, 24),
-    CACHE_KEYS.paginatedPage(1, 50),
-  ];
-  if (deletedCountry?.slug && deletedDest.slug) {
-    keysToInvalidate.push(
-      CACHE_KEYS.destBySlug(deletedCountry.slug, deletedDest.slug),
-    );
+  // A deleted destination changes the listing, country destinations, continent/country counts, and its own detail page
+  const keysToInvalidate: string[] = [CACHE_KEYS.continentStats];
+  if (deletedCountry?.slug) {
+    keysToInvalidate.push(CACHE_KEYS.countryDestinations(deletedCountry.slug));
+    if (deletedDest.slug) {
+      keysToInvalidate.push(
+        CACHE_KEYS.destBySlug(deletedCountry.slug, deletedDest.slug),
+      );
+    }
   }
   await invalidateKeys(...keysToInvalidate);
+  await invalidatePattern("api:dest:paginated:*");
 
   return deletedDest;
 };

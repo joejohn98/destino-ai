@@ -1,6 +1,7 @@
+import mongoose from "mongoose";
 import { Continent, Country, Destination, Review } from "../models";
 import { AppError } from "../utils/AppError";
-import { invalidateKeys } from "../utils/cache";
+import { CACHE_KEYS, invalidateKeys, invalidatePattern } from "../utils/cache";
 import { isValidObjectId } from "../utils/validation";
 import type {
   CreateCountryInput,
@@ -99,13 +100,16 @@ const createCountry = async (
   const newCountry = await Country.create(payload);
 
   // A new country changes both continent stats and the per-continent country list
-  await invalidateKeys("agg:continent:stats");
+  await invalidateKeys(
+    CACHE_KEYS.continentStats,
+    CACHE_KEYS.continentCountries(continent.slug),
+  );
 
   return newCountry;
 };
 
 const updateCountry = async (id: string, updateData: UpdateCountryInput) => {
-  const country = await Country.findById(id);
+  const country = await Country.findById(id).populate<{ continent: { slug: string } }>("continent", "slug");
   if (!country) {
     throw new AppError("Country not found", 404);
   }
@@ -128,34 +132,65 @@ const updateCountry = async (id: string, updateData: UpdateCountryInput) => {
   // Save changes
   await country.save();
 
-  await invalidateKeys("agg:continent:stats");
+  const keys: string[] = [CACHE_KEYS.continentStats];
+  if (country.continent?.slug) {
+    keys.push(CACHE_KEYS.continentCountries(country.continent.slug));
+  }
+  await invalidateKeys(...keys);
 
   return country;
 };
 
 const deleteCountry = async (id: string) => {
-  const country = await Country.findById(id);
+  const country = await Country.findById(id).populate<{ continent: { slug: string } }>("continent", "slug");
   if (!country) {
     throw new AppError("Country not found", 404);
   }
 
-  // Cascade delete destinations
+  // Cascade delete destinations in transaction with standalone fallback
   const destinations = await Destination.find({
     "location.country": country._id,
   });
 
-  if (destinations.length > 0) {
-    const destinationIds = destinations.map((d) => d._id);
-    await Review.deleteMany({ destination: { $in: destinationIds } });
-    await Destination.deleteMany({ _id: { $in: destinationIds } });
+  const destinationIds = destinations.map((d) => d._id);
+
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      if (destinationIds.length > 0) {
+        await Review.deleteMany({ destination: { $in: destinationIds } }, { session });
+        await Destination.deleteMany({ _id: { $in: destinationIds } }, { session });
+      }
+
+      await Country.findByIdAndDelete(country._id, { session });
+    });
+  } catch (error: any) {
+    if (error?.message?.includes("replica set")) {
+      if (destinationIds.length > 0) {
+        await Review.deleteMany({ destination: { $in: destinationIds } });
+        await Destination.deleteMany({ _id: { $in: destinationIds } });
+      }
+
+      await Country.findByIdAndDelete(country._id);
+    } else {
+      throw error;
+    }
+  } finally {
+    await session.endSession();
   }
 
-  // Delete the country
-  const deletedCountry = await Country.findByIdAndDelete(country._id);
+  const keys: string[] = [CACHE_KEYS.continentStats];
+  if (country.continent?.slug) {
+    keys.push(CACHE_KEYS.continentCountries(country.continent.slug));
+  }
+  if (country.slug) {
+    keys.push(CACHE_KEYS.countryDestinations(country.slug));
+  }
 
-  await invalidateKeys("agg:continent:stats");
+  await invalidateKeys(...keys);
+  await invalidatePattern("api:dest:*");
 
-  return deletedCountry;
+  return country;
 };
 
 export default {

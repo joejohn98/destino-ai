@@ -1,6 +1,7 @@
 import { Country, Destination, Review, User } from "../models";
 import aiService from "./ai.service";
 import { AppError } from "../utils/AppError";
+import { CACHE_KEYS, invalidateKeys, invalidatePattern } from "../utils/cache";
 import {
   CreateReviewInput,
   UpdateReviewInput,
@@ -18,14 +19,12 @@ const getDestinationReviews = async (
     "location.country": country._id,
   });
 
-  if (!destination) {
+  if (!destination)
     throw new AppError("Destination not found in this country", 404);
-  }
 
-  const reviews = await Review.find({ destination: destination._id }).populate({
-    path: "user",
-    select: "username _id",
-  });
+  const reviews = await Review.find({ destination: destination._id })
+    .populate("user", "firstName lastName avatarUrl")
+    .sort({ createdAt: -1 });
 
   return reviews;
 };
@@ -86,6 +85,9 @@ const createReview = async (
 
   await User.findByIdAndUpdate(userId, { $inc: { reviewCount: 1 } });
 
+  await invalidateKeys(CACHE_KEYS.destBySlug(countrySlug, destinationSlug));
+  await invalidatePattern("api:dest:paginated:*");
+
   return review;
 };
 
@@ -123,6 +125,16 @@ const updateReview = async (
   // post("save") hook on Review.model.ts will automatically recalculate destination averageRating
   await review.save();
 
+  const dest = await Destination.findById(review.destination)
+    .populate<{ location: { country: { slug: string } } }>("location.country", "slug")
+    .lean();
+  if (dest?.slug && dest.location?.country?.slug) {
+    await invalidateKeys(
+      CACHE_KEYS.destBySlug(dest.location.country.slug, dest.slug),
+    );
+  }
+  await invalidatePattern("api:dest:paginated:*");
+
   return review;
 };
 
@@ -138,10 +150,22 @@ const deleteReview = async (reviewId: string, userId: string, role: string) => {
   // Use findByIdAndDelete so the findOneAnd* hooks in Review.model.ts are triggered and the average rating is updated
   const deletedReview = await Review.findByIdAndDelete(reviewId);
 
-  if (role === "admin" && deletedReview?.user) {
+  if (deletedReview?.user) {
     await User.findByIdAndUpdate(deletedReview.user, {
       $inc: { reviewCount: -1 },
     });
+  }
+
+  if (deletedReview?.destination) {
+    const dest = await Destination.findById(deletedReview.destination)
+      .populate<{ location: { country: { slug: string } } }>("location.country", "slug")
+      .lean();
+    if (dest?.slug && dest.location?.country?.slug) {
+      await invalidateKeys(
+        CACHE_KEYS.destBySlug(dest.location.country.slug, dest.slug),
+      );
+    }
+    await invalidatePattern("api:dest:paginated:*");
   }
 
   return deletedReview;
