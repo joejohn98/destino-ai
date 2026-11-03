@@ -89,6 +89,11 @@ async function refreshDestinationRatings(
       averageRating: stats ? Math.round(stats.averageRating * 10) / 10 : 0,
       ratingsCount: stats?.ratingsCount ?? 0,
     },
+    $inc: { reviewContentVersion: 1 },
+    $unset: {
+      aiReviewSummary: 1,
+      summaryGeneratedAtRatingCount: 1,
+    },
   });
 }
 

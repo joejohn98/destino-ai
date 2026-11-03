@@ -61,6 +61,7 @@ export interface IDestination extends Document {
   travelTipsContextHash?: string;
   aiReviewSummary?: string;
   summaryGeneratedAtRatingCount?: number;
+  reviewContentVersion?: number;
   openingHours?: string;
   ticketPrice?: string;
   website?: string;
@@ -176,6 +177,11 @@ const destinationSchema = new mongoose.Schema<IDestination>(
       type: Number,
       min: [0, "Summary rating count cannot be negative"],
       default: undefined,
+    },
+    reviewContentVersion: {
+      type: Number,
+      default: 0,
+      select: false,
     },
     averageRating: {
       type: Number,

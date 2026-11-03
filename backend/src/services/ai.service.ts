@@ -105,7 +105,9 @@ const generateDestinationSummary = async (
   force = false,
 ) => {
   const destination = await Destination.findById(destinationId)
-    .select("name ratingsCount aiReviewSummary summaryGeneratedAtRatingCount")
+    .select(
+      "+reviewContentVersion name ratingsCount aiReviewSummary summaryGeneratedAtRatingCount",
+    )
     .lean();
   if (!destination) throw new AppError("Destination not found", 404);
 
@@ -155,10 +157,25 @@ const generateDestinationSummary = async (
     prompt: `Summarize these ${reviews.length} reviews of ${JSON.stringify(destination.name)}. Each item contains a rating out of 5 and review text:\n${JSON.stringify(reviews.map(({ rating, reviewText }) => ({ rating, reviewText })))}`,
   });
 
-  // Compare-and-set the review count so an intervening review does not make the
-  // saved summary appear fresher than the reviews actually summarized.
+  // Compare both the count and content revision so an intervening edit cannot
+  // save a summary based on older review text or ratings.
+  const reviewVersion = destination.reviewContentVersion ?? 0;
+  const revisionFilter =
+    reviewVersion === 0
+      ? {
+          $or: [
+            { reviewContentVersion: 0 },
+            { reviewContentVersion: { $exists: false } },
+          ],
+        }
+      : { reviewContentVersion: reviewVersion };
+
   const savedDestination = await Destination.findOneAndUpdate(
-    { _id: destination._id, ratingsCount: destination.ratingsCount },
+    {
+      _id: destination._id,
+      ratingsCount: destination.ratingsCount,
+      ...revisionFilter,
+    },
     {
       $set: {
         aiReviewSummary: text.trim(),
@@ -171,14 +188,10 @@ const generateDestinationSummary = async (
     .lean();
 
   if (!savedDestination) {
-    // Do not persist a summary against a newer review count. A later request
-    // will regenerate once the threshold is met.
-    return {
-      summary: text.trim(),
-      ratingsCount: destination.ratingsCount,
-      summaryGeneratedAtRatingCount: destination.ratingsCount,
-      cached: false,
-    };
+    throw new AppError(
+      "Reviews changed while the summary was being generated. Please retry.",
+      409,
+    );
   }
 
   return {
