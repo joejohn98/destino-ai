@@ -1,9 +1,11 @@
 import mongoose, { Document } from "mongoose";
 import slugify from "slugify";
 import { IDestination } from "./Destination.model";
+import { normalizeSearchValue } from "../utils/search-normalization";
 
 export interface ICountry extends Document {
   name: string;
+  searchName?: string;
   slug: string;
   imageUrl: string;
   description: string | undefined;
@@ -20,6 +22,10 @@ const countrySchema = new mongoose.Schema<ICountry>(
       type: String,
       required: [true, "Country name is required"],
       trim: true,
+    },
+    searchName: {
+      type: String,
+      select: false,
     },
     slug: {
       type: String,
@@ -61,9 +67,13 @@ countrySchema.virtual("destinations", {
 
 // Create an index on the continent field for faster queries
 countrySchema.index({ continent: 1 });
+countrySchema.index({ searchName: 1 });
+countrySchema.index({ name: "text" });
 
 // Pre-save hook: auto-generate slug from name
 countrySchema.pre("validate", function () {
+  this.searchName = normalizeSearchValue(this.name ?? "");
+
   if (this.isModified("name") || !this.slug) {
     this.slug = slugify(this.name, { lower: true, strict: true });
   }
@@ -74,10 +84,14 @@ countrySchema.pre("findOneAndUpdate", function () {
   const update = this.getUpdate() as {
     name?: string;
     slug?: string;
-    $set?: { name?: string; slug?: string };
+    $set?: { name?: string; slug?: string; searchName?: string };
   };
   if (update?.name) {
     update.slug = slugify(update.name, { lower: true, strict: true });
+    update.$set = {
+      ...update.$set,
+      searchName: normalizeSearchValue(update.name),
+    };
   }
 
   if (update?.$set?.name) {
@@ -85,6 +99,7 @@ countrySchema.pre("findOneAndUpdate", function () {
       lower: true,
       strict: true,
     });
+    update.$set.searchName = normalizeSearchValue(update.$set.name);
   }
 });
 

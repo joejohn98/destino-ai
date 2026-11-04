@@ -1,4 +1,5 @@
 import type { QueryFilter } from "mongoose";
+import slugify from "slugify";
 import { CATEGORIES, Destination } from "../models/Destination.model";
 import type { Category, IDestination } from "../models/Destination.model";
 import { Country } from "../models/Country.model";
@@ -19,6 +20,10 @@ import type {
   UpdateDestinationInput,
 } from "../validators/destination.validators";
 import { Review, User } from "../models";
+import {
+  normalizeSearchValue,
+  toMongoTextSearch,
+} from "../utils/search-normalization";
 
 export interface PaginatedOptions {
   page: number;
@@ -68,6 +73,10 @@ const getPaginatedDestinations = async (
       400,
     );
   }
+  const textSearch = search ? toMongoTextSearch(search) : undefined;
+  if (search && !textSearch) {
+    throw new AppError("Search query must contain letters or numbers", 400);
+  }
   if (category && !CATEGORIES.includes(category as Category)) {
     throw new AppError(
       `Invalid category. Valid categories are: ${CATEGORIES.join(", ")}`,
@@ -81,46 +90,47 @@ const getPaginatedDestinations = async (
     throw new AppError("minRating must be a number between 0 and 5", 400);
   }
 
-  const searchRegex = search ? new RegExp(escapeRegex(search), "i") : undefined;
-  const locationRegex = location
-    ? new RegExp(escapeRegex(location), "i")
+  const locationPrefix = location
+    ? new RegExp(`^${escapeRegex(normalizeSearchValue(location))}`)
     : undefined;
   const [matchingSearchCountries, matchingLocationCountries] =
     await Promise.all([
-      searchRegex
-        ? Country.find({ name: searchRegex }).select("_id").lean()
+      textSearch
+        ? Country.find({ $text: { $search: textSearch } })
+            .select("_id")
+            .lean()
         : Promise.resolve([]),
-      locationRegex
-        ? Country.find({ name: locationRegex }).select("_id").lean()
+      locationPrefix
+        ? Country.find({ searchName: locationPrefix }).select("_id").lean()
         : Promise.resolve([]),
     ]);
 
   const filters: QueryFilter<IDestination>[] = [];
-  if (searchRegex) {
-    filters.push({
-      $or: [
-        { name: searchRegex },
-        { description: searchRegex },
-        { "location.city": searchRegex },
-        {
-          "location.country": {
-            $in: matchingSearchCountries.map((country) => country._id),
-          },
-        },
-      ],
-    });
+  if (textSearch) {
+    const searchBranches: QueryFilter<IDestination>[] = [
+      { $text: { $search: textSearch } },
+    ];
+    const searchCountryIds = matchingSearchCountries.map(
+      (country) => country._id,
+    );
+    if (searchCountryIds.length > 0) {
+      searchBranches.push({ "location.country": { $in: searchCountryIds } });
+    }
+    filters.push({ $or: searchBranches });
   }
-  if (locationRegex) {
-    filters.push({
-      $or: [
-        { "location.city": locationRegex },
-        {
-          "location.country": {
-            $in: matchingLocationCountries.map((country) => country._id),
-          },
-        },
-      ],
-    });
+  if (locationPrefix) {
+    const locationBranches: QueryFilter<IDestination>[] = [
+      { searchCity: locationPrefix },
+    ];
+    const locationCountryIds = matchingLocationCountries.map(
+      (country) => country._id,
+    );
+    if (locationCountryIds.length > 0) {
+      locationBranches.push({
+        "location.country": { $in: locationCountryIds },
+      });
+    }
+    filters.push({ $or: locationBranches });
   }
   if (category) {
     filters.push({ category: category as Category });
@@ -133,14 +143,19 @@ const getPaginatedDestinations = async (
     filters.length > 0 ? { $and: filters } : {};
 
   const loadPage = async (): Promise<PaginatedResult> => {
+    const sort =
+      minRating !== undefined
+        ? { averageRating: -1 as const, _id: 1 as const }
+        : { createdAt: -1 as const, _id: -1 as const };
     const [destinations, total] = await Promise.all([
       Destination.find(filter)
-        .select("-reviews -__v")
+        .select("-reviews -__v -searchCity")
         .populate({
           path: "location.country",
           select: "slug name",
           populate: { path: "continent", select: "slug name" },
         })
+        .sort(sort)
         .skip(skip)
         .limit(limit)
         .lean(),
@@ -193,43 +208,54 @@ const searchDestinations = async (q: string): Promise<IDestination[]> => {
     );
   }
 
-  const regex = new RegExp(escapeRegex(trimmedQ), "i");
+  const textSearch = toMongoTextSearch(trimmedQ);
+  if (!textSearch) {
+    throw new AppError("Search query must contain letters or numbers", 400);
+  }
 
-  const matchingCountries = await Country.find({ name: regex })
+  const matchingCountries = await Country.find({
+    $text: { $search: textSearch },
+  })
     .select("_id")
     .lean();
-  const countryIds = matchingCountries.map((c) => c._id);
+  const countryIds = matchingCountries.map((country) => country._id);
 
-  const $or: QueryFilter<IDestination>[] = [
-    { name: regex },
-    { description: regex },
-    { "location.city": regex },
+  const branches: QueryFilter<IDestination>[] = [
+    { $text: { $search: textSearch } },
   ];
 
   if (countryIds.length > 0) {
-    $or.push({ "location.country": { $in: countryIds } });
+    branches.push({ "location.country": { $in: countryIds } });
   }
 
-  return Destination.find({ $or }).select("-reviews -__v").limit(50).lean();
+  return Destination.find({ $or: branches })
+    .select("-reviews -__v -searchCity")
+    .sort({ createdAt: -1, _id: -1 })
+    .limit(50)
+    .lean();
 };
 
 const getDestinationsByLocation = async (
   rawLocation: string,
 ): Promise<IDestination[]> => {
   const locParam = decodeURIComponent(rawLocation).trim();
-  const regex = new RegExp(escapeRegex(locParam), "i");
+  const prefix = new RegExp(`^${escapeRegex(normalizeSearchValue(locParam))}`);
 
-  const matchingCountries = await Country.find({ name: regex })
+  const matchingCountries = await Country.find({ searchName: prefix })
     .select("_id")
     .lean();
   const countryIds = matchingCountries.map((c) => c._id);
 
-  const $or: QueryFilter<IDestination>[] = [{ "location.city": regex }];
+  const $or: QueryFilter<IDestination>[] = [{ searchCity: prefix }];
   if (countryIds.length > 0) {
     $or.push({ "location.country": { $in: countryIds } });
   }
 
-  return Destination.find({ $or }).select("-reviews -__v").limit(50).lean();
+  return Destination.find({ $or })
+    .select("-reviews -__v -searchCity")
+    .sort({ createdAt: -1, _id: -1 })
+    .limit(50)
+    .lean();
 };
 
 const getDestinationsByCategory = async (
@@ -253,7 +279,8 @@ const getDestinationsByCategory = async (
   }
 
   const destinations = await Destination.find({ category })
-    .select("-reviews -__v")
+    .select("-reviews -__v -searchCity")
+    .sort({ createdAt: -1, _id: -1 })
     .limit(50)
     .lean();
 
@@ -495,14 +522,21 @@ const resolveCountry = async (countryIdentifier: string) => {
 };
 
 const createDestination = async (data: CreateDestinationInput) => {
-  const existingDest = await Destination.findOne({ name: data.name });
-  if (existingDest) {
-    throw new AppError("Destination with this name already exists", 409);
-  }
-
   const country = await resolveCountry(data.location.country);
   if (!country) {
     throw new AppError(`Country '${data.location.country}' not found`, 404);
+  }
+
+  const slug = slugify(data.name, { lower: true, strict: true });
+  const existingDest = await Destination.findOne({
+    "location.country": country._id,
+    slug,
+  });
+  if (existingDest) {
+    throw new AppError(
+      "Destination with this name already exists in this country",
+      409,
+    );
   }
 
   const payload: any = {
@@ -547,19 +581,46 @@ const updateDestination = async (id: string, data: UpdateDestinationInput) => {
     throw new AppError("Destination not found", 404);
   }
 
-  const previousCountrySlug = previousDestination.location?.country?.slug;
+  const previousCountryObj = previousDestination.location?.country as any;
+  const previousCountrySlug = previousCountryObj?.slug;
+  let targetCountryId = previousCountryObj?._id ?? previousCountryObj;
 
   const updatePayload: Record<string, unknown> = {};
 
+  if (data.location?.country !== undefined) {
+    const country = await resolveCountry(data.location.country);
+    if (!country)
+      throw new AppError(`Country '${data.location.country}' not found`, 404);
+    targetCountryId = country._id;
+    updatePayload["location.country"] = country._id;
+  }
+
   if (data.name !== undefined) {
+    const targetSlug = slugify(data.name, { lower: true, strict: true });
     const existing = await Destination.findOne({
-      name: data.name,
+      "location.country": targetCountryId,
+      slug: targetSlug,
       _id: { $ne: id },
     });
     if (existing)
-      throw new AppError("Destination with this name already exists", 409);
+      throw new AppError(
+        "Destination with this name already exists in this country",
+        409,
+      );
     updatePayload.name = data.name;
+  } else if (data.location?.country !== undefined && targetCountryId) {
+    const existing = await Destination.findOne({
+      "location.country": targetCountryId,
+      slug: previousDestination.slug,
+      _id: { $ne: id },
+    });
+    if (existing)
+      throw new AppError(
+        "Destination with this name already exists in this country",
+        409,
+      );
   }
+
   if (data.description !== undefined)
     updatePayload.description = data.description;
   if (data.category !== undefined) updatePayload.category = data.category;
@@ -573,12 +634,6 @@ const updateDestination = async (id: string, data: UpdateDestinationInput) => {
     updatePayload["location.city"] = data.location.city;
   if (data.location?.state !== undefined)
     updatePayload["location.state"] = data.location.state;
-  if (data.location?.country !== undefined) {
-    const country = await resolveCountry(data.location.country);
-    if (!country)
-      throw new AppError(`Country '${data.location.country}' not found`, 404);
-    updatePayload["location.country"] = country._id;
-  }
 
   const contextChanged =
     data.name !== undefined ||

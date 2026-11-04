@@ -209,10 +209,13 @@ GITHUB_CALLBACK_URL           # OAuth (required for GitHub login)
 | `createdAt`, `updatedAt` | `Date` | timestamps |
 
 **Indexes:**
-- `{ category: 1 }`
-- `{ averageRating: -1 }`
+- `{ createdAt: -1, _id: -1 }` — stable default paginated listing order
+- `{ category: 1, createdAt: -1, _id: -1 }` — category filter and default listing order
+- `{ "location.country": 1, createdAt: -1, _id: -1 }` — country filter and default listing order
+- `{ category: 1, averageRating: -1, _id: 1 }` and `{ averageRating: -1, _id: 1 }` — rating filter ordering
+- `{ searchCity: 1 }` — normalized city prefix filtering
 - `{ "location.country": 1, slug: 1 }` — **UNIQUE** (canonical lookup key)
-- `{ name: "text", description: "text" }` — text search index (not currently used by search endpoint — known bug)
+- `{ name: "text", description: "text", "location.city": "text" }` — word-based destination search
 
 **IAttraction subdocument fields:** `name` (required), `description?`, `ticketPrice?`, `suggestedDuration?`, `openingHours?`, `category?` (enum ATTRACTION_CATEGORIES)
 
@@ -235,13 +238,14 @@ SENTIMENTS = ["positive","neutral","negative"] as const
 | Field | Type | Notes |
 |-------|------|-------|
 | `name` | `String` | required, trim |
+| `searchName` | `String` | normalized, hidden indexed field for location prefix search |
 | `slug` | `String` | required, unique, lowercase; auto-generated from name |
 | `imageUrl` | `String` | required |
 | `description` | `String?` | optional |
 | `continent` | `ObjectId` | ref `Continent`, required |
 
 **Virtual:** `destinations` — populates `Destination` docs where `location.country == _id`
-**Index:** `{ continent: 1 }`
+**Indexes:** `{ continent: 1 }`, `{ searchName: 1 }`, `{ name: "text" }`
 **Slug hooks:** Same pattern as Destination model.
 
 ---
@@ -315,7 +319,7 @@ All routes guarded by `router.use(protect)`.
 | Method | Path | Auth | Upload | Notes |
 |--------|------|------|--------|-------|
 | GET | `/` | None | — | ?page=1&limit=12; cached per page+limit |
-| GET | `/search` | None | — | ?q=... (min 2 chars); NOT cached |
+| GET | `/search` | None | — | ?q=... (min 2 chars); word-based text search; NOT cached |
 | GET | `/rating` | None | — | All docs sorted by rating DESC; NO pagination (known bug) |
 | GET | `/location/:location` | None | — | Filter by city/country; NO limit (known bug) |
 | GET | `/filter/:minRating` | None | — | Filter by min rating; NO limit (known bug) |
@@ -702,7 +706,6 @@ Same structure as continent validators.
 | **CRASH-04** | HIGH | `updateReview` does not re-run sentiment analysis when `reviewText` changes |
 | **SEC-04** | HIGH | Cookie `maxAge` hardcoded to 7 days regardless of `JWT_EXPIRATION` env var |
 | **BUG-02** | HIGH | `getDestinationsByRating`, `getDestinationsByLocation`, etc. have no `.limit()` |
-| **BUG-03** | MED | Search uses regex scan instead of `$text` operator — ignores text index |
 | **BUG-04** | MED | Cache invalidation only clears page 1 variants of paginated keys |
 | **BUG-06** | MED | `compareDestinations` 422 response missing `status` and `message` fields |
 | **BUG-07** | MED | `continent.service` uses string literal `"agg:continent:stats"` not a constant |

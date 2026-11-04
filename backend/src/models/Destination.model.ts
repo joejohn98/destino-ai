@@ -1,5 +1,6 @@
 import mongoose, { Document } from "mongoose";
 import slugify from "slugify";
+import { normalizeSearchValue } from "../utils/search-normalization";
 
 export const CATEGORIES = [
   "beach",
@@ -62,6 +63,7 @@ export interface IDestination extends Document {
   aiReviewSummary?: string;
   summaryGeneratedAtRatingCount?: number;
   reviewContentVersion?: number;
+  searchCity?: string;
   openingHours?: string;
   ticketPrice?: string;
   website?: string;
@@ -183,6 +185,10 @@ const destinationSchema = new mongoose.Schema<IDestination>(
       default: 0,
       select: false,
     },
+    searchCity: {
+      type: String,
+      select: false,
+    },
     averageRating: {
       type: Number,
       default: 0,
@@ -204,13 +210,23 @@ const destinationSchema = new mongoose.Schema<IDestination>(
   },
 );
 
-destinationSchema.index({ category: 1 });
-destinationSchema.index({ averageRating: -1 });
+destinationSchema.index({ createdAt: -1, _id: -1 });
+destinationSchema.index({ category: 1, createdAt: -1, _id: -1 });
+destinationSchema.index({ "location.country": 1, createdAt: -1, _id: -1 });
+destinationSchema.index({ category: 1, averageRating: -1, _id: 1 });
+destinationSchema.index({ averageRating: -1, _id: 1 });
+destinationSchema.index({ searchCity: 1 });
 destinationSchema.index({ "location.country": 1, slug: 1 }, { unique: true });
-destinationSchema.index({ name: "text", description: "text" });
+destinationSchema.index({
+  name: "text",
+  description: "text",
+  "location.city": "text",
+});
 
 // Pre-save hook: auto-generate slug from name
 destinationSchema.pre("validate", function () {
+  this.searchCity = normalizeSearchValue(this.location?.city ?? "");
+
   if (this.isModified("name") || !this.slug) {
     this.slug = slugify(this.name, { lower: true, strict: true });
   }
@@ -221,8 +237,26 @@ destinationSchema.pre("findOneAndUpdate", function () {
   const update = this.getUpdate() as {
     name?: string;
     slug?: string;
-    $set?: { name?: string; slug?: string };
+    $set?: {
+      name?: string;
+      slug?: string;
+      "location.city"?: string;
+      location?: { city?: string };
+      searchCity?: string;
+    };
+    "location.city"?: string;
   };
+
+  const updatedCity =
+    update?.["location.city"] ??
+    update?.$set?.["location.city"] ??
+    update?.$set?.location?.city;
+  if (typeof updatedCity === "string") {
+    update.$set = {
+      ...update.$set,
+      searchCity: normalizeSearchValue(updatedCity),
+    };
+  }
 
   if (update?.name) {
     update.slug = slugify(update.name, { lower: true, strict: true });

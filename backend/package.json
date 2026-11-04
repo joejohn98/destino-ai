@@ -9,7 +9,8 @@
     "start": "node dist/index.js",
     "type-check": "tsc --noEmit",
     "lint": "eslint src",
-    "seed": "tsx src/scripts/seed.ts"
+    "seed": "tsx src/scripts/seed.ts",
+    "migrate-search-index": "tsx src/scripts/migrate-search-index.ts"
   },
   "keywords": [],
   "author": "",
