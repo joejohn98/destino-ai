@@ -700,6 +700,7 @@ const getDestinationsByCountrySlug = async (rawCountrySlug: string) => {
       })
         .select("-reviews -__v")
         .sort({ averageRating: -1, name: 1 })
+        .limit(100)
         .lean();
 
       const continentObj = country.continent as any;

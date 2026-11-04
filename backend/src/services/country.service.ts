@@ -35,6 +35,7 @@ const getAllCountries = async (continentIdOrSlug: string) => {
     .populate({
       path: "destinations",
       select: "_id name slug",
+      options: { limit: 100 },
     })
     .lean();
 
@@ -51,6 +52,7 @@ const getCountry = async (continentIdOrSlug: string, slug: string) => {
     .populate({
       path: "destinations",
       select: "-__v",
+      options: { limit: 100 },
     })
     .populate({
       path: "continent",
