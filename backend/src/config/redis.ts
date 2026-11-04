@@ -1,4 +1,3 @@
-  
 import { createClient } from "redis";
 import { config } from "./config";
 
@@ -22,17 +21,30 @@ redisClient.on("end", () => {
   console.log("Redis client disconnected");
 });
 
-export const connectRedis = async () => {
-  if (!redisClient.isOpen) {
-    await redisClient.connect();
+export const connectRedis = async (): Promise<boolean> => {
+  try {
+    if (!redisClient.isOpen) {
+      await redisClient.connect();
+    }
+    const pong = await redisClient.ping();
+    console.log("Redis ping response:", pong);
+    return true;
+  } catch (error) {
+    console.warn(
+      "WARNING: Unable to connect to Redis on startup. Caching and rate limiting will operate in fallback mode.",
+      error instanceof Error ? error.message : error,
+    );
+    return false;
   }
-  const pong = await redisClient.ping();
-  console.log("redis ping response", pong);
 };
 
-export const disconnectRedis = async () => {
+export const disconnectRedis = async (): Promise<void> => {
   if (redisClient.isOpen) {
-    await redisClient.quit();
-    console.log("Redis client disconnected");
+    try {
+      await redisClient.quit();
+      console.log("Redis client disconnected");
+    } catch (error) {
+      console.error("Error disconnecting Redis client:", error);
+    }
   }
 };

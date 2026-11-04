@@ -30,6 +30,10 @@ export const withCache = async <T>(
   ttlSeconds: number,
   fn: () => Promise<T>,
 ): Promise<T> => {
+  if (!redisClient.isOpen) {
+    return fn();
+  }
+
   let result: T | undefined;
 
   try {
@@ -52,10 +56,10 @@ export const withCache = async <T>(
  * Failures are silently swallowed so a Redis hiccup never breaks a write path.
  */
 export const invalidateKeys = async (...keys: string[]): Promise<void> => {
+  if (!redisClient.isOpen || keys.length === 0) return;
+
   try {
-    if (keys.length > 0) {
-      await redisClient.del(keys);
-    }
+    await redisClient.del(keys);
   } catch {
     // Non-fatal — stale data will expire on its own TTL
   }
@@ -65,6 +69,8 @@ export const invalidateKeys = async (...keys: string[]): Promise<void> => {
  * Delete all keys matching a pattern (e.g. "api:dest:paginated:*").
  */
 export const invalidatePattern = async (pattern: string): Promise<void> => {
+  if (!redisClient.isOpen) return;
+
   try {
     const keys: string[] = [];
     for await (const key of (redisClient as any).scanIterator({ MATCH: pattern })) {

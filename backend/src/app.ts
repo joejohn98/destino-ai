@@ -2,8 +2,10 @@ import express, { Request, Response } from "express";
 import cors from "cors";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
+import mongoose from "mongoose";
 
 import "./models";
+import { redisClient } from "./config/redis";
 import destinationRouter from "./routes/destination.routes";
 import { authRoutes } from "./routes/auth.routes";
 import { continentRoutes } from "./routes/continent.routes";
@@ -71,6 +73,30 @@ app.use("/api/admin/countries", countryRoutes);
 // AI routes
 app.use("/api/ai/agents", agentRoutes);
 app.use("/api/ai", aiRoutes);
+
+const healthHandler = (_req: Request, res: Response) => {
+  const isMongoReady = mongoose.connection.readyState === 1;
+  const isRedisReady = redisClient.isOpen;
+
+  const status = isMongoReady
+    ? isRedisReady
+      ? "healthy"
+      : "degraded"
+    : "unhealthy";
+  const statusCode = isMongoReady ? 200 : 503;
+
+  res.status(statusCode).json({
+    status,
+    timestamp: new Date().toISOString(),
+    services: {
+      database: isMongoReady ? "connected" : "disconnected",
+      redis: isRedisReady ? "connected" : "disconnected",
+    },
+  });
+};
+
+app.get("/health", healthHandler);
+app.get("/api/health", healthHandler);
 
 app.get("/", (_req: Request, res: Response) => {
   res.status(200).json({

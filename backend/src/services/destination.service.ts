@@ -758,7 +758,10 @@ const getDestinationsByCountrySlug = async (rawCountrySlug: string) => {
         .limit(100)
         .lean();
 
-      const continentObj = country.continent as any;
+      const continentObj = country.continent as {
+        name?: string;
+        slug?: string;
+      } | null;
       const continentName = continentObj?.name ?? "";
       const continentSlug = continentObj?.slug ?? "";
 

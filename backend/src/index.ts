@@ -86,7 +86,12 @@ process.on("unhandledRejection", (reason: unknown) => {
 const startServer = async () => {
   try {
     await connectDB();
-    await connectRedis();
+    const redisConnected = await connectRedis();
+    if (!redisConnected) {
+      console.warn(
+        "Starting server with Redis in fallback mode (database-only caching).",
+      );
+    }
 
     server = app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
