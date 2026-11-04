@@ -23,7 +23,7 @@ export const agentLimiter = rateLimit({
   standardHeaders: true, // Return RateLimit-* headers so the client knows its remaining quota
   legacyHeaders: false,
   message: {
-    status: "failed",
+    status: "fail",
     message:
       "Agent rate limit reached. Please wait before making another agent request.",
   },
@@ -41,7 +41,7 @@ export const aiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: {
-    status: "failed",
+    status: "fail",
     message:
       "AI request rate limit reached. Please wait before making another request.",
   },
@@ -54,7 +54,7 @@ export const authLimiter = rateLimit({
   store: createStore("auth"),
   passOnStoreError: true,
   message: {
-    status: "failed",
+    status: "fail",
     message: "Too many attempts. Try again after 15 minutes.",
   },
   standardHeaders: true,
