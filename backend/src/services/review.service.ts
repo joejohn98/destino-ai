@@ -2,7 +2,10 @@ import { Country, Destination, Review, User } from "../models";
 import aiService from "./ai.service";
 import { AppError } from "../utils/AppError";
 import { CACHE_KEYS, invalidateKeys, invalidatePattern } from "../utils/cache";
+import type { PaginatedReviewsDTO, PublicReviewAuthorDTO } from "../dto/review.dto";
 import {
+  DEFAULT_REVIEW_PAGE_SIZE,
+  MAX_REVIEW_PAGE_SIZE,
   CreateReviewInput,
   ReviewPaginationInput,
   UpdateReviewInput,
@@ -11,8 +14,21 @@ import {
 const getDestinationReviews = async (
   countrySlug: string,
   destinationSlug: string,
-  { page, limit }: ReviewPaginationInput,
-) => {
+  pagination: ReviewPaginationInput,
+): Promise<PaginatedReviewsDTO> => {
+  const page =
+    Number.isSafeInteger(pagination.page) && pagination.page > 0
+      ? pagination.page
+      : 1;
+  const limit =
+    Number.isSafeInteger(pagination.limit) && pagination.limit > 0
+      ? Math.min(pagination.limit, MAX_REVIEW_PAGE_SIZE)
+      : DEFAULT_REVIEW_PAGE_SIZE;
+  const skip = (page - 1) * limit;
+  if (!Number.isSafeInteger(skip)) {
+    throw new AppError("Requested review page is too large", 400);
+  }
+
   const country = await Country.findOne({ slug: countrySlug });
   if (!country) throw new AppError("Country not found", 404);
 
@@ -25,17 +41,55 @@ const getDestinationReviews = async (
     throw new AppError("Destination not found in this country", 404);
 
   const filter = { destination: destination._id };
+  type PopulatedAuthor = {
+    _id: { toString(): string };
+    firstName: string;
+    lastName: string;
+    avatarUrl?: string;
+  };
+
   const [totalReviews, reviews] = await Promise.all([
     Review.countDocuments(filter),
     Review.find(filter)
-      .populate("user", "firstName lastName avatarUrl")
+      .select(
+        "destination user authorName rating reviewText sentiment themes createdAt updatedAt",
+      )
+      .populate<{ user: PopulatedAuthor | null }>(
+        "user",
+        "firstName lastName avatarUrl",
+      )
       .sort({ createdAt: -1, _id: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit),
+      .skip(skip)
+      .limit(limit)
+      .lean(),
   ]);
 
   return {
-    data: reviews,
+    data: reviews.map((review) => {
+      const author: PublicReviewAuthorDTO | null = review.user
+        ? {
+            _id: review.user._id.toString(),
+            firstName: review.user.firstName,
+            lastName: review.user.lastName,
+            ...(review.user.avatarUrl
+              ? { avatarUrl: review.user.avatarUrl }
+              : {}),
+          }
+        : null;
+
+      return {
+        _id: review._id.toString(),
+        destination: review.destination.toString(),
+        user: author,
+        authorName: review.authorName,
+        rating: review.rating,
+        reviewText: review.reviewText,
+        ...(review.sentiment ? { sentiment: review.sentiment } : {}),
+        themes: review.themes ?? [],
+        createdAt: review.createdAt.toISOString(),
+        updatedAt: review.updatedAt.toISOString(),
+      };
+    }),
     totalReviews,
     totalPages: Math.ceil(totalReviews / limit),
     currentPage: page,

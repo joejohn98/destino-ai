@@ -1,6 +1,7 @@
 import { catchAsync } from "../utils/catchAsync";
 import reviewService from "../services/review.service";
 import { AppError } from "../utils/AppError";
+import type { ReviewListResponseDTO } from "../dto/review.dto";
 import { isValidObjectId } from "../utils/validation";
 import { reviewPaginationSchema } from "../validators/review.validators";
 
@@ -24,14 +25,15 @@ export const getDestinationReviews = catchAsync(async (req, res) => {
     destinationSlug,
     pagination.data,
   );
-  res.status(200).json({
+  const response: ReviewListResponseDTO = {
     status: "success",
     results: result.data.length,
     totalReviews: result.totalReviews,
     totalPages: result.totalPages,
     currentPage: result.currentPage,
     data: result.data,
-  });
+  };
+  res.status(200).json(response);
 });
 
 export const createReview = catchAsync(async (req, res) => {
@@ -54,7 +56,6 @@ export const createReview = catchAsync(async (req, res) => {
     data: review,
   });
 });
-
 
 export const updateReview = catchAsync(async (req, res) => {
   const reviewId = req.params.reviewId as string;
@@ -85,7 +86,3 @@ export const deleteReview = catchAsync(async (req, res) => {
     message: "Review deleted successfully",
   });
 });
-
-
-
-
