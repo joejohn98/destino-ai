@@ -232,7 +232,6 @@ export function ReviewsSection({
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="font-semibold text-ink">
                               {review.authorName ||
-                                review.user?.username ||
                                 "Anonymous Traveler"}
                             </span>
                             {isOwn && (

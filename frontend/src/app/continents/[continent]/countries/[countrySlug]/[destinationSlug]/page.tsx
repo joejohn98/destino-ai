@@ -29,6 +29,7 @@ import {
   shouldBypassImageOptimization,
 } from "@/lib/api";
 import { FavoriteButton } from "@/components/favorite-button";
+import { DestinationImageCarousel } from "@/components/destination-image-carousel";
 import { ReviewsSection } from "@/components/reviews/reviews-section";
 
 type DestinationDetailPageProps = {
@@ -177,22 +178,15 @@ export default async function DestinationDetailPage({
             className="grid overflow-hidden p-0 lg:grid-cols-12"
           >
             <div className="relative min-h-80 overflow-hidden lg:col-span-7 lg:min-h-130">
-              {destination.imageUrls?.[0] ? (
-                <Image
-                  src={destination.imageUrls[0]}
-                  alt={destination.name}
-                  fill
-                  unoptimized={shouldBypassImageOptimization(destination.imageUrls[0])}
-                  priority
-                  sizes="(max-width: 1024px) 100vw, 60vw"
-                  className="object-cover"
-                />
-              ) : (
-                <div className="size-full bg-cream" />
-              )}
+              <DestinationImageCarousel
+                images={destination.imageUrls ?? []}
+                destinationName={destination.name}
+                priority
+                sizes="(max-width: 1024px) 100vw, 60vw"
+              />
               <div
                 aria-hidden="true"
-                className="absolute inset-0 bg-gradient-to-t from-ink/70 via-ink/15 to-transparent"
+                className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink/70 via-ink/15 to-transparent"
               />
               <div className="absolute bottom-6 left-6 flex flex-wrap gap-2">
                 <Badge

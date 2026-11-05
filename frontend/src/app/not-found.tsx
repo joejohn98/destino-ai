@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { ArrowRight, Compass } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { NotFoundGlitch } from "@/components/not-found-glitch";
 
 export default function NotFound() {
   return (
@@ -9,9 +10,7 @@ export default function NotFound() {
       <main className="flex flex-1 items-center justify-center px-4 py-20 sm:px-6 lg:px-10">
         <Card variant="editorial" className="max-w-lg p-10 text-center sm:p-14">
           <CardContent className="p-0">
-            <div className="mx-auto grid size-16 place-items-center rounded-full bg-canvas text-ink">
-              <Compass className="size-8 text-pastel-sky" />
-            </div>
+            <NotFoundGlitch />
             <p className="mt-6 text-eyebrow font-medium uppercase text-muted-foreground">
               404 — Destination Not Found
             </p>

@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/field";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { AgentProgress } from "@/components/ai/agent-progress";
 import {
   api,
   ApiError,
@@ -396,11 +397,11 @@ function HowItWorks() {
 
 function LoadingState() {
   return (
-    <section aria-live="polite" aria-busy="true" className="flex flex-col gap-4">
+    <section aria-busy="true" className="flex flex-col gap-4">
       <div className="flex items-center gap-3">
-        <Sparkles aria-hidden="true" className="size-5 text-pastel-sky" />
         <div>
           <h2 className="font-semibold">Researching the destinations</h2>
+          <AgentProgress label="Thinking through the trade-offs" className="mt-1" />
           <p className="text-sm text-muted-foreground">
             Checking destination details and traveller reviews.
           </p>

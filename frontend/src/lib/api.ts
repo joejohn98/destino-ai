@@ -63,10 +63,7 @@ export function destinationHref(
   if (continentSlug && countrySlug && destination.slug) {
     return `/continents/${encodeURIComponent(continentSlug)}/countries/${encodeURIComponent(countrySlug)}/${encodeURIComponent(destination.slug)}`;
   }
-  if (countrySlug && destination.slug) {
-    return `/destinations/${encodeURIComponent(countrySlug)}/${encodeURIComponent(destination.slug)}`;
-  }
-  return `/destinations/${encodeURIComponent(destination.slug || destination._id)}`;
+  return "/destinations";
 }
 
 const nextOptimizedImageHosts = new Set([
@@ -93,9 +90,10 @@ export function shouldBypassImageOptimization(source: string): boolean {
 export interface Review {
   _id: string;
   destination: string;
-  user?: {
+  user: {
     _id: string;
-    username: string;
+    firstName: string;
+    lastName: string;
     avatarUrl?: string;
   } | null;
   authorName: string;
@@ -172,6 +170,9 @@ export interface SingleDestinationResponse {
 export interface ReviewsResponse {
   status: string;
   results: number;
+  totalReviews: number;
+  totalPages: number;
+  currentPage: number;
   data: Review[];
 }
 
@@ -219,7 +220,6 @@ export interface AuthUser {
   role: "user" | "admin";
   avatarUrl?: string;
   bio?: string;
-  isActive?: boolean;
   favoriteDestinations?: string[];
 }
 
@@ -335,11 +335,11 @@ export interface MyReview {
   createdAt: string;
   updatedAt: string;
   destination: {
-    _id: string;
+    _id: string | null;
     name: string;
-    slug: string;
-    countryName?: string | null;
-    countrySlug?: string | null;
+    slug: string | null;
+    countryName: string | null;
+    countrySlug: string | null;
   };
 }
 
@@ -826,9 +826,15 @@ export const api = {
   async getDestinationReviews(
     countrySlug: string,
     destinationSlug: string,
+    params: { page?: number; limit?: number } = {},
   ): Promise<ReviewsResponse> {
+    const query = new URLSearchParams();
+    if (params.page !== undefined) query.set("page", String(params.page));
+    if (params.limit !== undefined) query.set("limit", String(params.limit));
+    const queryString = query.size > 0 ? `?${query.toString()}` : "";
+
     return fetchApi<ReviewsResponse>(
-      `/api/countries/${encodeURIComponent(countrySlug)}/destinations/${encodeURIComponent(destinationSlug)}/reviews`,
+      `/api/countries/${encodeURIComponent(countrySlug)}/destinations/${encodeURIComponent(destinationSlug)}/reviews${queryString}`,
     );
   },
 

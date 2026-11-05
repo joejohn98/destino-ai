@@ -35,6 +35,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { AgentProgress } from "@/components/ai/agent-progress";
 import {
   api,
   ApiError,
@@ -375,11 +376,11 @@ function PlannerSteps() {
 
 function LoadingState() {
   return (
-    <section aria-live="polite" aria-busy="true" className="flex flex-col gap-4">
+    <section aria-busy="true" className="flex flex-col gap-4">
       <div className="flex items-center gap-3">
-        <Sparkles aria-hidden="true" className="size-5 text-pastel-sky" />
         <div>
           <h2 className="font-semibold">Researching your itinerary</h2>
+          <AgentProgress label="Thinking through your itinerary" className="mt-1" />
           <p className="text-sm text-muted-foreground">
             Checking destinations, traveller notes, and the trip estimate.
           </p>
