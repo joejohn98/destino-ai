@@ -1,6 +1,6 @@
 import type { Request, Response, RequestHandler } from "express";
 
-import { catchAsync } from "../utils/catchAsync";
+import { catchAsync, catchAsyncBody } from "../utils/catchAsync";
 import continentService from "../services/continent.service";
 import { AppError } from "../utils/AppError";
 import { isValidObjectId } from "../utils/validation";
@@ -39,8 +39,8 @@ export const getContinent: RequestHandler = catchAsync(
   },
 );
 
-export const createContinent: RequestHandler = catchAsync(
-  async (req: Request, res: Response) => {
+export const createContinent = catchAsyncBody<CreateContinentInput>(
+  async (req, res) => {
     let { name, description } = req.body;
     let imageUrl: string | undefined = req.body.imageUrl;
 
@@ -82,8 +82,8 @@ export const createContinent: RequestHandler = catchAsync(
   },
 );
 
-export const updateContinent: RequestHandler = catchAsync(
-  async (req: Request, res: Response) => {
+export const updateContinent = catchAsyncBody<UpdateContinentInput>(
+  async (req, res) => {
     const id = req.params.id as string;
     if (!isValidObjectId(id)) throw new AppError("Invalid Continent ID", 400);
 

@@ -1,21 +1,23 @@
 import type { RequestHandler } from "express";
 import destinationService from "../services/destination.service";
-import { catchAsync } from "../utils/catchAsync";
+import { catchAsync, catchAsyncBody } from "../utils/catchAsync";
 import { uploadMultipleImageStreams, uploadUrlToCloudinary } from "../services/cloudinary.service";
 import { AppError } from "../utils/AppError";
 import { isValidObjectId } from "../utils/validation";
+import type {
+  CreateDestinationInput,
+  UpdateDestinationInput,
+} from "../validators/destination.validators";
+import { destinationListQuerySchema } from "../validators/query.validators";
+import type {
+  CategoryDestinationResponseDTO,
+  DestinationArrayResponseDTO,
+  PaginatedDestinationResponseDTO,
+} from "../dto/destination.dto";
+import { searchQuerySchema } from "../validators/query.validators";
 
-const assertImageLimit = (req: Parameters<RequestHandler>[0]) => {
-  const urlCount = Array.isArray(req.body.images)
-    ? req.body.images.length
-    : req.body.images
-      ? 1
-      : 0;
-  const fileCount =
-    (req.file ? 1 : 0) +
-    (Array.isArray(req.files) ? req.files.length : 0);
-
-  if (urlCount + fileCount > 5) {
+const assertImageLimit = (imageUrls: string[] | undefined, uploadedFileCount: number) => {
+  if ((imageUrls?.length ?? 0) + uploadedFileCount > 5) {
     throw new AppError("At most 5 images are allowed", 400);
   }
 };
@@ -26,34 +28,37 @@ const assertImageLimit = (req: Parameters<RequestHandler>[0]) => {
  */
 export const getPaginatedDestinations: RequestHandler = catchAsync(
   async (req, res) => {
-    const page = parseInt(String(req.query.page || "1"), 10) || 1;
-    const rawLimit = parseInt(String(req.query.limit || "12"), 10) || 12;
+    const parsedQuery = destinationListQuerySchema.safeParse(req.query);
+    if (!parsedQuery.success) {
+      throw new AppError(
+        parsedQuery.error.issues[0]?.message || "Invalid query parameters",
+        400,
+      );
+    }
+
+    const { page, limit, q, location, category, minRating } = parsedQuery.data;
     const options: Parameters<
       typeof destinationService.getPaginatedDestinations
     >[0] = {
       page,
-      limit: rawLimit,
+      limit,
     };
-    const search = String(req.query.q || "").trim();
-    const location = String(req.query.location || "").trim();
-    const category = String(req.query.category || "").trim();
-    const rawMinRating = req.query.minRating;
-
-    if (search) options.search = search;
+    if (q) options.search = q;
     if (location) options.location = location;
     if (category) options.category = category;
-    if (rawMinRating !== undefined) options.minRating = Number(rawMinRating);
+    if (minRating !== undefined) options.minRating = minRating;
 
     const result = await destinationService.getPaginatedDestinations(options);
 
-    res.status(200).json({
+    const response: PaginatedDestinationResponseDTO = {
       status: "success",
       results: result.destinations.length,
       totalDestinations: result.totalDestinations,
       totalPages: result.totalPages,
       currentPage: result.currentPage,
       data: result.destinations,
-    });
+    };
+    res.status(200).json(response);
   }
 );
 
@@ -63,14 +68,18 @@ export const getPaginatedDestinations: RequestHandler = catchAsync(
  */
 export const searchDestinations: RequestHandler = catchAsync(
   async (req, res) => {
-    const q = String(req.query.q || "");
-    const destinations = await destinationService.searchDestinations(q);
+    const query = searchQuerySchema.safeParse(req.query);
+    if (!query.success) {
+      throw new AppError(query.error.issues[0]?.message || "Invalid search query", 400);
+    }
+    const destinations = await destinationService.searchDestinations(query.data.q);
 
-    res.status(200).json({
+    const response: DestinationArrayResponseDTO = {
       status: "success",
       results: destinations.length,
       data: destinations,
-    });
+    };
+    res.status(200).json(response);
   }
 );
 
@@ -85,11 +94,12 @@ export const getDestinationsByLocation: RequestHandler = catchAsync(
       rawLoc
     );
 
-    res.status(200).json({
+    const response: DestinationArrayResponseDTO = {
       status: "success",
       results: destinations.length,
       data: destinations,
-    });
+    };
+    res.status(200).json(response);
   }
 );
 
@@ -103,12 +113,13 @@ export const getDestinationsByCategory: RequestHandler = catchAsync(
     const { category, destinations } =
       await destinationService.getDestinationsByCategory(rawCat);
 
-    res.status(200).json({
+    const response: CategoryDestinationResponseDTO = {
       status: "success",
       category,
       results: destinations.length,
       data: destinations,
-    });
+    };
+    res.status(200).json(response);
   }
 );
 
@@ -211,8 +222,11 @@ export const getDestinationBySlug: RequestHandler = catchAsync(
  * POST /api/destinations
  * Create a new destination (Admin only)
  */
-export const createDestination: RequestHandler = catchAsync(async (req, res) => {
-  assertImageLimit(req);
+export const createDestination = catchAsyncBody<CreateDestinationInput>(async (req, res) => {
+  assertImageLimit(
+    req.body.images,
+    (req.file ? 1 : 0) + (Array.isArray(req.files) ? req.files.length : 0),
+  );
   let images = req.body.images || [];
   if (typeof images === "string") images = [images];
 
@@ -254,13 +268,16 @@ export const createDestination: RequestHandler = catchAsync(async (req, res) => 
  * PUT /api/destinations/:id
  * Update an existing destination (Admin only)
  */
-export const updateDestination: RequestHandler = catchAsync(async (req, res) => {
+export const updateDestination = catchAsyncBody<UpdateDestinationInput>(async (req, res) => {
   const id = req.params.id as string;
   if (!isValidObjectId(id)) {
     throw new AppError("Invalid Destination ID", 400);
   }
 
-  assertImageLimit(req);
+  assertImageLimit(
+    req.body.images,
+    (req.file ? 1 : 0) + (Array.isArray(req.files) ? req.files.length : 0),
+  );
 
   let fileBuffers: Buffer[] = [];
   if (req.file) fileBuffers.push(req.file.buffer);

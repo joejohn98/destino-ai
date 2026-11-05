@@ -1,10 +1,11 @@
-import type { RequestHandler, Request, Response } from "express";
-import { catchAsync } from "../utils/catchAsync";
+import type { RequestHandler } from "express";
+import { catchAsync, catchAsyncBody } from "../utils/catchAsync";
 import authService from "../services/auth.service";
 import { createSendToken } from "../utils/utils";
+import type { LoginInput, RegisterInput } from "../validators/auth.validators";
 
-export const register: RequestHandler = catchAsync(
-  async (req: Request, res: Response) => {
+export const register = catchAsyncBody<RegisterInput>(
+  async (req, res) => {
     const { firstName, lastName, email, username, password } = req.body;
 
     const user = await authService.register(
@@ -27,8 +28,8 @@ export const register: RequestHandler = catchAsync(
   },
 );
 
-export const login: RequestHandler = catchAsync(
-  async (req: Request, res: Response) => {
+export const login = catchAsyncBody<LoginInput>(
+  async (req, res) => {
     const { email, password } = req.body;
 
     const user = await authService.login(email, password);

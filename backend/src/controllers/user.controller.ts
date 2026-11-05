@@ -2,7 +2,13 @@ import type { RequestHandler } from "express";
 
 import userService from "../services/user.service";
 import { AppError } from "../utils/AppError";
-import { catchAsync } from "../utils/catchAsync";
+import { catchAsync, catchAsyncBody } from "../utils/catchAsync";
+import type { UpdateProfileInput } from "../validators/user.validators";
+import { paginationQuerySchema } from "../validators/query.validators";
+import type {
+  FavoritesResponseDTO,
+  MyReviewsResponseDTO,
+} from "../dto/user.dto";
 
 const getAuthenticatedUserId = (userId: string | undefined) => {
   if (!userId) {
@@ -23,18 +29,20 @@ export const getProfile: RequestHandler = catchAsync(async (req, res) => {
   });
 });
 
-export const updateProfile: RequestHandler = catchAsync(async (req, res) => {
-  const user = await userService.updateProfile(
-    getAuthenticatedUserId(req.user?._id.toString()),
-    req.body,
-  );
+export const updateProfile = catchAsyncBody<UpdateProfileInput>(
+  async (req, res) => {
+    const user = await userService.updateProfile(
+      getAuthenticatedUserId(req.user?._id.toString()),
+      req.body,
+    );
 
-  res.status(200).json({
-    status: "success",
-    message: "Profile updated successfully",
-    data: user,
-  });
-});
+    res.status(200).json({
+      status: "success",
+      message: "Profile updated successfully",
+      data: user,
+    });
+  },
+);
 
 export const deleteProfile: RequestHandler = catchAsync(async (req, res) => {
   await userService.deleteProfile(
@@ -48,49 +56,47 @@ export const deleteProfile: RequestHandler = catchAsync(async (req, res) => {
 });
 
 export const getMyReviews: RequestHandler = catchAsync(async (req, res) => {
-  const page = Math.max(parseInt(String(req.query.page || "1"), 10) || 1, 1);
-  const limit = Math.min(
-    Math.max(parseInt(String(req.query.limit || "12"), 10) || 12, 1),
-    50,
-  );
+  const query = paginationQuerySchema.safeParse(req.query);
+  if (!query.success) {
+    throw new AppError(query.error.issues[0]?.message || "Invalid pagination parameters", 400);
+  }
 
   const result = await userService.getMyReviews(
     getAuthenticatedUserId(req.user?._id.toString()),
-    page,
-    limit,
+    query.data,
   );
 
-  res.status(200).json({
+  const response: MyReviewsResponseDTO = {
     status: "success",
     results: result.data.length,
     totalReviews: result.totalReviews,
     totalPages: result.totalPages,
     currentPage: result.currentPage,
     data: result.data,
-  });
+  };
+  res.status(200).json(response);
 });
 
 export const getFavorites: RequestHandler = catchAsync(async (req, res) => {
-  const page = Math.max(parseInt(String(req.query.page || "1"), 10) || 1, 1);
-  const limit = Math.min(
-    Math.max(parseInt(String(req.query.limit || "12"), 10) || 12, 1),
-    50,
-  );
+  const query = paginationQuerySchema.safeParse(req.query);
+  if (!query.success) {
+    throw new AppError(query.error.issues[0]?.message || "Invalid pagination parameters", 400);
+  }
 
   const result = await userService.getFavorites(
     getAuthenticatedUserId(req.user?._id.toString()),
-    page,
-    limit,
+    query.data,
   );
 
-  res.status(200).json({
+  const response: FavoritesResponseDTO = {
     status: "success",
     results: result.data.length,
     totalFavorites: result.totalFavorites,
     totalPages: result.totalPages,
     currentPage: result.currentPage,
     data: result.data,
-  });
+  };
+  res.status(200).json(response);
 });
 
 export const addFavorite: RequestHandler = catchAsync(async (req, res) => {

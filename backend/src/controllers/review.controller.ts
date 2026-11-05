@@ -1,7 +1,11 @@
-import { catchAsync } from "../utils/catchAsync";
+import { catchAsync, catchAsyncBody } from "../utils/catchAsync";
 import reviewService from "../services/review.service";
 import { AppError } from "../utils/AppError";
 import type { ReviewListResponseDTO } from "../dto/review.dto";
+import type {
+  CreateReviewInput,
+  UpdateReviewInput,
+} from "../validators/review.validators";
 import { isValidObjectId } from "../utils/validation";
 import { reviewPaginationSchema } from "../validators/review.validators";
 
@@ -36,7 +40,7 @@ export const getDestinationReviews = catchAsync(async (req, res) => {
   res.status(200).json(response);
 });
 
-export const createReview = catchAsync(async (req, res) => {
+export const createReview = catchAsyncBody<CreateReviewInput>(async (req, res) => {
   const { countrySlug, destinationSlug } = req.params as { countrySlug?: string; destinationSlug?: string };
 
   if (!countrySlug || !destinationSlug) throw new AppError("Country and Destination slugs are required", 400);
@@ -57,7 +61,7 @@ export const createReview = catchAsync(async (req, res) => {
   });
 });
 
-export const updateReview = catchAsync(async (req, res) => {
+export const updateReview = catchAsyncBody<UpdateReviewInput>(async (req, res) => {
   const reviewId = req.params.reviewId as string;
 
   if (!isValidObjectId(reviewId)) throw new AppError("Invalid review ID", 400);

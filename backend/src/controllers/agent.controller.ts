@@ -1,10 +1,12 @@
-import type { Request, Response } from "express";
-
-import { catchAsync } from "../utils/catchAsync";
+import { catchAsyncBody } from "../utils/catchAsync";
 import agentService from "../services/agent.service";
+import type {
+  CompareRequestInput,
+  PlanRequestInput,
+} from "../validators/ai.validators";
 
-export const generateItinerary = catchAsync(
-  async (req: Request, res: Response) => {
+export const generateItinerary = catchAsyncBody<PlanRequestInput>(
+  async (req, res) => {
     const { query } = req.body;
 
     const itinerary = await agentService.planItinerary(query);
@@ -60,8 +62,8 @@ export const generateItinerary = catchAsync(
   },
 );
 
-export const compareDestinations = catchAsync(
-  async (req: Request, res: Response) => {
+export const compareDestinations = catchAsyncBody<CompareRequestInput>(
+  async (req, res) => {
     const { query } = req.body;
 
     const comparison = await agentService.compareDestinations(query);

@@ -1,6 +1,8 @@
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Strategy as GitHubStrategy } from "passport-github2";
+import type { VerifyCallback } from "passport-oauth2";
+import type { Profile as GitHubProfile } from "passport-github2";
 import authService from "../services/auth.service";
 import { config } from "./config";
 
@@ -31,7 +33,10 @@ if (config.googleClientId && config.googleClientSecret && config.googleCallbackU
 
           return done(null, user);
         } catch (err) {
-          return done(err as Error, undefined);
+          return done(
+            err instanceof Error ? err : new Error("Google OAuth failed"),
+            undefined,
+          );
         }
       },
     ),
@@ -53,8 +58,8 @@ if (config.githubClientId && config.githubClientSecret && config.githubCallbackU
       async (
         _accessToken: string,
         _refreshToken: string,
-        profile: any,
-        done: any,
+        profile: GitHubProfile,
+        done: VerifyCallback,
       ) => {
         try {
           const email =
@@ -78,7 +83,10 @@ if (config.githubClientId && config.githubClientSecret && config.githubCallbackU
 
           return done(null, user);
         } catch (err) {
-          return done(err as Error, undefined);
+          return done(
+            err instanceof Error ? err : new Error("GitHub OAuth failed"),
+            undefined,
+          );
         }
       },
     ),

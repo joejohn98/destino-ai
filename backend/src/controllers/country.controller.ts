@@ -1,6 +1,6 @@
 import type { RequestHandler, Request, Response } from "express";
 
-import { catchAsync } from "../utils/catchAsync";
+import { catchAsync, catchAsyncBody } from "../utils/catchAsync";
 import countryService from "../services/country.service";
 import { AppError } from "../utils/AppError";
 import { isValidObjectId } from "../utils/validation";
@@ -38,7 +38,7 @@ export const getCountry: RequestHandler = catchAsync(async (req, res) => {
   });
 });
 
-export const createCountry: RequestHandler = catchAsync(async (req, res) => {
+export const createCountry = catchAsyncBody<CreateCountryInput>(async (req, res) => {
   const continentId = req.params.continentId as string;
 
   if (!continentId) {
@@ -77,8 +77,8 @@ export const createCountry: RequestHandler = catchAsync(async (req, res) => {
   });
 });
 
-export const updateCountry: RequestHandler = catchAsync(
-  async (req: Request, res: Response) => {
+export const updateCountry = catchAsyncBody<UpdateCountryInput>(
+  async (req, res) => {
     const id = req.params.id as string;
 
     if (!isValidObjectId(id)) {
