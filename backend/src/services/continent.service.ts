@@ -2,49 +2,104 @@ import {
   Continent,
   Country,
   Destination,
+  IDestination,
   IContinent,
   ICountry,
   Review,
   User,
 } from "../models";
 import { AppError } from "../utils/AppError";
-import { CACHE_KEYS, invalidateKeys, invalidatePattern } from "../utils/cache";
+import {
+  CACHE_KEYS,
+  CONTINENT_ADMIN_LIST_CACHE_TTL,
+  invalidateKeys,
+  invalidatePattern,
+  withCache,
+} from "../utils/cache";
 import { withMongoTransaction } from "../utils/mongo-transactions";
 import {
   CreateContinentInput,
   UpdateContinentInput,
 } from "../validators/continent.validators";
 
-const getAllContinents = async () => {
-  const continents = await Continent.find()
-    .select("-__v")
-    .populate({
-      path: "countries",
-      select: "_id name slug",
-      populate: {
-        path: "destinations",
-        select: "_id name",
-      },
-    })
-    .lean();
+interface ContinentAdminListItem {
+  _id: IContinent["_id"];
+  name: string;
+  slug: string;
+  description?: string;
+  imageUrl: string;
+  createdAt: Date;
+  updatedAt: Date;
+  countries: Array<{
+    _id: ICountry["_id"];
+    name: string;
+    slug: string;
+    destinations: Array<{ _id: IDestination["_id"]; name: string }>;
+  }>;
+  countryCount: number;
+  destinationCount: number;
+}
 
-  if (!continents) {
-    return [];
-  }
-
-  const data = continents.map((continent: IContinent) => ({
-    ...continent,
-    countryCount: continent.countries ? continent.countries.length : 0,
-    destinationCount: continent.countries
-      ? continent.countries.reduce(
-          (acc: number, country: ICountry) =>
-            acc + (country.destinations?.length || 0),
-          0,
-        )
-      : 0,
-  }));
-
-  return data;
+const getAllContinents = async (): Promise<ContinentAdminListItem[]> => {
+  return withCache(
+    CACHE_KEYS.continentAdminList,
+    CONTINENT_ADMIN_LIST_CACHE_TTL,
+    () =>
+      Continent.aggregate<ContinentAdminListItem>([
+        { $sort: { name: 1 } },
+        {
+          $lookup: {
+            from: Country.collection.name,
+            let: { continentId: "$_id" },
+            pipeline: [
+              { $match: { $expr: { $eq: ["$continent", "$$continentId"] } } },
+              { $sort: { name: 1 } },
+              {
+                $project: {
+                  _id: 1,
+                  name: 1,
+                  slug: 1,
+                },
+              },
+              {
+                $lookup: {
+                  from: Destination.collection.name,
+                  let: { countryId: "$_id" },
+                  pipeline: [
+                    {
+                      $match: {
+                        $expr: {
+                          $eq: ["$location.country", "$$countryId"],
+                        },
+                      },
+                    },
+                    { $sort: { name: 1 } },
+                    { $project: { _id: 1, name: 1 } },
+                  ],
+                  as: "destinations",
+                },
+              },
+            ],
+            as: "countries",
+          },
+        },
+        {
+          $addFields: {
+            countryCount: { $size: "$countries" },
+            destinationCount: {
+              $sum: {
+                $map: {
+                  input: "$countries",
+                  as: "country",
+                  in: { $size: "$$country.destinations" },
+                },
+              },
+            },
+          },
+        },
+        { $project: { __v: 0 } },
+      ]),
+  );
 };
 
 const getContinent = async (slug: string) => {
@@ -109,7 +164,7 @@ const createContinent = async (continentData: CreateContinentInput) => {
   // Create new continent
   const newContinent = await Continent.create(payload);
 
-  await invalidateKeys(CACHE_KEYS.continentStats);
+  await invalidateKeys(CACHE_KEYS.continentStats, CACHE_KEYS.continentAdminList);
   await invalidatePattern("agg:continent:*");
 
   return newContinent;
@@ -146,7 +201,7 @@ const updateContinent = async (
   // Save changes
   await continent.save();
 
-  await invalidateKeys(CACHE_KEYS.continentStats);
+  await invalidateKeys(CACHE_KEYS.continentStats, CACHE_KEYS.continentAdminList);
   await invalidatePattern("agg:continent:*");
 
   return continent;
@@ -201,7 +256,7 @@ const deleteContinent = async (id: string) => {
     }
   });
 
-  await invalidateKeys(CACHE_KEYS.continentStats);
+  await invalidateKeys(CACHE_KEYS.continentStats, CACHE_KEYS.continentAdminList);
   await invalidatePattern("agg:continent:*");
   await invalidatePattern("api:dest:*");
 

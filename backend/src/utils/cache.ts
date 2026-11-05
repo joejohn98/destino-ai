@@ -3,6 +3,7 @@ import { redisClient } from "../config/redis";
 // ─── Cache keys & TTL constants ───────────────────────────────────────────────
 export const CACHE_KEYS = {
   continentStats: "agg:continent:stats",
+  continentAdminList: "agg:continent:admin-list",
   continentCountries: (slug: string) => `agg:continent:${slug}:countries`,
   paginatedPage: (page: number, limit: number) =>
     `api:dest:paginated:p${page}:l${limit}`,
@@ -15,6 +16,7 @@ export const CACHE_KEYS = {
 } as const;
 
 export const AGG_CACHE_TTL = 30 * 60; // 30 minutes
+export const CONTINENT_ADMIN_LIST_CACHE_TTL = 5 * 60; // 5 minutes
 export const LISTING_CACHE_TTL = 3 * 60; // 3 minutes
 export const DETAIL_CACHE_TTL = 10 * 60; // 10 minutes
 

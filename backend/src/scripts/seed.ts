@@ -16,6 +16,7 @@ import { Country } from "../models/Country.model";
 import { Destination, type Category } from "../models/Destination.model";
 import { User } from "../models/User.model";
 import { Review } from "../models/Review.model";
+import { normalizeSearchValue } from "../utils/search-normalization";
 
 const seed = async () => {
   try {
@@ -164,7 +165,12 @@ const seed = async () => {
         continent: continentMap.get("Oceania"),
       },
     ];
-    const countries = await Country.insertMany(countriesData);
+    const countries = await Country.insertMany(
+      countriesData.map((country) => ({
+        ...country,
+        searchName: normalizeSearchValue(country.name),
+      })),
+    );
 
     const countryMap = new Map<string, mongoose.Types.ObjectId>();
     countries.forEach((c) =>
@@ -175,7 +181,15 @@ const seed = async () => {
     // ── 3. Users ──────────────────────────────────────────────────────────────
     console.log("👤  Seeding Users...");
     const hashedPassword = await bcrypt.hash("Password123!", 12);
-    const usersData = [
+    const usersData: Array<{
+      firstName: string;
+      lastName: string;
+      username: string;
+      email: string;
+      password: string;
+      role: "user" | "admin";
+      avatarUrl: string;
+    }> = [
       {
         firstName: "Admin",
         lastName: "User",
@@ -204,7 +218,7 @@ const seed = async () => {
         avatarUrl: "https://i.pravatar.cc/150?u=sarah",
       },
     ];
-    const users = await User.insertMany(usersData as any);
+    const users = await User.insertMany(usersData);
     console.log(`   → ${users.length} users inserted`);
 
     // ── 4. Destinations ───────────────────────────────────────────────────────
@@ -1152,7 +1166,12 @@ const seed = async () => {
         ],
       },
     ];
-    const destinations = await Destination.insertMany(destinationsData);
+    const destinations = await Destination.insertMany(
+      destinationsData.map((destination) => ({
+        ...destination,
+        searchCity: normalizeSearchValue(destination.location.city),
+      })),
+    );
     console.log(`   → ${destinations.length} destinations inserted`);
 
     // ── 5. Reviews ────────────────────────────────────────────────────────────

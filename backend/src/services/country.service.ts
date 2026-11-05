@@ -104,6 +104,7 @@ const createCountry = async (
   // A new country changes both continent stats and the per-continent country list
   await invalidateKeys(
     CACHE_KEYS.continentStats,
+    CACHE_KEYS.continentAdminList,
     CACHE_KEYS.continentCountries(continent.slug),
   );
 
@@ -138,7 +139,10 @@ const updateCountry = async (id: string, updateData: UpdateCountryInput) => {
   await country.save();
 
   const countrySlugs = new Set([previousCountrySlug, country.slug]);
-  const keys = new Set<string>([CACHE_KEYS.continentStats]);
+  const keys = new Set<string>([
+    CACHE_KEYS.continentStats,
+    CACHE_KEYS.continentAdminList,
+  ]);
   if (continentSlug) {
     keys.add(CACHE_KEYS.continentCountries(continentSlug));
   }
@@ -196,7 +200,10 @@ const deleteCountry = async (id: string) => {
     }
   });
 
-  const keys: string[] = [CACHE_KEYS.continentStats];
+  const keys: string[] = [
+    CACHE_KEYS.continentStats,
+    CACHE_KEYS.continentAdminList,
+  ];
   if (country.continent?.slug) {
     keys.push(CACHE_KEYS.continentCountries(country.continent.slug));
   }

@@ -562,6 +562,7 @@ const createDestination = async (data: CreateDestinationInput) => {
   // A new destination changes listing pages, country destinations, and continent/country counts
   await invalidateKeys(
     CACHE_KEYS.continentStats,
+    CACHE_KEYS.continentAdminList,
     CACHE_KEYS.countryDestinations(country.slug),
   );
   await invalidatePattern("api:dest:paginated:*");
@@ -675,6 +676,7 @@ const updateDestination = async (id: string, data: UpdateDestinationInput) => {
   // Invalidate cache entries for both the previous and updated route locations.
   const keysToInvalidate = new Set<string>([
     CACHE_KEYS.continentStats,
+    CACHE_KEYS.continentAdminList,
     ...(previousCountrySlug
       ? [CACHE_KEYS.countryDestinations(previousCountrySlug)]
       : []),
@@ -725,7 +727,10 @@ const deleteDestination = async (id: string) => {
     .lean();
 
   // A deleted destination changes the listing, country destinations, continent/country counts, and its own detail page
-  const keysToInvalidate: string[] = [CACHE_KEYS.continentStats];
+  const keysToInvalidate: string[] = [
+    CACHE_KEYS.continentStats,
+    CACHE_KEYS.continentAdminList,
+  ];
   if (deletedCountry?.slug) {
     keysToInvalidate.push(CACHE_KEYS.countryDestinations(deletedCountry.slug));
     if (deletedDest.slug) {
