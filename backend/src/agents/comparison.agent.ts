@@ -111,10 +111,7 @@ export const comparisonSchema = z.object({
     .describe(
       "List of requested destination names that could not be verified in the database.",
     ),
-  userContext: z
-    .string()
-    .optional()
-    .describe("What the user is looking for"),
+  userContext: z.string().optional().describe("What the user is looking for"),
   destinations: z
     .array(destinationComparisonItemSchema)
     .max(3)
@@ -135,7 +132,9 @@ export const comparisonSchema = z.object({
           ),
         reason: z
           .string()
-          .describe("Explanation for why this destination won or why it is a tie"),
+          .describe(
+            "Explanation for why this destination won or why it is a tie",
+          ),
       }),
     )
     .optional()
@@ -143,7 +142,9 @@ export const comparisonSchema = z.object({
   recommendation: z
     .string()
     .optional()
-    .describe("Exact name of the single recommended destination matching one of the researched destinations"),
+    .describe(
+      "Exact name of the single recommended destination matching one of the researched destinations",
+    ),
   recommendationReason: z
     .string()
     .optional()
@@ -157,4 +158,3 @@ export const comparisonSchema = z.object({
 });
 
 export type ComparisonOutput = z.infer<typeof comparisonSchema>;
-

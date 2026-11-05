@@ -202,7 +202,9 @@ export const itinerarySchema = z.object({
       }),
     )
     .optional()
-    .describe("Day-by-day itinerary with exact length matching the trip duration"),
+    .describe(
+      "Day-by-day itinerary with exact length matching the trip duration",
+    ),
   budgetBreakdown: z
     .object({
       accommodation: z
