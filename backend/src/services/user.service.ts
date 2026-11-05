@@ -2,6 +2,10 @@ import { Destination, Review, User } from "../models";
 import { isValidObjectId } from "../utils/validation";
 import { AppError } from "../utils/AppError";
 import type { UpdateProfileInput } from "../validators/user.validators";
+import type { PaginationQuery } from "../validators/query.validators";
+import type { DestinationCardRecord } from "../dto/destination.dto";
+import { toDestinationCardDTO } from "../dto/destination.dto";
+import type { FavoritesPageDTO, MyReviewsPageDTO } from "../dto/user.dto";
 
 const getProfile = async (userId: string) => {
   const user = await User.findById(userId).select("-password");
@@ -66,9 +70,13 @@ const assertValidDestinationId = (destinationId: string) => {
   }
 };
 
-const toIdStrings = (ids: unknown[]) => ids.map((id) => String(id));
+const toIdStrings = (ids: readonly { toString(): string }[]) =>
+  ids.map((id) => id.toString());
 
-const getFavorites = async (userId: string, page: number, limit: number) => {
+const getFavorites = async (
+  userId: string,
+  { page, limit }: PaginationQuery,
+): Promise<FavoritesPageDTO> => {
   const user = await User.findById(userId).select("favoriteDestinations").lean();
 
   if (!user) {
@@ -92,33 +100,19 @@ const getFavorites = async (userId: string, page: number, limit: number) => {
 
   const destinations = await Destination.find({ _id: { $in: pageIds } })
     .select("-reviews -__v")
-    .populate({
+    .populate<{ location: DestinationCardRecord["location"] }>({
       path: "location.country",
       select: "slug name",
       populate: { path: "continent", select: "slug name" },
     })
-    .lean();
+    .lean<DestinationCardRecord[]>();
 
-  const byId = new Map(destinations.map((d: any) => [String(d._id), d]));
+  const byId = new Map(destinations.map((destination) => [String(destination._id), destination]));
 
   // Same flattened shape as the paginated destinations list.
   const data = pageIds.flatMap((id) => {
-    const d: any = byId.get(id);
-    if (!d) return [];
-    const country = d.location?.country;
-    const continent = country?.continent;
-    return [
-      {
-        ...d,
-        location: {
-          city: d.location?.city,
-          country: country?.name ?? country,
-          countrySlug: country?.slug ?? null,
-        },
-        continent: continent?.name ?? null,
-        continentSlug: continent?.slug ?? null,
-      },
-    ];
+    const destination = byId.get(id);
+    return destination ? [toDestinationCardDTO(destination)] : [];
   });
 
   return {
@@ -169,32 +163,52 @@ const removeFavorite = async (userId: string, destinationId: string) => {
   return toIdStrings(user.favoriteDestinations ?? []);
 };
 
-const getMyReviews = async (userId: string, page: number, limit: number) => {
+const getMyReviews = async (
+  userId: string,
+  { page, limit }: PaginationQuery,
+): Promise<MyReviewsPageDTO> => {
   const totalReviews = await Review.countDocuments({ user: userId });
 
+  type CountrySummary = { name: string; slug: string };
+  type ReviewDestination = {
+    _id: { toString(): string };
+    name: string;
+    slug: string;
+    location?: {
+      city?: string;
+      country: CountrySummary | null;
+    };
+  };
+
   const reviews = await Review.find({ user: userId })
+    .select("destination rating reviewText sentiment themes createdAt updatedAt")
     .sort({ createdAt: -1 })
     .skip((page - 1) * limit)
     .limit(limit)
     .select("-__v")
-    .populate({
+    .populate<{ destination: ReviewDestination | null }>({
       path: "destination",
       select: "name slug location",
     })
-    .populate({
-      path: "destination.location.country",
-      select: "name slug",
-    })
+    .populate<{ destination: ReviewDestination | null }>(
+      "destination.location.country",
+      "name slug",
+    )
     .lean();
 
-  const data = reviews.map((review: any) => {
+  const data = reviews.map((review) => {
     const destination = review.destination;
     const country = destination?.location?.country;
-    delete review.destination?.location;
     return {
-      ...review,
+      _id: review._id.toString(),
+      rating: review.rating,
+      reviewText: review.reviewText,
+      ...(review.sentiment ? { sentiment: review.sentiment } : {}),
+      themes: review.themes,
+      createdAt: review.createdAt.toISOString(),
+      updatedAt: review.updatedAt.toISOString(),
       destination: {
-        _id: destination?._id ?? null,
+        _id: destination?._id.toString() ?? null,
         name: destination?.name ?? "Deleted destination",
         slug: destination?.slug ?? null,
         countryName: country?.name ?? null,

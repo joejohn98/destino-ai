@@ -73,8 +73,8 @@ export const invalidatePattern = async (pattern: string): Promise<void> => {
 
   try {
     const keys: string[] = [];
-    for await (const key of (redisClient as any).scanIterator({ MATCH: pattern })) {
-      keys.push(key);
+    for await (const batch of redisClient.scanIterator({ MATCH: pattern })) {
+      keys.push(...batch);
     }
     if (keys.length > 0) {
       await redisClient.del(keys);

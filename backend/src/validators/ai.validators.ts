@@ -14,4 +14,7 @@ const compareRequestSchema = z.object({
     .max(500, 'Keep the query under 500 characters'),
 });
 
+export type PlanRequestInput = z.infer<typeof planRequestSchema>;
+export type CompareRequestInput = z.infer<typeof compareRequestSchema>;
+
 export { planRequestSchema, compareRequestSchema };

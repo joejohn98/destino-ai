@@ -105,7 +105,7 @@ export const destinationTools = {
             aiReviewSummary:
               destination.aiReviewSummary ?? "No AI summary available",
             travelTips: destination.travelTips ?? [],
-            attractions: (destination.attractions ?? []).map((a: any) => ({
+            attractions: (destination.attractions ?? []).map((a) => ({
               id: a._id ? String(a._id) : undefined,
               name: a.name,
               description: a.description ?? "",
@@ -171,7 +171,7 @@ export const destinationTools = {
           aiReviewSummary:
             destination.aiReviewSummary ?? "No AI summary available",
           travelTips: destination.travelTips ?? [],
-          attractions: (destination.attractions ?? []).map((a: any) => ({
+          attractions: (destination.attractions ?? []).map((a) => ({
             id: a._id ? String(a._id) : undefined,
             name: a.name,
             description: a.description ?? "",

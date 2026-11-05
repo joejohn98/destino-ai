@@ -87,7 +87,7 @@ export const deleteImage = async (publicId: string): Promise<boolean> => {
   try {
     const result = await cloudinary.uploader.destroy(publicId);
     return result.result === "ok";
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Cloudinary delete error:", error);
     throw new AppError(
       "Failed to delete image from Cloudinary. Please try again later.",
@@ -123,10 +123,11 @@ export const uploadUrlToCloudinary = async (
       url: result.secure_url,
       publicId: result.public_id,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Cloudinary URL upload error:", error);
+    const message = error instanceof Error ? error.message : "invalid image";
     throw new AppError(
-      `${fieldName}: Failed to upload image from URL (${error?.message || "invalid image"})`,
+      `${fieldName}: Failed to upload image from URL (${message})`,
       400
     );
   }

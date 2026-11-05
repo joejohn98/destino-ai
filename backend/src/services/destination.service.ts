@@ -1,4 +1,4 @@
-import type { QueryFilter } from "mongoose";
+import type { QueryFilter, Types } from "mongoose";
 import slugify from "slugify";
 import { CATEGORIES, Destination } from "../models/Destination.model";
 import type { Category, IDestination } from "../models/Destination.model";
@@ -20,6 +20,11 @@ import type {
   UpdateDestinationInput,
 } from "../validators/destination.validators";
 import { Review, User } from "../models";
+import type {
+  DestinationCardDTO,
+  DestinationCardRecord,
+} from "../dto/destination.dto";
+import { toDestinationCardDTO } from "../dto/destination.dto";
 import {
   normalizeSearchValue,
   toMongoTextSearch,
@@ -36,7 +41,7 @@ export interface PaginatedOptions {
 }
 
 export interface PaginatedResult {
-  destinations: any[];
+  destinations: DestinationCardDTO[];
   totalDestinations: number;
   totalPages: number;
   currentPage: number;
@@ -150,7 +155,7 @@ const getPaginatedDestinations = async (
     const [destinations, total] = await Promise.all([
       Destination.find(filter)
         .select("-reviews -__v -searchCity")
-        .populate({
+        .populate<{ location: DestinationCardRecord["location"] }>({
           path: "location.country",
           select: "slug name",
           populate: { path: "continent", select: "slug name" },
@@ -158,25 +163,12 @@ const getPaginatedDestinations = async (
         .sort(sort)
         .skip(skip)
         .limit(limit)
-        .lean(),
+        .lean<DestinationCardRecord[]>(),
       Destination.countDocuments(filter),
     ]);
 
     // Flatten country/continent slugs for frontend navigation and filtering.
-    const enriched = destinations.map((d: any) => {
-      const country = d.location?.country;
-      const continent = country?.continent;
-      return {
-        ...d,
-        location: {
-          city: d.location?.city,
-          country: country?.name ?? country,
-          countrySlug: country?.slug ?? null,
-        },
-        continent: continent?.name ?? null,
-        continentSlug: continent?.slug ?? null,
-      };
-    });
+    const enriched = destinations.map(toDestinationCardDTO);
 
     const totalPages = Math.ceil(total / limit) || 0;
 
@@ -199,7 +191,7 @@ const getPaginatedDestinations = async (
   );
 };
 
-const searchDestinations = async (q: string): Promise<IDestination[]> => {
+const searchDestinations = async (q: string): Promise<DestinationCardDTO[]> => {
   const trimmedQ = q.trim();
   if (!trimmedQ || trimmedQ.length < 2) {
     throw new AppError(
@@ -230,14 +222,20 @@ const searchDestinations = async (q: string): Promise<IDestination[]> => {
 
   return Destination.find({ $or: branches })
     .select("-reviews -__v -searchCity")
+    .populate<{ location: DestinationCardRecord["location"] }>({
+      path: "location.country",
+      select: "name slug",
+      populate: { path: "continent", select: "name slug" },
+    })
     .sort({ createdAt: -1, _id: -1 })
     .limit(50)
-    .lean();
+    .lean<DestinationCardRecord[]>()
+    .then((destinations) => destinations.map(toDestinationCardDTO));
 };
 
 const getDestinationsByLocation = async (
   rawLocation: string,
-): Promise<IDestination[]> => {
+): Promise<DestinationCardDTO[]> => {
   const locParam = decodeURIComponent(rawLocation).trim();
   const prefix = new RegExp(`^${escapeRegex(normalizeSearchValue(locParam))}`);
 
@@ -253,14 +251,20 @@ const getDestinationsByLocation = async (
 
   return Destination.find({ $or })
     .select("-reviews -__v -searchCity")
+    .populate<{ location: DestinationCardRecord["location"] }>({
+      path: "location.country",
+      select: "name slug",
+      populate: { path: "continent", select: "name slug" },
+    })
     .sort({ createdAt: -1, _id: -1 })
     .limit(50)
-    .lean();
+    .lean<DestinationCardRecord[]>()
+    .then((destinations) => destinations.map(toDestinationCardDTO));
 };
 
 const getDestinationsByCategory = async (
   rawCategory: string,
-): Promise<{ category: Category; destinations: any[] }> => {
+): Promise<{ category: Category; destinations: DestinationCardDTO[] }> => {
   const category = rawCategory.toLowerCase() as Category;
   const validCategories = [
     "beach",
@@ -280,11 +284,16 @@ const getDestinationsByCategory = async (
 
   const destinations = await Destination.find({ category })
     .select("-reviews -__v -searchCity")
+    .populate<{ location: DestinationCardRecord["location"] }>({
+      path: "location.country",
+      select: "name slug",
+      populate: { path: "continent", select: "name slug" },
+    })
     .sort({ createdAt: -1, _id: -1 })
     .limit(50)
-    .lean();
+    .lean<DestinationCardRecord[]>();
 
-  return { category, destinations };
+  return { category, destinations: destinations.map(toDestinationCardDTO) };
 };
 
 const getContinentStats = async (): Promise<ContinentStat[]> => {
@@ -409,7 +418,9 @@ const getCountriesByContinent = async (
   );
 };
 
-const getDestinationByName = async (rawIdentifier: string): Promise<any> => {
+const getDestinationByName = async (
+  rawIdentifier: string,
+): Promise<DestinationCardDTO> => {
   const param = decodeURIComponent(rawIdentifier).trim();
 
   const query = isValidObjectId(param)
@@ -422,37 +433,18 @@ const getDestinationByName = async (rawIdentifier: string): Promise<any> => {
       };
 
   const destination = await Destination.findOne(query)
-    .populate({
+    .populate<{ location: DestinationCardRecord["location"] }>({
       path: "location.country",
       select: "name slug",
       populate: { path: "continent", select: "name slug" },
     })
-    .lean();
+    .lean<DestinationCardRecord>();
 
   if (!destination) {
     throw new AppError("Destination not found", 404);
   }
 
-  const countryObj = destination.location?.country as any;
-  const countryName =
-    typeof countryObj === "object" && countryObj?.name
-      ? countryObj.name
-      : countryObj;
-  const continentName =
-    typeof countryObj === "object" && countryObj?.continent?.name
-      ? countryObj.continent.name
-      : (destination as any).continent || "";
-
-  return {
-    ...destination,
-    location: {
-      city: destination.location?.city,
-      country: countryName,
-      countrySlug: countryObj?.slug ?? null,
-    },
-    continent: continentName,
-    continentSlug: countryObj?.continent?.slug ?? null,
-  };
+  return toDestinationCardDTO(destination);
 };
 
 /**
@@ -463,7 +455,7 @@ const getDestinationByName = async (rawIdentifier: string): Promise<any> => {
 const getDestinationBySlug = async (
   countrySlug: string,
   destinationSlug: string,
-): Promise<any> => {
+): Promise<DestinationCardDTO> => {
   return withCache(
     CACHE_KEYS.destBySlug(countrySlug, destinationSlug),
     DETAIL_CACHE_TTL,
@@ -471,11 +463,7 @@ const getDestinationBySlug = async (
       const country = await Country.findOne({
         slug: countrySlug.toLowerCase(),
       })
-        .select("_id name slug continent")
-        .populate<{ continent: { _id: any; name: string; slug: string } }>(
-          "continent",
-          "name slug",
-        )
+        .select("_id name slug")
         .lean();
 
       if (!country) {
@@ -487,7 +475,12 @@ const getDestinationBySlug = async (
         "location.country": country._id,
       })
         .select("-__v")
-        .lean();
+        .populate<{ location: DestinationCardRecord["location"] }>({
+          path: "location.country",
+          select: "name slug",
+          populate: { path: "continent", select: "name slug" },
+        })
+        .lean<DestinationCardRecord>();
 
       if (!destination) {
         throw new AppError(
@@ -496,18 +489,7 @@ const getDestinationBySlug = async (
         );
       }
 
-      const continent = country.continent as any;
-
-      return {
-        ...destination,
-        location: {
-          city: destination.location?.city,
-          country: country.name,
-          countrySlug: country.slug,
-        },
-        continent: continent?.name ?? null,
-        continentSlug: continent?.slug ?? null,
-      };
+      return toDestinationCardDTO(destination);
     },
   );
 };
@@ -539,7 +521,7 @@ const createDestination = async (data: CreateDestinationInput) => {
     );
   }
 
-  const payload: any = {
+  const payload = {
     name: data.name,
     description: data.description,
     location: {
@@ -548,12 +530,31 @@ const createDestination = async (data: CreateDestinationInput) => {
       country: country._id,
     },
     category: data.category,
+    ...(data.bestTimeToVisit ? { bestTimeToVisit: data.bestTimeToVisit } : {}),
+    ...(data.images?.length ? { imageUrls: data.images } : {}),
+    ...(data.attractions?.length
+      ? {
+          attractions: data.attractions.map((attraction) => ({
+            name: attraction.name,
+            ...(attraction.description !== undefined
+              ? { description: attraction.description }
+              : {}),
+            ...(attraction.ticketPrice !== undefined
+              ? { ticketPrice: attraction.ticketPrice }
+              : {}),
+            ...(attraction.suggestedDuration !== undefined
+              ? { suggestedDuration: attraction.suggestedDuration }
+              : {}),
+            ...(attraction.openingHours !== undefined
+              ? { openingHours: attraction.openingHours }
+              : {}),
+            ...(attraction.category !== undefined
+              ? { category: attraction.category }
+              : {}),
+          })),
+        }
+      : {}),
   };
-
-  if (data.bestTimeToVisit) payload.bestTimeToVisit = data.bestTimeToVisit;
-  if (data.images && data.images.length > 0) payload.imageUrls = data.images;
-  if (data.attractions && data.attractions.length > 0)
-    payload.attractions = data.attractions;
 
   const newDest = await Destination.create(payload);
   const { __v, ...rest } = newDest.toObject();
@@ -571,9 +572,13 @@ const createDestination = async (data: CreateDestinationInput) => {
 const updateDestination = async (id: string, data: UpdateDestinationInput) => {
   const previousDestination = await Destination.findById(id)
     .select("slug location.country")
-    .populate<{ location: { country: { slug: string } } }>(
+    .populate<{
+      location: {
+        country: { _id: Types.ObjectId; slug: string } | null;
+      };
+    }>(
       "location.country",
-      "slug",
+      "_id slug",
     )
     .lean();
 
@@ -581,9 +586,12 @@ const updateDestination = async (id: string, data: UpdateDestinationInput) => {
     throw new AppError("Destination not found", 404);
   }
 
-  const previousCountryObj = previousDestination.location?.country as any;
-  const previousCountrySlug = previousCountryObj?.slug;
-  let targetCountryId = previousCountryObj?._id ?? previousCountryObj;
+  const previousCountry = previousDestination.location?.country;
+  if (!previousCountry) {
+    throw new AppError("Destination country not found", 404);
+  }
+  const previousCountrySlug = previousCountry.slug;
+  let targetCountryId: Types.ObjectId = previousCountry._id;
 
   const updatePayload: Record<string, unknown> = {};
 
