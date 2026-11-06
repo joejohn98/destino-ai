@@ -5,6 +5,16 @@ import type {
   PlanRequestInput,
 } from "../validators/ai.validators";
 
+type AgentResult = {
+  steps: { length: number };
+  usage: { totalTokens: number | undefined };
+};
+
+const agentMeta = ({ steps, usage }: AgentResult) => ({
+  stepsUsed: steps.length,
+  totalTokens: usage.totalTokens ?? "N/A",
+});
+
 export const generateItinerary = catchAsyncBody<PlanRequestInput>(
   async (req, res) => {
     const { query } = req.body;
@@ -20,10 +30,7 @@ export const generateItinerary = catchAsyncBody<PlanRequestInput>(
         data: {
           query,
           result: itinerary.output,
-          meta: {
-            stepsUsed: itinerary.steps.length,
-            totalTokens: itinerary.usage.totalTokens ?? "N/A",
-          },
+          meta: agentMeta(itinerary),
         },
       });
       return;
@@ -38,10 +45,7 @@ export const generateItinerary = catchAsyncBody<PlanRequestInput>(
         data: {
           query,
           result: itinerary.output,
-          meta: {
-            stepsUsed: itinerary.steps.length,
-            totalTokens: itinerary.usage.totalTokens ?? "N/A",
-          },
+          meta: agentMeta(itinerary),
         },
       });
       return;
@@ -53,10 +57,7 @@ export const generateItinerary = catchAsyncBody<PlanRequestInput>(
       data: {
         query,
         itinerary: itinerary.output,
-        meta: {
-          stepsUsed: itinerary.steps.length,
-          totalTokens: itinerary.usage.totalTokens ?? "N/A",
-        },
+        meta: agentMeta(itinerary),
       },
     });
   },
@@ -70,14 +71,13 @@ export const compareDestinations = catchAsyncBody<CompareRequestInput>(
     if (comparison.output?.status === "invalid_request") {
       res.status(422).json({
         status: "fail",
-        message: comparison.output.message || "Requested parameters exceed supported limits",
+        message:
+          comparison.output.message ||
+          "Requested parameters exceed supported limits",
         data: {
           query,
           result: comparison.output,
-          meta: {
-            stepsUsed: comparison.steps.length,
-            totalTokens: comparison.usage.totalTokens ?? "N/A",
-          },
+          meta: agentMeta(comparison),
         },
       });
       return;
@@ -92,10 +92,7 @@ export const compareDestinations = catchAsyncBody<CompareRequestInput>(
         data: {
           query,
           result: comparison.output,
-          meta: {
-            stepsUsed: comparison.steps.length,
-            totalTokens: comparison.usage.totalTokens ?? "N/A",
-          },
+          meta: agentMeta(comparison),
         },
       });
       return;
@@ -113,10 +110,7 @@ export const compareDestinations = catchAsyncBody<CompareRequestInput>(
       data: {
         query,
         comparison: comparison.output,
-        meta: {
-          stepsUsed: comparison.steps.length,
-          totalTokens: comparison.usage.totalTokens ?? "N/A",
-        },
+        meta: agentMeta(comparison),
       },
     });
   },
