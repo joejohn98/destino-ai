@@ -116,7 +116,7 @@ userSchema.index(
 // Pre-save hook: hash password
 userSchema.pre("save", async function (this: IUser) {
   if (!this.isModified("password") || !this.password) return;
-  this.password = await bcrypt.hash(this.password!, 12);
+  this.password = await bcrypt.hash(this.password, 12);
 });
 
 // Method to compare password
@@ -124,7 +124,7 @@ userSchema.methods.comparePassword = async function (
   candidatePassword: string,
 ): Promise<boolean> {
   if (!this.password) return false;
-  return await bcrypt.compare(candidatePassword, this.password!);
+  return bcrypt.compare(candidatePassword, this.password);
 };
 
 export const User = mongoose.model<IUser>("User", userSchema);

@@ -46,11 +46,6 @@ router.put(
   validate(updateDestinationSchema),
   updateDestination
 );
-router.delete(
-  "/:id",
-  protect,
-  restrictTo("admin"),
-  deleteDestination
-);
+router.delete("/:id", protect, restrictTo("admin"), deleteDestination);
 
 export default router;

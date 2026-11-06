@@ -1,12 +1,12 @@
 import z from "zod";
-import { Destination } from "../models/Destination.model";
+import { CATEGORIES, Destination } from "../models/Destination.model";
 import mongoose from "mongoose";
 import { escapeRegex } from "../utils/validation";
 
 const searchDestinationsInput = z.object({
   query: z.string().trim().min(2).max(200),
   category: z
-    .enum(["beach", "mountain", "city", "historical", "adventure", "wildlife"])
+    .enum(CATEGORIES)
     .optional()
     .describe("Type of destination to filter by"),
   location: z
@@ -31,8 +31,6 @@ const searchDestinationsInput = z.object({
 const getDestinationDetailsInput = z.object({
   destinationId: z.string().describe("The MongoDB ObjectId of the destination"),
 });
-
-
 
 export const destinationTools = {
   // ─── Tool 1: Search destinations ───────────────────────────────────────────
