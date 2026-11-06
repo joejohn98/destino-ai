@@ -1,5 +1,8 @@
-import type { IAttraction, IDestination } from "../models/Destination.model";
-import type { Category } from "../models/Destination.model";
+import type {
+  IAttraction,
+  Category,
+  IDestination,
+} from "../models/Destination.model";
 
 export interface DestinationCardDTO {
   _id: string;
@@ -14,9 +17,7 @@ export interface DestinationCardDTO {
   };
   category: Category;
   imageUrls: string[];
-  attractions: Array<
-    Omit<IAttraction, "_id"> & { _id?: string }
-  >;
+  attractions: Array<Omit<IAttraction, "_id"> & { _id?: string }>;
   bestTimeToVisit?: string;
   travelTips?: string[];
   aiReviewSummary?: string;
@@ -33,26 +34,26 @@ export interface DestinationCardDTO {
   continentSlug: string | null;
 }
 
-export interface DestinationCardRecord
-  extends Pick<
-    IDestination,
-    | "name"
-    | "slug"
-    | "description"
-    | "category"
-    | "imageUrls"
-    | "attractions"
-    | "bestTimeToVisit"
-    | "travelTips"
-    | "aiReviewSummary"
-    | "summaryGeneratedAtRatingCount"
-    | "openingHours"
-    | "ticketPrice"
-    | "website"
-    | "averageRating"
-    | "ratingsCount"
-    | "isFeatured"
-  > {
+export type DestinationCardRecord = Omit<Pick<
+  IDestination,
+  | "name"
+  | "slug"
+  | "description"
+  | "category"
+  | "imageUrls"
+  | "attractions"
+  | "bestTimeToVisit"
+  | "travelTips"
+  | "aiReviewSummary"
+  | "summaryGeneratedAtRatingCount"
+  | "openingHours"
+  | "ticketPrice"
+  | "website"
+  | "averageRating"
+  | "ratingsCount"
+  | "isFeatured"
+>, "attractions"> & {
+  attractions?: IAttraction[] | null;
   _id: { toString(): string };
   createdAt: Date;
   updatedAt: Date;
@@ -65,7 +66,7 @@ export interface DestinationCardRecord
       continent: { name: string; slug: string } | null;
     } | null;
   };
-}
+};
 
 export interface DestinationCardResponseDTO {
   status: "success";
@@ -112,7 +113,10 @@ export const toDestinationCardDTO = (
     },
     category: destination.category,
     imageUrls: destination.imageUrls,
-    attractions: destination.attractions.map((attraction) => ({
+    attractions: (Array.isArray(destination.attractions)
+      ? destination.attractions
+      : []
+    ).map((attraction) => ({
       name: attraction.name,
       ...(attraction._id ? { _id: attraction._id.toString() } : {}),
       ...(attraction.description !== undefined

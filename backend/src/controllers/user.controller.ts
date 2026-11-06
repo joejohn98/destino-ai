@@ -1,7 +1,6 @@
 import type { RequestHandler } from "express";
 
 import userService from "../services/user.service";
-import { AppError } from "../utils/AppError";
 import { catchAsync, catchAsyncBody } from "../utils/catchAsync";
 import type { UpdateProfileInput } from "../validators/user.validators";
 import { paginationQuerySchema } from "../validators/query.validators";
@@ -9,19 +8,14 @@ import type {
   FavoritesResponseDTO,
   MyReviewsResponseDTO,
 } from "../dto/user.dto";
+import { parseQuery } from "../middleware/validation.middleware";
+import { getAuthenticatedUser } from "../middleware/auth.middleware";
 
-const getAuthenticatedUserId = (userId: string | undefined) => {
-  if (!userId) {
-    throw new AppError("Unauthorized, user not found", 401);
-  }
-
-  return userId;
-};
+const parsePagination = parseQuery(paginationQuerySchema);
 
 export const getProfile: RequestHandler = catchAsync(async (req, res) => {
-  const user = await userService.getProfile(
-    getAuthenticatedUserId(req.user?._id.toString()),
-  );
+  const userId = getAuthenticatedUser(req)._id.toString();
+  const user = await userService.getProfile(userId);
 
   res.status(200).json({
     status: "success",
@@ -31,10 +25,8 @@ export const getProfile: RequestHandler = catchAsync(async (req, res) => {
 
 export const updateProfile = catchAsyncBody<UpdateProfileInput>(
   async (req, res) => {
-    const user = await userService.updateProfile(
-      getAuthenticatedUserId(req.user?._id.toString()),
-      req.body,
-    );
+    const userId = getAuthenticatedUser(req)._id.toString();
+    const user = await userService.updateProfile(userId, req.body);
 
     res.status(200).json({
       status: "success",
@@ -45,9 +37,8 @@ export const updateProfile = catchAsyncBody<UpdateProfileInput>(
 );
 
 export const deleteProfile: RequestHandler = catchAsync(async (req, res) => {
-  await userService.deleteProfile(
-    getAuthenticatedUserId(req.user?._id.toString()),
-  );
+  const userId = getAuthenticatedUser(req)._id.toString();
+  await userService.deleteProfile(userId);
 
   res.status(200).json({
     status: "success",
@@ -56,15 +47,10 @@ export const deleteProfile: RequestHandler = catchAsync(async (req, res) => {
 });
 
 export const getMyReviews: RequestHandler = catchAsync(async (req, res) => {
-  const query = paginationQuerySchema.safeParse(req.query);
-  if (!query.success) {
-    throw new AppError(query.error.issues[0]?.message || "Invalid pagination parameters", 400);
-  }
+  const userId = getAuthenticatedUser(req)._id.toString();
+  const query = parsePagination(req.query);
 
-  const result = await userService.getMyReviews(
-    getAuthenticatedUserId(req.user?._id.toString()),
-    query.data,
-  );
+  const result = await userService.getMyReviews(userId, query);
 
   const response: MyReviewsResponseDTO = {
     status: "success",
@@ -78,15 +64,10 @@ export const getMyReviews: RequestHandler = catchAsync(async (req, res) => {
 });
 
 export const getFavorites: RequestHandler = catchAsync(async (req, res) => {
-  const query = paginationQuerySchema.safeParse(req.query);
-  if (!query.success) {
-    throw new AppError(query.error.issues[0]?.message || "Invalid pagination parameters", 400);
-  }
+  const userId = getAuthenticatedUser(req)._id.toString();
+  const query = parsePagination(req.query);
 
-  const result = await userService.getFavorites(
-    getAuthenticatedUserId(req.user?._id.toString()),
-    query.data,
-  );
+  const result = await userService.getFavorites(userId, query);
 
   const response: FavoritesResponseDTO = {
     status: "success",
@@ -100,8 +81,9 @@ export const getFavorites: RequestHandler = catchAsync(async (req, res) => {
 });
 
 export const addFavorite: RequestHandler = catchAsync(async (req, res) => {
+  const userId = getAuthenticatedUser(req)._id.toString();
   const favoriteDestinations = await userService.addFavorite(
-    getAuthenticatedUserId(req.user?._id.toString()),
+    userId,
     String(req.params.destinationId),
   );
 
@@ -113,8 +95,9 @@ export const addFavorite: RequestHandler = catchAsync(async (req, res) => {
 });
 
 export const removeFavorite: RequestHandler = catchAsync(async (req, res) => {
+  const userId = getAuthenticatedUser(req)._id.toString();
   const favoriteDestinations = await userService.removeFavorite(
-    getAuthenticatedUserId(req.user?._id.toString()),
+    userId,
     String(req.params.destinationId),
   );
 

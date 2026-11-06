@@ -4,8 +4,11 @@ import { catchAsync, catchAsyncBody } from "../utils/catchAsync";
 import countryService from "../services/country.service";
 import { AppError } from "../utils/AppError";
 import { isValidObjectId } from "../utils/validation";
-import { uploadImageStream, uploadUrlToCloudinary } from "../services/cloudinary.service";
-import { CreateCountryInput, UpdateCountryInput } from "../validators/country.validators";
+import { resolveSingleImageUrl } from "../services/cloudinary.service";
+import {
+  CreateCountryInput,
+  UpdateCountryInput,
+} from "../validators/country.validators";
 
 export const getAllCountries: RequestHandler = catchAsync(async (_req, res) => {
   const continentId = _req.params.continentId as string;
@@ -38,44 +41,44 @@ export const getCountry: RequestHandler = catchAsync(async (req, res) => {
   });
 });
 
-export const createCountry = catchAsyncBody<CreateCountryInput>(async (req, res) => {
-  const continentId = req.params.continentId as string;
+export const createCountry = catchAsyncBody<CreateCountryInput>(
+  async (req, res) => {
+    const continentId = req.params.continentId as string;
 
-  if (!continentId) {
-    throw new AppError("Continent ID or slug is required", 400);
-  }
+    if (!continentId) {
+      throw new AppError("Continent ID or slug is required", 400);
+    }
 
-  let { name, description } = req.body;
-  let imageUrl: string | undefined = req.body.imageUrl;
-
-  if (!req.file && !imageUrl) {
-    throw new AppError(
-      "An image is required (either upload a file or provide an imageUrl)",
-      400,
+    const { name, description } = req.body;
+    const imageUrl = await resolveSingleImageUrl(
+      req.file,
+      req.body.imageUrl,
+      "countries",
     );
-  }
 
-  if (req.file) {
-    const uploadRes = await uploadImageStream(req.file.buffer, "countries");
-    imageUrl = uploadRes.url;
-  } else if (imageUrl) {
-    // User-supplied URL image — re-host on Cloudinary instead of storing the raw URL.
-    const uploaded = await uploadUrlToCloudinary(imageUrl, "countries", "imageUrl");
-    imageUrl = uploaded.url;
-  }
+    if (!imageUrl) {
+      throw new AppError(
+        "An image is required (either upload a file or provide an imageUrl)",
+        400,
+      );
+    }
 
-  const countryData: CreateCountryInput = { name, imageUrl: imageUrl! };
-  if (description !== undefined) {
-    countryData.description = description;
-  }
+    const countryData: CreateCountryInput = { name, imageUrl };
+    if (description !== undefined) {
+      countryData.description = description;
+    }
 
-  const country = await countryService.createCountry(continentId, countryData);
-  res.status(201).json({
-    status: "success",
-    message: "Country created successfully",
-    data: country,
-  });
-});
+    const country = await countryService.createCountry(
+      continentId,
+      countryData,
+    );
+    res.status(201).json({
+      status: "success",
+      message: "Country created successfully",
+      data: country,
+    });
+  },
+);
 
 export const updateCountry = catchAsyncBody<UpdateCountryInput>(
   async (req, res) => {
@@ -85,17 +88,12 @@ export const updateCountry = catchAsyncBody<UpdateCountryInput>(
       throw new AppError("Invalid country ID", 400);
     }
 
-    let { name, description } = req.body;
-    let imageUrl: string | undefined = req.body.imageUrl;
-
-    if (req.file) {
-      const uploadRes = await uploadImageStream(req.file.buffer, "countries");
-      imageUrl = uploadRes.url;
-    } else if (imageUrl) {
-      // User-supplied URL image — re-host on Cloudinary instead of storing the raw URL.
-      const uploaded = await uploadUrlToCloudinary(imageUrl, "countries", "imageUrl");
-      imageUrl = uploaded.url;
-    }
+    const { name, description } = req.body;
+    const imageUrl = await resolveSingleImageUrl(
+      req.file,
+      req.body.imageUrl,
+      "countries",
+    );
 
     const updateData: UpdateCountryInput = {};
     if (name !== undefined) updateData.name = name;
