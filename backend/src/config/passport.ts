@@ -7,7 +7,11 @@ import authService from "../services/auth.service";
 import { config } from "./config";
 
 // Google Strategy
-if (config.googleClientId && config.googleClientSecret && config.googleCallbackUrl) {
+if (
+  config.googleClientId &&
+  config.googleClientSecret &&
+  config.googleCallbackUrl
+) {
   passport.use(
     new GoogleStrategy(
       {
@@ -19,7 +23,10 @@ if (config.googleClientId && config.googleClientSecret && config.googleCallbackU
         try {
           const email = profile.emails?.[0]?.value;
           if (!email) {
-            return done(new Error("No email found in Google profile"), undefined);
+            return done(
+              new Error("No email found in Google profile"),
+              undefined,
+            );
           }
 
           const user = await authService.findOrCreateSocialUser({
@@ -46,7 +53,11 @@ if (config.googleClientId && config.googleClientSecret && config.googleCallbackU
 }
 
 // GitHub Strategy
-if (config.githubClientId && config.githubClientSecret && config.githubCallbackUrl) {
+if (
+  config.githubClientId &&
+  config.githubClientSecret &&
+  config.githubCallbackUrl
+) {
   passport.use(
     new GitHubStrategy(
       {
@@ -66,9 +77,11 @@ if (config.githubClientId && config.githubClientSecret && config.githubCallbackU
             profile.emails?.[0]?.value ||
             `${profile.username}@users.noreply.github.com`;
 
-          const nameParts = (profile.displayName || profile.username || "").split(
-            " ",
-          );
+          const nameParts = (
+            profile.displayName ||
+            profile.username ||
+            ""
+          ).split(" ");
           const firstName = nameParts[0] || "Traveler";
           const lastName = nameParts.slice(1).join(" ") || "User";
 

@@ -1,4 +1,4 @@
-import express, { Request, Response } from "express";
+import express, { type Request, type Response } from "express";
 import cors from "cors";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
@@ -83,9 +83,8 @@ const healthHandler = (_req: Request, res: Response) => {
       ? "healthy"
       : "degraded"
     : "unhealthy";
-  const statusCode = isMongoReady ? 200 : 503;
 
-  res.status(statusCode).json({
+  res.status(isMongoReady ? 200 : 503).json({
     status,
     timestamp: new Date().toISOString(),
     services: {

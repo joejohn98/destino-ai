@@ -9,8 +9,9 @@
     "start": "node dist/index.js",
     "type-check": "tsc --noEmit",
     "lint": "eslint src",
-    "seed": "tsx src/scripts/seed.ts",
-    "migrate-search-index": "tsx src/scripts/migrate-search-index.ts"
+    "format": "prettier --write \"src/**/*.ts\" \"*.json\" \"*.mjs\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"*.json\" \"*.mjs\"",
+    "seed": "tsx src/scripts/seed.ts"
   },
   "keywords": [],
   "author": "",

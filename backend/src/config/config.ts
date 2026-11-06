@@ -18,13 +18,18 @@ const isValidIpOrCidr = (address: string): boolean => {
 
   const bits = version === 4 ? 32 : 128;
   const prefixLength = Number(prefix);
-  return Number.isInteger(prefixLength) && prefixLength >= 0 && prefixLength <= bits;
+  return (
+    Number.isInteger(prefixLength) && prefixLength >= 0 && prefixLength <= bits
+  );
 };
 
 const parseTrustProxy = (value?: string): TrustProxy => {
   if (!value || value.toLowerCase() === "false") return false;
   if (/^\d+$/.test(value)) return Number(value);
-  return value.split(",").map((s) => s.trim()).filter(Boolean);
+  return value
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 };
 
 const envSchema = z
@@ -59,16 +64,19 @@ const envSchema = z
   })
   .superRefine((env, ctx) => {
     const isProd = env.NODE_ENV === "production";
+    const requiredInProd = (field: string, value?: string) => {
+      if (isProd && !value) {
+        ctx.addIssue({
+          code: "custom",
+          path: [field],
+          message: `${field} is required in production`,
+        });
+      }
+    };
 
     // 1. DATABASE_URL validation (supports mongodb://, mongodb+srv://, and replica set lists)
     if (!env.DATABASE_URL) {
-      if (isProd) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["DATABASE_URL"],
-          message: "DATABASE_URL is required in production",
-        });
-      }
+      requiredInProd("DATABASE_URL");
     } else if (!/^mongodb(\+srv)?:\/\/.+/i.test(env.DATABASE_URL)) {
       ctx.addIssue({
         code: "custom",
@@ -79,13 +87,7 @@ const envSchema = z
 
     // 2. JWT_SECRET validation
     if (!env.JWT_SECRET) {
-      if (isProd) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["JWT_SECRET"],
-          message: "JWT_SECRET is required in production",
-        });
-      }
+      requiredInProd("JWT_SECRET");
     } else if (isProd) {
       if (env.JWT_SECRET.length < 32) {
         ctx.addIssue({
@@ -105,13 +107,7 @@ const envSchema = z
 
     // 3. REDIS_URL validation
     if (!env.REDIS_URL) {
-      if (isProd) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["REDIS_URL"],
-          message: "REDIS_URL is required in production",
-        });
-      }
+      requiredInProd("REDIS_URL");
     } else if (!/^rediss?:\/\/.+/i.test(env.REDIS_URL)) {
       ctx.addIssue({
         code: "custom",
@@ -124,13 +120,7 @@ const envSchema = z
     const clientUrl =
       env.CLIENT_URL || (isProd ? undefined : "http://localhost:3000");
     if (!clientUrl) {
-      if (isProd) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["CLIENT_URL"],
-          message: "CLIENT_URL is required in production",
-        });
-      }
+      requiredInProd("CLIENT_URL");
     } else {
       try {
         const parsed = new URL(clientUrl);
@@ -172,8 +162,7 @@ const envSchema = z
         ctx.addIssue({
           code: "custom",
           path: ["GOOGLE_GENERATIVE_AI_API_KEY"],
-          message:
-            "GOOGLE_GENERATIVE_AI_API_KEY must not use placeholder text",
+          message: "GOOGLE_GENERATIVE_AI_API_KEY must not use placeholder text",
         });
       }
     }
@@ -189,7 +178,10 @@ const envSchema = z
             "TRUST_PROXY=true is not supported; use a numeric hop count (e.g. 1) or trusted IP/CIDR values",
         });
       } else if (tp.toLowerCase() !== "false" && !/^\d+$/.test(tp)) {
-        const addresses = tp.split(",").map((a) => a.trim()).filter(Boolean);
+        const addresses = tp
+          .split(",")
+          .map((a) => a.trim())
+          .filter(Boolean);
         if (
           addresses.length === 0 ||
           addresses.some((a) => !isValidIpOrCidr(a))
@@ -222,21 +214,13 @@ const envSchema = z
 
     checkGroup(
       "GOOGLE_OAUTH",
-      [
-        env.GOOGLE_CLIENT_ID,
-        env.GOOGLE_CLIENT_SECRET,
-        env.GOOGLE_CALLBACK_URL,
-      ],
+      [env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET, env.GOOGLE_CALLBACK_URL],
       "Google OAuth (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_CALLBACK_URL)",
     );
 
     checkGroup(
       "GITHUB_OAUTH",
-      [
-        env.GITHUB_CLIENT_ID,
-        env.GITHUB_CLIENT_SECRET,
-        env.GITHUB_CALLBACK_URL,
-      ],
+      [env.GITHUB_CLIENT_ID, env.GITHUB_CLIENT_SECRET, env.GITHUB_CALLBACK_URL],
       "GitHub OAuth (GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, GITHUB_CALLBACK_URL)",
     );
 

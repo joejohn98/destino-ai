@@ -1,4 +1,5 @@
 import { Server } from "http";
+import type { Express } from "express";
 
 // An uncaught exception leaves the process in an unknown state; log it and exit.
 process.on("uncaughtException", (error: Error) => {
@@ -6,7 +7,6 @@ process.on("uncaughtException", (error: Error) => {
   process.exit(1);
 });
 
-import app from "./app";
 import connectDB, { disconnectDB } from "./config/db";
 import { connectRedis, disconnectRedis } from "./config/redis";
 import { config } from "./config/config";
@@ -35,7 +35,9 @@ const closeHttpServer = async () => {
 const disconnectResources = async () => {
   const results = await Promise.allSettled([disconnectDB(), disconnectRedis()]);
   const failures = results
-    .filter((result): result is PromiseRejectedResult => result.status === "rejected")
+    .filter(
+      (result): result is PromiseRejectedResult => result.status === "rejected",
+    )
     .map((result) => result.reason);
 
   for (const error of failures) {
@@ -55,7 +57,9 @@ const gracefulShutdown = async (reason: string, exitCode = 0) => {
   console.log(`${reason} received. Starting graceful shutdown...`);
 
   const forceExitTimeout = setTimeout(() => {
-    console.error("Graceful shutdown timed out. Closing remaining HTTP connections.");
+    console.error(
+      "Graceful shutdown timed out. Closing remaining HTTP connections.",
+    );
     server?.closeAllConnections();
     process.exit(1);
   }, SHUTDOWN_TIMEOUT_MS);
@@ -89,9 +93,14 @@ const startServer = async () => {
     const redisConnected = await connectRedis();
     if (!redisConnected) {
       console.warn(
-        "Starting server with Redis in fallback mode (database-only caching).",
+        "Starting server with Redis fallback mode (no Redis cache; in-memory rate limiting).",
       );
     }
+
+    // Importing the app creates rate-limit stores. Do it only after Redis has
+    // connected (or conclusively fallen back to the in-memory store).
+    const appModule = await import("./app.js");
+    const app = appModule.default as unknown as Express;
 
     server = app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
