@@ -1,0 +1,23 @@
+services:
+  api:
+    build:
+      context: .
+      target: production
+    image: destino-backend:production
+    init: true
+    restart: unless-stopped
+    ports:
+      - "${HOST_PORT:-5000}:5000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      NODE_ENV: production
+      PORT: "5000"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true

@@ -1,0 +1,17 @@
+node_modules
+dist
+coverage
+.git
+.env
+.env.*
+!.env.example
+*.log
+npm-debug.log*
+Dockerfile*
+compose*.yaml
+DOCKER.md
+README.md
+.vscode
+.idea
+.DS_Store
+Thumbs.db

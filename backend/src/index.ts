@@ -105,6 +105,11 @@ const startServer = async () => {
     server = app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
     });
+
+    // Ensure keep-alive timeout is higher than upstream ALB idle timeout (default 60s)
+    // to prevent spurious 502 Bad Gateway errors on AWS ECS.
+    server.keepAliveTimeout = 65_000;
+    server.headersTimeout = 66_000;
   } catch (error) {
     console.error("Error starting the server:", error);
     await disconnectResources();
