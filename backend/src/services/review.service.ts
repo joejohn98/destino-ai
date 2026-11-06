@@ -1,8 +1,16 @@
 import { Country, Destination, Review, User } from "../models";
 import aiService from "./ai.service";
 import { AppError } from "../utils/AppError";
-import { CACHE_KEYS, invalidateKeys, invalidatePattern } from "../utils/cache";
-import type { PaginatedReviewsDTO, PublicReviewAuthorDTO } from "../dto/review.dto";
+import {
+  CACHE_KEYS,
+  DEST_LISTING_PATTERN,
+  invalidateKeys,
+  invalidatePattern,
+} from "../utils/cache";
+import type {
+  PaginatedReviewsDTO,
+  PublicReviewAuthorDTO,
+} from "../dto/review.dto";
 import {
   DEFAULT_REVIEW_PAGE_SIZE,
   MAX_REVIEW_PAGE_SIZE,
@@ -153,7 +161,7 @@ const createReview = async (
   await User.findByIdAndUpdate(userId, { $inc: { reviewCount: 1 } });
 
   await invalidateKeys(CACHE_KEYS.destBySlug(countrySlug, destinationSlug));
-  await invalidatePattern("api:dest:paginated:*");
+  await invalidatePattern(DEST_LISTING_PATTERN);
 
   return review;
 };
@@ -193,14 +201,17 @@ const updateReview = async (
   await review.save();
 
   const dest = await Destination.findById(review.destination)
-    .populate<{ location: { country: { slug: string } } }>("location.country", "slug")
+    .populate<{ location: { country: { slug: string } } }>(
+      "location.country",
+      "slug",
+    )
     .lean();
   if (dest?.slug && dest.location?.country?.slug) {
     await invalidateKeys(
       CACHE_KEYS.destBySlug(dest.location.country.slug, dest.slug),
     );
   }
-  await invalidatePattern("api:dest:paginated:*");
+  await invalidatePattern(DEST_LISTING_PATTERN);
 
   return review;
 };
@@ -225,14 +236,17 @@ const deleteReview = async (reviewId: string, userId: string, role: string) => {
 
   if (deletedReview?.destination) {
     const dest = await Destination.findById(deletedReview.destination)
-      .populate<{ location: { country: { slug: string } } }>("location.country", "slug")
+      .populate<{ location: { country: { slug: string } } }>(
+        "location.country",
+        "slug",
+      )
       .lean();
     if (dest?.slug && dest.location?.country?.slug) {
       await invalidateKeys(
         CACHE_KEYS.destBySlug(dest.location.country.slug, dest.slug),
       );
     }
-    await invalidatePattern("api:dest:paginated:*");
+    await invalidatePattern(DEST_LISTING_PATTERN);
   }
 
   return deletedReview;

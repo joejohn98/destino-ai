@@ -11,6 +11,8 @@ import {
 import { AppError } from "../utils/AppError";
 import {
   CACHE_KEYS,
+  CONTINENT_AGG_PATTERN,
+  DEST_ALL_PATTERN,
   CONTINENT_ADMIN_LIST_CACHE_TTL,
   invalidateKeys,
   invalidatePattern,
@@ -117,20 +119,18 @@ const getContinent = async (slug: string) => {
   if (!continent) {
     throw new AppError("No continent found with that slug", 404);
   }
-  // 1. Calculate overall counts for the continent
-  const countryCount = continent.countries ? continent.countries.length : 0;
-  const destinationCount = continent.countries
-    ? continent.countries.reduce(
-        (acc: number, country: ICountry) =>
-          acc + (country.destinations?.length || 0),
-        0,
-      )
-    : 0;
 
-  // 2. Attach destinationCount to each nested country
-  continent.countries?.forEach((country: ICountry) => {
-    country.destinationCount = country.destinations?.length || 0;
-  });
+  const countries = continent.countries ?? ([] as ICountry[]);
+  const countryCount = countries.length;
+  const destinationCount = countries.reduce(
+    (acc, country) => acc + (country.destinations?.length ?? 0),
+    0,
+  );
+
+  // Attach a per-country destination count so the payload is dashboard-friendly.
+  for (const country of countries) {
+    country.destinationCount = country.destinations?.length ?? 0;
+  }
 
   return {
     ...continent,
@@ -164,8 +164,11 @@ const createContinent = async (continentData: CreateContinentInput) => {
   // Create new continent
   const newContinent = await Continent.create(payload);
 
-  await invalidateKeys(CACHE_KEYS.continentStats, CACHE_KEYS.continentAdminList);
-  await invalidatePattern("agg:continent:*");
+  await invalidateKeys(
+    CACHE_KEYS.continentStats,
+    CACHE_KEYS.continentAdminList,
+  );
+  await invalidatePattern(CONTINENT_AGG_PATTERN);
 
   return newContinent;
 };
@@ -201,8 +204,11 @@ const updateContinent = async (
   // Save changes
   await continent.save();
 
-  await invalidateKeys(CACHE_KEYS.continentStats, CACHE_KEYS.continentAdminList);
-  await invalidatePattern("agg:continent:*");
+  await invalidateKeys(
+    CACHE_KEYS.continentStats,
+    CACHE_KEYS.continentAdminList,
+  );
+  await invalidatePattern(CONTINENT_AGG_PATTERN);
 
   return continent;
 };
@@ -256,9 +262,12 @@ const deleteContinent = async (id: string) => {
     }
   });
 
-  await invalidateKeys(CACHE_KEYS.continentStats, CACHE_KEYS.continentAdminList);
-  await invalidatePattern("agg:continent:*");
-  await invalidatePattern("api:dest:*");
+  await invalidateKeys(
+    CACHE_KEYS.continentStats,
+    CACHE_KEYS.continentAdminList,
+  );
+  await invalidatePattern(CONTINENT_AGG_PATTERN);
+  await invalidatePattern(DEST_ALL_PATTERN);
 
   return continent;
 };

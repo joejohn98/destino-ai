@@ -1,6 +1,12 @@
 import { Continent, Country, Destination, Review, User } from "../models";
 import { AppError } from "../utils/AppError";
-import { CACHE_KEYS, invalidateKeys, invalidatePattern } from "../utils/cache";
+import {
+  CACHE_KEYS,
+  DEST_ALL_PATTERN,
+  DEST_LISTING_PATTERN,
+  invalidateKeys,
+  invalidatePattern,
+} from "../utils/cache";
 import { withMongoTransaction } from "../utils/mongo-transactions";
 import { isValidObjectId } from "../utils/validation";
 import type {
@@ -112,7 +118,9 @@ const createCountry = async (
 };
 
 const updateCountry = async (id: string, updateData: UpdateCountryInput) => {
-  const country = await Country.findById(id).populate<{ continent: { slug: string } }>("continent", "slug");
+  const country = await Country.findById(id).populate<{
+    continent: { slug: string };
+  }>("continent", "slug");
   if (!country) {
     throw new AppError("Country not found", 404);
   }
@@ -156,13 +164,15 @@ const updateCountry = async (id: string, updateData: UpdateCountryInput) => {
       invalidatePattern(CACHE_KEYS.destByCountryPattern(slug)),
     ),
   );
-  await invalidatePattern("api:dest:paginated:*");
+  await invalidatePattern(DEST_LISTING_PATTERN);
 
   return country;
 };
 
 const deleteCountry = async (id: string) => {
-  const country = await Country.findById(id).populate<{ continent: { slug: string } }>("continent", "slug");
+  const country = await Country.findById(id).populate<{
+    continent: { slug: string };
+  }>("continent", "slug");
   if (!country) {
     throw new AppError("Country not found", 404);
   }
@@ -212,7 +222,7 @@ const deleteCountry = async (id: string) => {
   }
 
   await invalidateKeys(...keys);
-  await invalidatePattern("api:dest:*");
+  await invalidatePattern(DEST_ALL_PATTERN);
 
   return country;
 };
