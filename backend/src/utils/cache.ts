@@ -1,6 +1,6 @@
 import { redisClient } from "../config/redis";
 
-// ─── Cache keys & TTL constants ───────────────────────────────────────────────
+// ─── Cache keys ───────────────────────────────────────────────────────────────
 export const CACHE_KEYS = {
   continentStats: "agg:continent:stats",
   continentAdminList: "agg:continent:admin-list",
@@ -20,6 +20,10 @@ export const CONTINENT_ADMIN_LIST_CACHE_TTL = 5 * 60; // 5 minutes
 export const LISTING_CACHE_TTL = 3 * 60; // 3 minutes
 export const DETAIL_CACHE_TTL = 10 * 60; // 10 minutes
 
+export const DEST_LISTING_PATTERN = "api:dest:paginated:*";
+export const CONTINENT_AGG_PATTERN = "agg:continent:*";
+export const DEST_ALL_PATTERN = "api:dest:*";
+
 /**
  * Read-through cache wrapper.
  * - On a cache hit: returns the parsed value immediately.
@@ -36,21 +40,23 @@ export const withCache = async <T>(
     return fn();
   }
 
-  let result: T | undefined;
+  let cached: string | null;
 
   try {
-    const cached = await redisClient.get(key);
-
+    cached = await redisClient.get(key);
     if (cached) return JSON.parse(cached) as T;
-
-    result = await fn();
-
-    await redisClient.setEx(key, ttlSeconds, JSON.stringify(result));
-
-    return result;
   } catch {
-    return result ?? fn();
+    return fn();
   }
+
+  const result = await fn();
+  try {
+    await redisClient.setEx(key, ttlSeconds, JSON.stringify(result));
+  } catch {
+    // Cache writes are best-effort; keep the successful source result.
+  }
+
+  return result;
 };
 
 /**
