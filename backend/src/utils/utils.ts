@@ -1,30 +1,36 @@
 import jwt from "jsonwebtoken";
-import { Response } from "express";
+import type { CookieOptions, Response } from "express";
 import ms, { type StringValue } from "ms";
 
 import { config } from "../config/config";
 import { IUser } from "../models/User.model";
 
-const generateToken = (userId: string, res: Response): string => {
-  const payload = { id: userId };
+export const getAuthCookieOptions = (): CookieOptions => {
+  const isProduction = config.nodeEnv === "production";
 
-  const JWT_SECRET = config.jwtSecret;
-  const expiresIn = (config.jwtExpiration) as StringValue;
-  const maxAgeMs = typeof expiresIn === "string" ? ms(expiresIn) : expiresIn * 1000;
-
-  if (!JWT_SECRET) {
-    console.error("FATAL ERROR: JWT_SECRET is not defined.");
-    process.exit(1);
+  if (!config.jwtSecret) {
+    throw new Error("JWT_SECRET is not configured");
   }
 
-  const token = jwt.sign(payload, JWT_SECRET, {
+  return {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+  };
+};
+
+const generateToken = (userId: string, res: Response): string => {
+  const jwtSecret = config.jwtSecret || "";
+  const expiresIn = config.jwtExpiration as StringValue;
+  const maxAgeMs =
+    typeof expiresIn === "string" ? ms(expiresIn) : expiresIn * 1000;
+
+  const token = jwt.sign({ id: userId }, jwtSecret, {
     expiresIn,
   });
 
   res.cookie("token", token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    ...getAuthCookieOptions(),
     maxAge: maxAgeMs,
   });
 
@@ -33,4 +39,11 @@ const generateToken = (userId: string, res: Response): string => {
 
 export const createSendToken = (user: IUser, res: Response): string => {
   return generateToken(user._id.toString(), res);
+};
+
+export const sanitizeUser = (user: IUser): Record<string, unknown> => {
+  const obj = user.toObject();
+  delete obj.password;
+  delete obj.__v;
+  return obj;
 };

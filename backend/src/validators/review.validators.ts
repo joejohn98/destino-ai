@@ -1,28 +1,13 @@
 import z from "zod";
+import {
+  DEFAULT_PAGE_SIZE,
+  MAX_PAGE_SIZE,
+  paginationQuerySchema,
+} from "./query.validators";
 
-export const DEFAULT_REVIEW_PAGE_SIZE = 12;
-export const MAX_REVIEW_PAGE_SIZE = 50;
-
-const positiveIntegerQuery = z
-  .string()
-  .regex(/^[1-9]\d*$/, "Must be a positive integer")
-  .transform(Number)
-  .refine(Number.isSafeInteger, "Must be a safe integer");
-
-const reviewPaginationSchema = z.object({
-  page: positiveIntegerQuery.optional().transform((page) => page ?? 1),
-  limit: positiveIntegerQuery
-    .optional()
-    .transform((limit) => limit ?? DEFAULT_REVIEW_PAGE_SIZE)
-    .pipe(
-      z
-        .number()
-        .max(
-          MAX_REVIEW_PAGE_SIZE,
-          `Limit cannot exceed ${MAX_REVIEW_PAGE_SIZE}`,
-        ),
-    ),
-});
+export const DEFAULT_REVIEW_PAGE_SIZE = DEFAULT_PAGE_SIZE;
+export const MAX_REVIEW_PAGE_SIZE = MAX_PAGE_SIZE;
+const reviewPaginationSchema = paginationQuerySchema;
 
 const createReviewSchema = z.object({
   rating: z.coerce

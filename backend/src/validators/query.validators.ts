@@ -1,5 +1,8 @@
 import z from "zod";
 
+export const DEFAULT_PAGE_SIZE = 12;
+export const MAX_PAGE_SIZE = 50;
+
 const positiveIntegerQuery = z
   .string()
   .regex(/^[1-9]\d*$/, "Must be a positive integer")
@@ -10,8 +13,10 @@ export const paginationQuerySchema = z.object({
   page: positiveIntegerQuery.optional().transform((page) => page ?? 1),
   limit: positiveIntegerQuery
     .optional()
-    .transform((limit) => limit ?? 12)
-    .pipe(z.number().max(50, "Limit cannot exceed 50")),
+    .transform((limit) => limit ?? DEFAULT_PAGE_SIZE)
+    .pipe(
+      z.number().max(MAX_PAGE_SIZE, `Limit cannot exceed ${MAX_PAGE_SIZE}`),
+    ),
 });
 
 export const destinationListQuerySchema = paginationQuerySchema.extend({
@@ -27,7 +32,10 @@ export const destinationListQuerySchema = paginationQuerySchema.extend({
 });
 
 export const searchQuerySchema = z.object({
-  q: z.string().trim().min(2, "Search query must be at least 2 characters long"),
+  q: z
+    .string()
+    .trim()
+    .min(2, "Search query must be at least 2 characters long"),
 });
 
 export type PaginationQuery = z.infer<typeof paginationQuerySchema>;
