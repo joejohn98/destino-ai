@@ -9,12 +9,14 @@ const storage = multer.memoryStorage();
 const imageFileFilter = (
   _req: Request,
   file: Express.Multer.File,
-  cb: FileFilterCallback
+  cb: FileFilterCallback,
 ) => {
   if (file.mimetype.startsWith("image/")) {
     cb(null, true);
   } else {
-    cb(new AppError("Only image files (JPEG, PNG, WEBP, GIF) are allowed!", 400));
+    cb(
+      new AppError("Only image files (JPEG, PNG, WEBP, GIF) are allowed!", 400),
+    );
   }
 };
 
@@ -26,7 +28,10 @@ export const upload = multer({
   },
 });
 
-export const uploadSingle = (fieldName: string = "image") => upload.single(fieldName);
+export const uploadSingle = (fieldName: string = "image") =>
+  upload.single(fieldName);
 
-export const uploadArray = (fieldName: string = "images", maxCount: number = 5) =>
-  upload.array(fieldName, maxCount);
+export const uploadArray = (
+  fieldName: string = "images",
+  maxCount: number = 5,
+) => upload.array(fieldName, maxCount);

@@ -2,11 +2,24 @@ import rateLimit from "express-rate-limit";
 import { RedisStore } from "rate-limit-redis";
 import { redisClient } from "../config/redis";
 
-const createStore = (prefix: string) =>
-  new RedisStore({
+const createStore = (prefix: string) => {
+  if (!redisClient.isReady) {
+    console.warn(
+      `Redis is unavailable; using the in-memory rate-limit store for ${prefix}.`,
+    );
+    return undefined;
+  }
+
+  return new RedisStore({
     sendCommand: (...args: string[]) => redisClient.sendCommand(args),
     prefix: `rl:${prefix}:`,
   });
+};
+
+const storeOption = (prefix: string) => {
+  const store = createStore(prefix);
+  return store ? { store } : {};
+};
 
 /**
  * Rate limiter for AI agent endpoints (/api/ai/agents/*).
@@ -18,7 +31,7 @@ const createStore = (prefix: string) =>
 export const agentLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 5,
-  store: createStore("agents"),
+  ...storeOption("agents"),
   passOnStoreError: true, // Graceful degradation: allow request if Redis is temporarily unreachable
   standardHeaders: true, // Return RateLimit-* headers so the client knows its remaining quota
   legacyHeaders: false,
@@ -36,7 +49,7 @@ export const agentLimiter = rateLimit({
 export const aiLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 20,
-  store: createStore("ai"),
+  ...storeOption("ai"),
   passOnStoreError: true,
   standardHeaders: true,
   legacyHeaders: false,
@@ -51,7 +64,7 @@ export const aiLimiter = rateLimit({
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10,
-  store: createStore("auth"),
+  ...storeOption("auth"),
   passOnStoreError: true,
   message: {
     status: "fail",

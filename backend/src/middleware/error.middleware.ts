@@ -5,6 +5,7 @@ import { ZodError } from "zod";
 import { MulterError } from "multer";
 
 import { AppError } from "../utils/AppError";
+import { config } from "../config/config";
 
 export interface SerializedError {
   name: string;
@@ -16,7 +17,7 @@ export interface SerializedError {
 // Recursively serialize error cause chains
 export const serializeError = (
   error: unknown,
-  depth = 0
+  depth = 0,
 ): SerializedError | unknown => {
   if (depth > 2) return "[cause chain truncated]";
   if (!(error instanceof Error)) return error;
@@ -40,7 +41,7 @@ const handleCastErrorDB = (err: mongoose.Error.CastError): AppError => {
 };
 
 const handleDuplicateFieldsDB = (
-  err: mongoose.mongo.MongoServerError
+  err: mongoose.mongo.MongoServerError,
 ): AppError => {
   const keyValue = err.keyValue as Record<string, unknown> | undefined;
   const field = keyValue ? Object.keys(keyValue)[0] : undefined;
@@ -48,12 +49,12 @@ const handleDuplicateFieldsDB = (
   const displayField = field ?? "field";
   return new AppError(
     `Duplicate value '${value}' for field '${displayField}'. Please use another value.`,
-    409
+    409,
   );
 };
 
 const handleValidationErrorDB = (
-  err: mongoose.Error.ValidationError
+  err: mongoose.Error.ValidationError,
 ): AppError => {
   const errors = Object.values(err.errors).map((el) => el.message);
   return new AppError(`Invalid input data: ${errors.join(". ")}`, 400);
@@ -111,9 +112,7 @@ const normalizeError = (err: unknown): AppError => {
 
   // Generic fallback: safely inspect unknown objects without unsafe casts
   const maybeError = err as
-    | { statusCode?: unknown; message?: unknown }
-    | null
-    | undefined;
+    { statusCode?: unknown; message?: unknown } | null | undefined;
   const statusCode =
     typeof maybeError?.statusCode === "number" ? maybeError.statusCode : 500;
   const message =
@@ -131,10 +130,9 @@ export const globalErrorHandler = (
   err: unknown,
   req: Request,
   res: Response,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _next: NextFunction
+  _next: NextFunction,
 ): void => {
-  const isDev = process.env.NODE_ENV === "development";
+  const isDev = config.nodeEnv === "development";
   const appError = normalizeError(err);
   const statusCode = appError.statusCode || 500;
   const status = appError.status || "error";
@@ -185,12 +183,12 @@ export const globalErrorHandler = (
 export const notFoundHandler = (
   req: Request,
   _res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void => {
   next(
     new AppError(
       `Cannot find route ${req.method} ${req.originalUrl} on this server`,
-      404
-    )
+      404,
+    ),
   );
 };
