@@ -169,7 +169,6 @@ GITHUB_CALLBACK_URL           # OAuth (required for GitHub login)
 | `authProviders` | `[{ provider, providerId }]` | `provider` in `["google", "github"]` |
 | `role` | `String` | `"user"` or `"admin"`, default `"user"` |
 | `avatarUrl` | `String?` | optional |
-| `isActive` | `Boolean` | default `true` |
 | `bio` | `String?` | max 500 chars |
 | `favoriteDestinations` | `ObjectId[]` | ref `Destination` |
 | `createdAt`, `updatedAt` | `Date` | timestamps |
@@ -792,3 +791,4 @@ tsx@^4.23.15                TypeScript execution without compile step
 ---
 
 *This document was generated from full static analysis of every source file in the backend. Last updated: October 2026.*
+
