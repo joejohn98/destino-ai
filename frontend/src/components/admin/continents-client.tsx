@@ -22,6 +22,7 @@ export function AdminContinentsHome() {
   const [continents, setContinents] = useState<AdminContinent[]>([]);
   const [loading, setLoading] = useState(true);
   const [showContinentForm, setShowContinentForm] = useState(false);
+  const [continentFormInstance, setContinentFormInstance] = useState(0);
   const [editingContinent, setEditingContinent] = useState<AdminContinent | null>(
     null,
   );
@@ -73,7 +74,10 @@ export function AdminContinentsHome() {
         <Button
           variant="outline"
           size="pill"
-          onClick={() => setShowContinentForm(true)}
+          onClick={() => {
+            setContinentFormInstance((instance) => instance + 1);
+            setShowContinentForm(true);
+          }}
         >
           <Plus aria-hidden="true" />
           New continent
@@ -154,9 +158,9 @@ export function AdminContinentsHome() {
         </div>
       )}
 
-      {/* key resets form state when switching between create and different edit targets */}
+      {/* Remount on each create session and when switching edit targets. */}
       <EntityForm
-        key={editingContinent?._id ?? "new"}
+        key={editingContinent?._id ?? `new-${continentFormInstance}`}
         open={continentFormOpen}
         title={editingContinent ? `Edit ${editingContinent.name}` : "New continent"}
         description="Add a new continent. An image is required for new continents."

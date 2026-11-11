@@ -261,7 +261,7 @@ export function AdminCountryDestinations({
                 nativeButton={false}
                 render={
                   <Link
-                    href={destinationHref(dest, countrySlug)}
+                    href={destinationHref(dest, countrySlug, continentSlug)}
                     target="_blank"
                     rel="noopener noreferrer"
                   />

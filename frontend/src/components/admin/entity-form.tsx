@@ -1,6 +1,8 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useRef, useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -20,6 +22,11 @@ import {
   FieldTextarea,
 } from "@/components/ui/field";
 import { validateImageUrl } from "@/components/admin/image-input";
+import { entitySchema, type EntityFormData } from "@/schemas/admin.schema";
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 interface EntityFormProps {
   open: boolean;
@@ -38,6 +45,57 @@ interface EntityFormProps {
   onSubmit: (formData: FormData) => Promise<unknown>;
 }
 
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Build the `FormData` payload to send to the API. */
+function buildEntityFormData(
+  values: EntityFormData,
+  file: File | null,
+): FormData {
+  const fd = new FormData();
+  fd.append("name", values.name.trim());
+  if ((values.description ?? "").trim())
+    fd.append("description", (values.description ?? "").trim());
+  if (file) fd.append("image", file);
+  else if ((values.imageUrl ?? "").trim())
+    fd.append("imageUrl", (values.imageUrl ?? "").trim());
+  return fd;
+}
+
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
+/**
+ * Displays the current image preview — either a chosen file (blob URL),
+ * a typed URL, or the entity's existing saved image.
+ */
+function ImagePreview({
+  previewUrl,
+  imageUrl,
+  savedUrl,
+}: {
+  previewUrl: string | null;
+  imageUrl: string | undefined;
+  savedUrl: string | undefined;
+}) {
+  const src = previewUrl ?? ((imageUrl ?? "").trim() || savedUrl);
+  if (!src) return null;
+
+  return (
+    <div className="relative h-28 w-40 overflow-hidden rounded-lg border border-input bg-canvas">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt="" className="size-full object-cover" />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
+
 /**
  * Shared dialog for admin create/edit of a "single-image entity"
  * (continents and countries). The image is optional when editing and
@@ -53,15 +111,31 @@ export function EntityForm({
   onSubmit,
 }: EntityFormProps) {
   const isEdit = !!initial;
-  const [name, setName] = useState(initial?.name ?? "");
-  const [desc, setDesc] = useState(initial?.description ?? "");
+
   const [file, setFile] = useState<File | null>(null);
-  const [imageUrl, setImageUrl] = useState("");
-  const [imageError, setImageError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  // Stable object URL for the chosen file — avoids a new blob URL on every render.
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const {
+    handleSubmit,
+    register,
+    setValue,
+    setError,
+    clearErrors,
+    control,
+    formState: { errors, isSubmitting },
+  } = useForm<EntityFormData>({
+    resolver: zodResolver(entitySchema),
+    defaultValues: {
+      name: initial?.name ?? "",
+      description: initial?.description ?? "",
+      imageUrl: initial?.imageUrl ?? "",
+    },
+  });
+
+  const imageUrl = useWatch({ control, name: "imageUrl" });
+
+  // --- Image input handlers ---
 
   const handleFileChange = (next: File | null) => {
     // Revoke any previously created object URL before creating a new one.
@@ -69,68 +143,55 @@ export function EntityForm({
     setFile(next);
     setPreviewUrl(next ? URL.createObjectURL(next) : null);
     if (next) {
-      setImageUrl("");
-      setImageError(null);
+      setValue("imageUrl", "");
+      clearErrors("imageUrl");
     }
   };
 
   const handleImageUrlChange = (value: string) => {
+    // Switching to URL mode: clear any selected file and its blob preview.
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(null);
     setFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
-    setImageUrl(value);
-    setImageError(null);
+    setValue("imageUrl", value);
   };
 
-  const handleSubmit = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!name.trim()) {
-      toast.error("Name is required.");
-      return;
-    }
-    const imageValidationError = validateImageUrl(imageUrl);
+  // --- Form submit ---
+
+  const onFormSubmit = async (values: EntityFormData) => {
+    const imageValidationError = validateImageUrl(values.imageUrl ?? "");
     if (imageValidationError) {
-      setImageError(imageValidationError);
+      setError("imageUrl", { message: imageValidationError });
       return;
     }
-    if (!isEdit && !file && !imageUrl.trim()) {
+    if (!isEdit && !file && !(values.imageUrl ?? "").trim()) {
       toast.error("Choose an image file or enter an image URL.");
       return;
     }
 
-    setSubmitting(true);
     try {
-      const fd = new FormData();
-      fd.append("name", name.trim());
-      if (desc.trim()) fd.append("description", desc.trim());
-      if (file) fd.append("image", file);
-      else if (imageUrl.trim()) fd.append("imageUrl", imageUrl.trim());
-
-      await onSubmit(fd);
+      await onSubmit(buildEntityFormData(values, file));
       toast.success(isEdit ? "Saved changes" : "Created");
       onSaved();
     } catch (error) {
-      toast.error(
-        isEdit ? "Couldn't save changes" : "Couldn't create",
-        {
-          description:
-            error instanceof Error
-              ? error.message
-              : "Check the form and try again.",
-        },
-      );
-    } finally {
-      setSubmitting(false);
+      toast.error(isEdit ? "Couldn't save changes" : "Couldn't create", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "Check the form and try again.",
+      });
     }
   };
+
+  // --- Render ---
 
   return (
     <Dialog
       open={open}
       onOpenChange={(next) => {
         // Backdrop click / Escape key: just close, don't trigger a data reload.
-        if (!next && !submitting) onClose();
+        if (!next && !isSubmitting) onClose();
       }}
     >
       <DialogContent className="sm:max-w-md">
@@ -139,41 +200,48 @@ export function EntityForm({
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
+        <form
+          onSubmit={handleSubmit(onFormSubmit)}
+          noValidate
+          className="flex flex-col gap-5"
+        >
+          {/* Name */}
           <Field>
             <FieldLabel htmlFor="entity-name">Name *</FieldLabel>
             <FieldControl
               id="entity-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              {...register("name")}
               placeholder="e.g. Europe"
             />
+            {errors.name && (
+              <p role="alert" className="text-xs text-destructive">
+                {errors.name.message}
+              </p>
+            )}
           </Field>
 
+          {/* Description */}
           <Field>
             <FieldLabel htmlFor="entity-desc">Description</FieldLabel>
             <FieldTextarea
               id="entity-desc"
-              value={desc}
-              onChange={(e) => setDesc(e.target.value)}
+              {...register("description")}
               placeholder="Optional description (10–1000 chars)"
             />
           </Field>
 
-          <Field data-invalid={imageError ? true : undefined}>
+          {/* Image — file upload or URL */}
+          <Field data-invalid={!!errors.imageUrl}>
             <FieldLabel htmlFor="entity-image">
               Image{isEdit && initial?.imageUrl ? "" : " *"}
             </FieldLabel>
-            {(isEdit && initial?.imageUrl) || previewUrl || imageUrl.trim() ? (
-              <div className="relative h-28 w-40 overflow-hidden rounded-lg border border-input bg-canvas">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={previewUrl ?? (imageUrl.trim() || initial?.imageUrl)}
-                  alt=""
-                  className="size-full object-cover"
-                />
-              </div>
-            ) : null}
+
+            <ImagePreview
+              previewUrl={previewUrl}
+              imageUrl={imageUrl}
+              savedUrl={initial?.imageUrl}
+            />
+
             <FieldControl
               id="entity-image"
               ref={fileInputRef}
@@ -182,18 +250,22 @@ export function EntityForm({
               className="mt-1"
               onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
             />
-            <FieldLabel htmlFor="entity-image-url">Or use an image URL</FieldLabel>
+
+            <FieldLabel htmlFor="entity-image-url">
+              Or use an image URL
+            </FieldLabel>
             <FieldControl
               id="entity-image-url"
               type="url"
-              value={imageUrl}
+              {...register("imageUrl")}
               onChange={(e) => handleImageUrlChange(e.target.value)}
               placeholder="Or paste an image URL (https://…)"
-              aria-invalid={imageError ? true : undefined}
+              aria-invalid={!!errors.imageUrl}
             />
-            {imageError ? (
+
+            {errors.imageUrl ? (
               <p role="alert" className="text-xs text-destructive">
-                {imageError}
+                {errors.imageUrl.message}
               </p>
             ) : (
               <p className="text-xs text-muted-foreground">
@@ -207,12 +279,12 @@ export function EntityForm({
               type="button"
               variant="outline"
               onClick={onClose}
-              disabled={submitting}
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting && (
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && (
                 <Loader2 aria-hidden="true" className="animate-spin" />
               )}
               {isEdit ? "Save changes" : "Create"}

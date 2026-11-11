@@ -38,6 +38,7 @@ export function AdminContinentCountries({ slug }: { slug: string }) {
   const [pendingDelete, setPendingDelete] = useState<AdminCountryItem | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [showCountryForm, setShowCountryForm] = useState(false);
+  const [countryFormInstance, setCountryFormInstance] = useState(0);
   const [editingCountry, setEditingCountry] = useState<AdminCountryItem | null>(
     null,
   );
@@ -161,7 +162,10 @@ export function AdminContinentCountries({ slug }: { slug: string }) {
         <Button
           variant="outline"
           size="pill"
-          onClick={() => setShowCountryForm(true)}
+          onClick={() => {
+            setCountryFormInstance((instance) => instance + 1);
+            setShowCountryForm(true);
+          }}
         >
           <Plus aria-hidden="true" />
           New country
@@ -258,9 +262,9 @@ export function AdminContinentCountries({ slug }: { slug: string }) {
         </DialogContent>
       </Dialog>
 
-      {/* key resets form state when switching between create and different edit targets */}
+      {/* Remount on each create session and when switching edit targets. */}
       <EntityForm
-        key={editingCountry?._id ?? "new"}
+        key={editingCountry?._id ?? `new-${countryFormInstance}`}
         open={countryFormOpen}
         title={editingCountry ? `Edit ${editingCountry.name}` : "New country"}
         description="Create a new country within this continent. An image is required for new countries."

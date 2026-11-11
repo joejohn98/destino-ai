@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import { ImagePlus, Link2, Trash2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
+// ---------------------------------------------------------------------------
+// Types & constants
+// ---------------------------------------------------------------------------
 
 export interface ImagePickerValue {
   existingUrls: string[];
@@ -17,12 +20,16 @@ export interface ImagePickerValue {
 
 const MAX_IMAGE_URL_LENGTH = 2000;
 
-/** A URL pointing at an image, or an empty string when the input is empty. */
+// ---------------------------------------------------------------------------
+// URL helpers (exported so other components can reuse validation)
+// ---------------------------------------------------------------------------
+
+/** Returns the trimmed URL string, or an empty string when input is empty. */
 export function formatImageUrl(value: string): string {
   return value.trim();
 }
 
-/** Validates a user-supplied image URL. Returns an error message or null. */
+/** Validates a user-supplied image URL. Returns an error message, or null if valid. */
 export function validateImageUrl(value: string): string | null {
   const url = formatImageUrl(value);
   if (!url) return null;
@@ -37,7 +44,7 @@ export function validateImageUrl(value: string): string | null {
     if (/\.(?:jpe?g|png|gif|webp|avif|bmp)$/i.test(parsed.pathname)) {
       return null;
     }
-    // No file extension — only reject clearly non-image hosts.
+    // No recognisable image extension — only reject clearly non-image hosts.
     const host = parsed.hostname.toLowerCase();
     if (
       host === "example.com" ||
@@ -52,9 +59,11 @@ export function validateImageUrl(value: string): string | null {
   }
 }
 
-/**
- * Image thumbnail shared by uploaded-file and URL-based images.
- */
+// ---------------------------------------------------------------------------
+// Private sub-components
+// ---------------------------------------------------------------------------
+
+/** Thumbnail for an existing saved URL or a newly typed URL. */
 function ImageThumb({
   src,
   alt,
@@ -76,22 +85,19 @@ function ImageThumb({
       <div className="relative h-24 w-28 overflow-hidden rounded-lg border border-line bg-canvas">
         {errored ? (
           <div className="grid size-full place-items-center gap-1.5 bg-band/20 px-2 text-center">
-            <ImagePlus
-              aria-hidden="true"
-              className="size-4 text-muted-foreground"
-            />
+            <ImagePlus aria-hidden="true" className="size-4 text-muted-foreground" />
             <p className="text-[10px] font-medium leading-tight text-muted-foreground">
-              Couldn’t load image — is the URL valid?
+              Couldn&apos;t load image — is the URL valid?
             </p>
           </div>
         ) : (
           <div className="relative size-full">
-            <Image
+            {/* URL previews may come from arbitrary hosts; they are uploaded to Cloudinary on submit. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
               src={src}
               alt={alt}
-              fill
-              sizes="112px"
-              className="object-cover"
+              className="size-full object-contain"
               onError={() => setErroredSrc(src)}
             />
           </div>
@@ -114,25 +120,48 @@ function ImageThumb({
   );
 }
 
-function FilePreview({ file }: { file: File }) {
+/** Thumbnail for a newly selected local file — creates and revokes a blob URL. */
+function NewFileThumbnail({
+  file,
+  onRemove,
+}: {
+  file: File;
+  onRemove: () => void;
+}) {
   const imageRef = useRef<HTMLImageElement | null>(null);
 
   useEffect(() => {
     if (!file.type.startsWith("image/")) return;
     const objectUrl = URL.createObjectURL(file);
-    const imageElement = imageRef.current;
-    imageElement?.setAttribute("src", objectUrl);
+    const el = imageRef.current;
+    el?.setAttribute("src", objectUrl);
     return () => {
-      if (imageElement?.getAttribute("src") === objectUrl) {
-        imageElement.removeAttribute("src");
-      }
+      if (el?.getAttribute("src") === objectUrl) el.removeAttribute("src");
       URL.revokeObjectURL(objectUrl);
     };
   }, [file]);
 
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img ref={imageRef} alt="" className="size-full object-cover" />;
+  return (
+    <div className="relative">
+      <div className="relative h-24 w-28 overflow-hidden rounded-lg border border-primary bg-canvas">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img ref={imageRef} alt="" className="size-full object-contain" />
+      </div>
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label="Remove this image"
+        className="absolute right-1 top-1 grid size-6 place-items-center rounded-full bg-ink/70 text-white hover:bg-ink"
+      >
+        <X aria-hidden="true" className="size-3.5" />
+      </button>
+    </div>
+  );
 }
+
+// ---------------------------------------------------------------------------
+// ImagePicker
+// ---------------------------------------------------------------------------
 
 export function ImagePicker({
   initialUrls,
@@ -145,45 +174,44 @@ export function ImagePicker({
   max?: number;
   label?: string;
 }) {
-  const [existingUrls, setExistingUrls] = useState<string[]>(initialUrls ?? []);
+  const [existingUrls, setExistingUrls] = useState<string[]>(
+    initialUrls ?? [],
+  );
   const [newUrls, setNewUrls] = useState<string[]>([]);
   const [newFiles, setNewFiles] = useState<File[]>([]);
   const [removedUrls, setRemovedUrls] = useState<string[]>([]);
   const [urlDraft, setUrlDraft] = useState("");
   const [urlError, setUrlError] = useState<string | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const urlInputRef = useRef<HTMLInputElement | null>(null);
 
   const remaining = max - existingUrls.length - newUrls.length - newFiles.length;
   const limitReached = remaining <= 0;
 
-  const emit = (next: {
-    existingUrls: string[];
-    newUrls: string[];
-    newFiles: File[];
-    removedUrls: string[];
-  }) => onChange(next);
+  // --- Mutation helpers ---
 
   const addFiles = (list: FileList | null) => {
     if (!list) return;
-    const incoming = Array.from(list).filter((file) =>
-      file.type.startsWith("image/"),
+    const incoming = Array.from(list).filter((f) =>
+      f.type.startsWith("image/"),
     );
-    setNewFiles((current) => {
-      const next = [...current, ...incoming].slice(
+    setNewFiles((prev) => {
+      const next = [...prev, ...incoming].slice(
         0,
         Math.max(0, max - existingUrls.length - newUrls.length),
       );
-      emit({ existingUrls, newUrls, newFiles: next, removedUrls });
+      onChange({ existingUrls, newUrls, newFiles: next, removedUrls });
       return next;
     });
   };
+
   const removeExisting = (url: string) => {
     const nextExisting = existingUrls.filter((u) => u !== url);
     const nextRemoved = [...removedUrls, url];
     setExistingUrls(nextExisting);
     setRemovedUrls(nextRemoved);
-    emit({
+    onChange({
       existingUrls: nextExisting,
       newUrls,
       newFiles,
@@ -194,35 +222,39 @@ export function ImagePicker({
   const removeNewUrl = (url: string) => {
     const next = newUrls.filter((u) => u !== url);
     setNewUrls(next);
-    emit({ existingUrls, newUrls: next, newFiles, removedUrls });
+    onChange({ existingUrls, newUrls: next, newFiles, removedUrls });
   };
 
   const removeNewFile = (index: number) => {
     const next = newFiles.filter((_, i) => i !== index);
     setNewFiles(next);
-    emit({ existingUrls, newUrls, newFiles: next, removedUrls });
+    onChange({ existingUrls, newUrls, newFiles: next, removedUrls });
   };
 
   const addUrl = () => {
     const error = validateImageUrl(urlDraft);
     setUrlError(error);
     if (error || !urlDraft.trim() || limitReached) return;
+
     const url = formatImageUrl(urlDraft);
     if (newUrls.includes(url) || existingUrls.includes(url)) {
       setUrlError("This image URL is already in the list");
       return;
     }
+
     const next = [...newUrls, url];
     setNewUrls(next);
     setUrlDraft("");
     setUrlError(null);
-    // Keep focus in the URL field for quick multi-entry.
-    urlInputRef.current?.focus();
-    emit({ existingUrls, newUrls: next, newFiles, removedUrls });
+    urlInputRef.current?.focus(); // Keep focus for quick multi-entry.
+    onChange({ existingUrls, newUrls: next, newFiles, removedUrls });
   };
+
+  // --- Render ---
 
   return (
     <div role="group" aria-label={label} className="flex flex-col gap-3">
+      {/* Thumbnail grid */}
       <div className="flex flex-wrap gap-3">
         {existingUrls.map((url) => (
           <ImageThumb
@@ -246,21 +278,14 @@ export function ImagePicker({
         ))}
 
         {newFiles.map((file, index) => (
-          <div key={`${file.name}-${index}`} className="relative">
-            <div className="relative h-24 w-28 overflow-hidden rounded-lg border border-primary bg-canvas">
-              <FilePreview file={file} />
-            </div>
-            <button
-              type="button"
-              onClick={() => removeNewFile(index)}
-              aria-label="Remove this image"
-              className="absolute right-1 top-1 grid size-6 place-items-center rounded-full bg-ink/70 text-white hover:bg-ink"
-            >
-              <X aria-hidden="true" className="size-3.5" />
-            </button>
-          </div>
+          <NewFileThumbnail
+            key={`${file.name}-${index}`}
+            file={file}
+            onRemove={() => removeNewFile(index)}
+          />
         ))}
 
+        {/* Add-from-disk button — hidden when limit is reached */}
         {!limitReached && (
           <button
             type="button"
@@ -273,6 +298,7 @@ export function ImagePicker({
         )}
       </div>
 
+      {/* URL input row */}
       {!limitReached && (
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-2">
@@ -318,21 +344,23 @@ export function ImagePicker({
         </div>
       )}
 
+      {/* Limit reached notice */}
       {limitReached && (
         <p className="text-xs text-muted-foreground">
           Image limit reached ({max}).
         </p>
       )}
 
+      {/* Hidden file input — triggered by the add-from-disk button above */}
       <input
         ref={fileInputRef}
         type="file"
         accept="image/*"
         multiple
         className="hidden"
-        onChange={(event) => {
-          addFiles(event.target.files);
-          event.target.value = "";
+        onChange={(e) => {
+          addFiles(e.target.files);
+          e.target.value = "";
         }}
       />
     </div>
