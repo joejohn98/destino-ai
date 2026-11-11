@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { MessageSquare, Pencil, Star, Trash2 } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 
 import { useAuth } from "@/components/auth-provider";
 import { ReviewForm } from "@/components/reviews/review-form";
+import { DeleteReviewDialog } from "@/components/reviews/delete-review-dialog";
+import { MyReviewItem } from "@/components/profile/my-review-item";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -18,7 +19,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -103,154 +103,73 @@ export function MyReviews() {
   };
 
   return (
-    <section
-      aria-labelledby="my-reviews-heading"
-      className="flex flex-col gap-4"
-    >
+    <section aria-labelledby="my-reviews-heading" className="flex flex-col gap-6">
       <div>
-        <p className="text-eyebrow font-medium uppercase text-muted-foreground">
-          Activity
-        </p>
-        <h2
-          id="my-reviews-heading"
-          className="mt-1 text-title font-semibold text-ink"
-        >
+        <h2 id="my-reviews-heading" className="text-title font-semibold text-ink">
           My reviews
         </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Reviews you&apos;ve posted on destinations.
+        </p>
       </div>
 
       {loading ? (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Card
-              key={i}
-              variant="editorial"
-              className="animate-pulse gap-0 p-0"
-            >
-              <div className="h-24 w-full bg-band/30" />
+            <Card key={i} variant="app" className="animate-pulse bg-background p-6">
+              <div className="h-4 w-1/4 rounded-sm bg-band/40" />
+              <div className="mt-4 h-12 w-full rounded-sm bg-band/20" />
             </Card>
           ))}
         </div>
       ) : loadError ? (
         <Card variant="editorial" className="p-8 text-center">
-          <CardContent className="flex flex-col items-center gap-3 p-0">
-            <CardTitle className="text-base text-ink">
-              We couldn&apos;t load your reviews.
+          <CardContent className="px-0">
+            <CardTitle role="heading" aria-level={3} className="text-title font-semibold text-ink">
+              Couldn&apos;t load your reviews.
             </CardTitle>
-            <CardDescription>
-              Check your connection and try again.
+            <CardDescription className="mt-2 text-sm">
+              Please check your connection and try again.
             </CardDescription>
-            <Button type="button" variant="outline" onClick={reload}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setLoading(true);
+                reload();
+              }}
+              className="mt-4"
+            >
               Try again
             </Button>
           </CardContent>
         </Card>
       ) : reviews.length === 0 ? (
         <Card variant="editorial" className="p-8 text-center">
-          <CardContent className="flex flex-col items-center gap-3 p-0">
+          <CardContent className="px-0">
             <MessageSquare
               aria-hidden="true"
-              className="size-8 text-muted-foreground"
+              className="mx-auto size-8 text-muted-foreground"
             />
-            <CardTitle className="text-base text-ink">No reviews yet</CardTitle>
-            <CardDescription>
-              Review a destination you&apos;ve visited and it will show up here.
+            <CardTitle role="heading" aria-level={3} className="mt-3 text-base font-medium text-ink">
+              You haven&apos;t reviewed any destinations yet.
+            </CardTitle>
+            <CardDescription className="mt-1 text-sm">
+              Explore destinations and share your impressions.
             </CardDescription>
-            <Button
-              size="pill"
-              variant="outline"
-              nativeButton={false}
-              render={<Link href="/destinations" />}
-            >
-              Browse destinations
-            </Button>
           </CardContent>
         </Card>
       ) : (
         <ul className="flex flex-col gap-4">
-          {reviews.map((review) => {
-            const destHref = review.destination?.slug
-              ? `/destinations/${encodeURIComponent(review.destination.slug)}${
-                  review.destination.countrySlug
-                    ? `?country=${encodeURIComponent(review.destination.countrySlug)}`
-                    : ""
-                }`
-              : "/destinations";
-
-            return (
-              <li key={review._id}>
-                <Card variant="editorial" className="gap-3 p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex gap-2">
-                      {[1, 2, 3, 4, 5].map((value) => (
-                        <Star
-                          key={value}
-                          aria-hidden="true"
-                          className={
-                            value <= review.rating
-                              ? "size-4 fill-pastel-peach text-pastel-peach"
-                              : "size-4 text-line-strong"
-                          }
-                        />
-                      ))}
-                    </div>
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(review.createdAt).toLocaleDateString(
-                        undefined,
-                        {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        },
-                      )}
-                    </span>
-                  </div>
-                  <p className="text-sm leading-relaxed text-muted-foreground">
-                    {review.reviewText}
-                  </p>
-                  <div className="flex items-center justify-between gap-3 border-t border-line/60 pt-3">
-                    <Link
-                      href={destHref}
-                      className="rounded-sm text-sm font-medium text-ink underline underline-offset-4 transition-colors hover:text-muted-foreground"
-                    >
-                      {review.destination?.name ?? "Deleted destination"}
-                      <span className="text-muted-foreground">
-                        {review.destination?.countryName
-                          ? ` · ${review.destination.countryName}`
-                          : ""}
-                      </span>
-                    </Link>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setEditing(review)}
-                        disabled={!review.destination?.slug}
-                        aria-label={
-                          review.destination?.name
-                            ? `Edit your review of ${review.destination.name}`
-                            : "Edit review"
-                        }
-                      >
-                        <Pencil aria-hidden="true" />
-                        Edit
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-danger hover:text-danger"
-                        onClick={() => setPendingDelete(review)}
-                        aria-label="Delete review"
-                      >
-                        <Trash2 aria-hidden="true" />
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              </li>
-            );
-          })}
+          {reviews.map((review) => (
+            <li key={review._id}>
+              <MyReviewItem
+                review={review}
+                onEdit={() => setEditing(review)}
+                onDelete={() => setPendingDelete(review)}
+              />
+            </li>
+          ))}
         </ul>
       )}
 
@@ -315,37 +234,12 @@ export function MyReviews() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete dialog */}
-      <Dialog
+      <DeleteReviewDialog
         open={pendingDelete !== null}
-        onOpenChange={(open) => !open && !mutating && setPendingDelete(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete this review?</DialogTitle>
-            <DialogDescription>
-              This can&apos;t be undone. The destination&apos;s rating will be
-              recalculated.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setPendingDelete(null)}
-              disabled={mutating}
-            >
-              Keep review
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteReview}
-              disabled={mutating}
-            >
-              {mutating ? "Deleting…" : "Delete review"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        deleting={mutating}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={handleDeleteReview}
+      />
     </section>
   );
 }
