@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, ExternalLink, RefreshCw, Loader2, Trash2, Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { ArrowLeft, Plus } from "lucide-react";
 
-import { DestinationForm, destinationToFormInitial } from "@/components/admin/destination-form";
-import { Badge } from "@/components/ui/badge";
+import { AdminDestinationDialogs } from "@/components/admin/admin-destination-dialogs";
+import { AdminDestinationRow } from "@/components/admin/admin-destination-row";
+import { AdminDeleteDialog } from "@/components/admin/admin-delete-dialog";
+import { AdminRowSkeleton } from "@/components/admin/admin-row-skeleton";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -16,14 +17,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { api, destinationHref, type AdminContinent, type AdminCountryDetail, type AdminCountryItem, type Destination } from "@/lib/api";
+  api,
+  destinationHref,
+  type AdminContinent,
+  type AdminCountryDetail,
+  type AdminCountryItem,
+  type Destination,
+} from "@/lib/api";
+import { useAdminDelete } from "@/hooks/use-admin-delete";
 
 interface CountryDestProps {
   continentSlug: string;
@@ -47,18 +48,13 @@ export function AdminCountryDestinations({
   // Full continent list — needed for the country selector in DestinationForm.
   const [continents, setContinents] = useState<AdminContinent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [pendingDelete, setPendingDelete] = useState<Destination | null>(null);
-  const [deleting, setDeleting] = useState(false);
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Destination | null>(null);
 
   const load = useCallback(() => {
-    // Cancellation guard — prevents setState on an unmounted component.
     let cancelled = false;
 
-    // Fetch the country and its destinations directly via the admin endpoint.
-    // Separately fetch all continents for the DestinationForm country dropdown.
     Promise.all([
       api.getAdminCountry(continentSlug, countrySlug),
       api.getAdminContinents(),
@@ -68,7 +64,8 @@ export function AdminCountryDestinations({
 
         const countryData = countryRes.data;
         const continentObj =
-          typeof countryData.continent === "object" && countryData.continent !== null
+          typeof countryData.continent === "object" &&
+          countryData.continent !== null
             ? countryData.continent
             : null;
 
@@ -96,27 +93,21 @@ export function AdminCountryDestinations({
     return load();
   }, [load]);
 
+  const { pendingDelete, deleting, setPendingDelete, handleDelete } =
+    useAdminDelete({
+      deleteFn: (id: string) => api.deleteDestination(id),
+      successMessage: "Destination deleted",
+      errorMessage: "Couldn't delete destination",
+      itemName: "destination",
+      onDeleted: load,
+    });
+
   const handleEdit = async (dest: Destination) => {
     try {
       const res = await api.getDestinationById(dest._id);
       setEditing(res.data);
     } catch {
       setEditing(dest);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!pendingDelete) return;
-    setDeleting(true);
-    try {
-      await api.deleteDestination(pendingDelete._id);
-      toast.success("Destination deleted");
-      setPendingDelete(null);
-      load();
-    } catch {
-      toast.error("Couldn't delete destination");
-    } finally {
-      setDeleting(false);
     }
   };
 
@@ -143,7 +134,7 @@ export function AdminCountryDestinations({
           <div className="h-4 w-72 animate-pulse rounded-sm bg-band/20" />
         </div>
         {Array.from({ length: 3 }).map((_, i) => (
-          <SkeletonCard key={i} />
+          <AdminRowSkeleton key={i} />
         ))}
       </div>
     );
@@ -219,156 +210,34 @@ export function AdminCountryDestinations({
         </Card>
       ) : (
         destinations.map((dest) => (
-          <Card
+          <AdminDestinationRow
             key={dest._id}
-            variant="app"
-            className="gap-3 p-4 sm:flex-row sm:items-center"
-          >
-            <div className="h-20 w-full shrink-0 overflow-hidden rounded-lg bg-canvas sm:w-28">
-              {dest.imageUrls?.[0] ? (
-                <div className="relative size-full">
-                  <Image
-                    src={dest.imageUrls[0]}
-                    alt={dest.name}
-                    fill
-                    sizes="112px"
-                    className="object-cover"
-                  />
-                </div>
-              ) : null}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="font-semibold text-ink">{dest.name}</p>
-                <Badge variant="tag" className="rounded-full px-2 py-0.5 text-xs normal-case">
-                  {dest.category}
-                </Badge>
-                {dest.aiReviewSummary && <Badge variant="ai">AI summary</Badge>}
-              </div>
-              <p className="mt-1 truncate text-sm text-muted-foreground">
-                {dest.location?.city ? `${dest.location.city}, ` : ""}
-                {dest.location?.country}
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => handleEdit(dest)}>
-                <Pencil aria-hidden="true" />
-                Edit
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                nativeButton={false}
-                render={
-                  <Link
-                    href={destinationHref(dest, countrySlug, continentSlug)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  />
-                }
-              >
-                <ExternalLink aria-hidden="true" />
-                View
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleRegenerate(dest._id)}
-                disabled={regeneratingId === dest._id}
-              >
-                {regeneratingId === dest._id ? (
-                  <Loader2 aria-hidden="true" className="animate-spin" />
-                ) : (
-                  <RefreshCw aria-hidden="true" />
-                )}
-                AI summary
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-danger hover:text-danger"
-                onClick={() => setPendingDelete(dest)}
-              >
-                <Trash2 aria-hidden="true" />
-                Delete
-              </Button>
-            </div>
-          </Card>
+            destination={dest}
+            previewHref={destinationHref(dest, countrySlug, continentSlug)}
+            isRegenerating={regeneratingId === dest._id}
+            onEdit={() => handleEdit(dest)}
+            onRegenerate={() => handleRegenerate(dest._id)}
+            onDelete={() => setPendingDelete(dest)}
+          />
         ))
       )}
 
-      <Dialog
+      <AdminDestinationDialogs
+        continents={continents}
+        presetCountry={country.country?._id}
+        createOpen={formOpen}
+        onCloseCreate={() => setFormOpen(false)}
+        editing={editing}
+        onCloseEdit={() => setEditing(null)}
+        onSaved={load}
+      />
+
+      <AdminDeleteDialog
         open={pendingDelete !== null}
-        onOpenChange={(open) => !open && !deleting && setPendingDelete(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete destination?</DialogTitle>
-            <DialogDescription>
-              This permanently deletes {pendingDelete?.name} and its reviews.
-              This can&apos;t be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setPendingDelete(null)}
-              disabled={deleting}
-            >
-              Keep
-            </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
-              {deleting ? "Deleting…" : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {(formOpen || editing) && (
-        <DestinationForm
-          continents={continents}
-          initial={
-            editing
-              ? {
-                  // Inject the countryId by matching the destination's country name
-                  // against the loaded countries list so the dropdown pre-selects correctly.
-                  ...destinationToFormInitial(editing),
-                  location: {
-                    ...destinationToFormInitial(editing).location,
-                    countryId:
-                      continents
-                        .flatMap((c) => c.countries)
-                        .find(
-                          (c) =>
-                            c.name === editing.location?.country ||
-                            c.slug === editing.location?.countrySlug,
-                        )?._id ?? "",
-                  },
-                }
-              : null
-          }
-          presetCountry={editing ? undefined : country.country?._id}
-          onSaved={() => {
-            setFormOpen(false);
-            setEditing(null);
-            load();
-          }}
-        />
-      )}
+        deleting={deleting}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={handleDelete}
+      />
     </div>
-  );
-}
-
-function SkeletonCard() {
-  return (
-    <Card variant="editorial" className="animate-pulse gap-0 p-0">
-      <div className="flex items-center gap-4 p-4">
-        <div className="h-20 w-28 shrink-0 rounded-lg bg-band/30" />
-        <div className="flex flex-1 flex-col gap-2">
-          <div className="h-5 w-2/3 rounded-sm bg-band/30" />
-          <div className="h-3.5 w-1/2 rounded-sm bg-band/20" />
-        </div>
-      </div>
-    </Card>
   );
 }

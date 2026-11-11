@@ -1,6 +1,5 @@
 "use client";
 
-import { useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
@@ -21,8 +20,10 @@ import {
   FieldLabel,
   FieldTextarea,
 } from "@/components/ui/field";
+import { useSingleImageInput } from "@/hooks/use-single-image-input";
 import { validateImageUrl } from "@/components/admin/image-input";
 import { entitySchema, type EntityFormData } from "@/schemas/admin.schema";
+import { buildEntityFormData, ImagePreview } from "./entity-form-helpers";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -46,53 +47,6 @@ interface EntityFormProps {
 }
 
 // ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Build the `FormData` payload to send to the API. */
-function buildEntityFormData(
-  values: EntityFormData,
-  file: File | null,
-): FormData {
-  const fd = new FormData();
-  fd.append("name", values.name.trim());
-  if ((values.description ?? "").trim())
-    fd.append("description", (values.description ?? "").trim());
-  if (file) fd.append("image", file);
-  else if ((values.imageUrl ?? "").trim())
-    fd.append("imageUrl", (values.imageUrl ?? "").trim());
-  return fd;
-}
-
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
-
-/**
- * Displays the current image preview — either a chosen file (blob URL),
- * a typed URL, or the entity's existing saved image.
- */
-function ImagePreview({
-  previewUrl,
-  imageUrl,
-  savedUrl,
-}: {
-  previewUrl: string | null;
-  imageUrl: string | undefined;
-  savedUrl: string | undefined;
-}) {
-  const src = previewUrl ?? ((imageUrl ?? "").trim() || savedUrl);
-  if (!src) return null;
-
-  return (
-    <div className="relative h-28 w-40 overflow-hidden rounded-lg border border-input bg-canvas">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt="" className="size-full object-cover" />
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
 
@@ -111,10 +65,6 @@ export function EntityForm({
   onSubmit,
 }: EntityFormProps) {
   const isEdit = !!initial;
-
-  const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const {
     handleSubmit,
@@ -135,27 +85,13 @@ export function EntityForm({
 
   const imageUrl = useWatch({ control, name: "imageUrl" });
 
-  // --- Image input handlers ---
-
-  const handleFileChange = (next: File | null) => {
-    // Revoke any previously created object URL before creating a new one.
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setFile(next);
-    setPreviewUrl(next ? URL.createObjectURL(next) : null);
-    if (next) {
-      setValue("imageUrl", "");
-      clearErrors("imageUrl");
-    }
-  };
-
-  const handleImageUrlChange = (value: string) => {
-    // Switching to URL mode: clear any selected file and its blob preview.
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setPreviewUrl(null);
-    setFile(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-    setValue("imageUrl", value);
-  };
+  const {
+    file,
+    previewUrl,
+    fileInputRef,
+    handleFileChange,
+    handleImageUrlChange,
+  } = useSingleImageInput();
 
   // --- Form submit ---
 
@@ -248,7 +184,13 @@ export function EntityForm({
               type="file"
               accept="image/*"
               className="mt-1"
-              onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
+              onChange={(e) => {
+                handleFileChange(e.target.files?.[0] ?? null);
+                if (e.target.files?.[0]) {
+                  setValue("imageUrl", "");
+                  clearErrors("imageUrl");
+                }
+              }}
             />
 
             <FieldLabel htmlFor="entity-image-url">
@@ -258,7 +200,10 @@ export function EntityForm({
               id="entity-image-url"
               type="url"
               {...register("imageUrl")}
-              onChange={(e) => handleImageUrlChange(e.target.value)}
+              onChange={(e) => {
+                handleImageUrlChange();
+                setValue("imageUrl", e.target.value);
+              }}
               placeholder="Or paste an image URL (https://…)"
               aria-invalid={!!errors.imageUrl}
             />
