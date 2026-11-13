@@ -53,7 +53,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   if (user.role !== "admin") {
     return (
       <main className="flex flex-1 items-center justify-center bg-background px-4 py-20 text-foreground sm:px-6 lg:px-10">
-        <Card variant="editorial" className="w-full max-w-lg p-10 text-center sm:p-14">
+        <Card variant="editorial" className="w-full max-w-lg p-6 text-center sm:p-10 lg:p-14">
           <CardContent className="flex flex-col items-center gap-4 p-0">
             <div className="mx-auto grid size-16 place-items-center rounded-full bg-danger-soft text-ink">
               <ShieldAlert aria-hidden="true" className="size-8 text-danger" />
@@ -79,7 +79,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="mx-auto w-full max-w-page px-4 pb-24 pt-6 sm:px-6 lg:px-10">
-      <nav aria-label="Admin sections" className="flex flex-wrap items-center gap-6 border-b border-line pb-px">
+      <nav aria-label="Admin sections" className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line pb-px">
         <span className="mr-2 inline-flex items-center gap-2 text-sm font-semibold text-ink">
           <Compass aria-hidden="true" className="size-4 text-pastel-sky" />
           Admin
@@ -92,7 +92,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               href={item.href}
               aria-current={isActive ? "page" : undefined}
               className={cn(
-                "rounded-sm border-b-2 pb-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring",
+                "inline-flex min-h-11 items-center rounded-sm border-b-2 px-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring",
                 isActive
                   ? "border-ink text-ink"
                   : "border-transparent text-muted-foreground hover:text-ink",

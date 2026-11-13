@@ -35,7 +35,7 @@ export function AdminDestinationRow({
               src={destination.imageUrls[0]}
               alt={destination.name}
               fill
-              sizes="112px"
+              sizes="(max-width: 639px) calc(100vw - 4rem), 112px"
               className="object-cover"
             />
           </div>
@@ -44,7 +44,7 @@ export function AdminDestinationRow({
 
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <p className="font-semibold text-ink">{destination.name}</p>
+          <p className="min-w-0 break-words font-semibold text-ink">{destination.name}</p>
           <Badge
             variant="tag"
             className="rounded-full px-2 py-0.5 text-xs normal-case"
@@ -53,7 +53,7 @@ export function AdminDestinationRow({
           </Badge>
           {destination.aiReviewSummary && <Badge variant="ai">AI summary</Badge>}
         </div>
-        <p className="mt-1 truncate text-sm text-muted-foreground">
+        <p className="mt-1 min-w-0 break-words text-sm text-muted-foreground">
           {destination.location?.city ? `${destination.location.city}, ` : ""}
           {destination.location?.country}
         </p>
@@ -116,4 +116,3 @@ export function AdminDestinationRow({
     </Card>
   );
 }
-
