@@ -45,11 +45,11 @@ export function DestinationCard({ destination }: { destination: Destination }) {
           className="block rounded-b-marketing focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
         >
           <CardHeader className="gap-2 p-6 pb-0">
-            <div className="flex items-start justify-between gap-2">
+            <div className="flex min-w-0 items-start justify-between gap-2">
               <CardTitle
                 role="heading"
                 aria-level={3}
-                className="text-title font-semibold text-ink"
+                className="min-w-0 break-words text-title font-semibold text-ink"
               >
                 {destination.name}
               </CardTitle>
@@ -60,7 +60,7 @@ export function DestinationCard({ destination }: { destination: Destination }) {
                 </span>
               )}
             </div>
-            <CardDescription className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <CardDescription className="flex min-w-0 flex-wrap items-center gap-1.5 break-words text-xs text-muted-foreground">
               <MapPin aria-hidden="true" className="size-3.5 shrink-0" />
               {destination.location?.city ? `${destination.location.city}, ` : ""}
               {destination.location?.country}
@@ -72,7 +72,7 @@ export function DestinationCard({ destination }: { destination: Destination }) {
               {destination.description}
             </p>
 
-            <div className="mt-4 flex items-center justify-between border-t border-line/60 pt-3 text-xs text-muted-foreground">
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-line/60 pt-3 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
                 {destination.ratingsCount > 0
                   ? `${destination.ratingsCount} traveler reviews`
