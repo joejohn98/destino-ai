@@ -20,7 +20,8 @@ export const getAuthCookieOptions = (): CookieOptions => {
 };
 
 const generateToken = (userId: string, res: Response): string => {
-  const jwtSecret = config.jwtSecret || "";
+  const jwtSecret = config.jwtSecret;
+  if (!jwtSecret) throw new Error("JWT_SECRET is not configured");
   const expiresIn = config.jwtExpiration as StringValue;
   const maxAgeMs =
     typeof expiresIn === "string" ? ms(expiresIn) : expiresIn * 1000;
