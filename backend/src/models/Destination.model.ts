@@ -16,6 +16,7 @@ export const ATTRACTION_CATEGORIES = [
   "museum",
   "market",
   "nature",
+  "wildlife",
   "viewpoint",
   "day-trip",
   "activity",

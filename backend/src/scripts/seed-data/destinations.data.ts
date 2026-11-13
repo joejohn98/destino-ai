@@ -14,7 +14,9 @@ export const getDestinationsSeedData = (
       country: countryMap.get("India"),
     },
     category: "historical" as Category,
-    imageUrls: ["https://images.unsplash.com/photo-1600100397608-f010e423b971"],
+    imageUrls: [
+      "https://plus.unsplash.com/premium_photo-1697730337612-8bd916249e30?q=80&w=1471&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+    ],
     bestTimeToVisit: "October to February",
     openingHours: "06:00 AM - 06:00 PM",
     ticketPrice: "₹40",
@@ -255,7 +257,9 @@ export const getDestinationsSeedData = (
       "Japan's tallest peak, an active stratovolcano with an iconic snow-capped cone and a UNESCO World Heritage Site.",
     location: { city: "Fujinomiya", country: countryMap.get("Japan") },
     category: "mountain" as Category,
-    imageUrls: ["https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e"],
+    imageUrls: [
+      "https://plus.unsplash.com/premium_photo-1661964177687-57387c2cbd14?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+    ],
     bestTimeToVisit: "July to September",
     openingHours: "Climbing season: July–September",
     ticketPrice: "¥2,000 (conservation fee)",
@@ -314,7 +318,9 @@ export const getDestinationsSeedData = (
       "Historical center of Japan with thousands of classical Buddhist temples, imperial palaces, and Zen gardens.",
     location: { city: "Kyoto", country: countryMap.get("Japan") },
     category: "historical" as Category,
-    imageUrls: ["https://images.unsplash.com/photo-1503899036084-c55cdd92da26"],
+    imageUrls: [
+      "https://images.unsplash.com/photo-1578469645742-46cae010e5d4?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+    ],
     bestTimeToVisit: "March to May, October to November",
     openingHours: "Varies by site",
     ticketPrice: "¥500–¥1,000 per temple",
@@ -382,7 +388,9 @@ export const getDestinationsSeedData = (
       "Iconic communications and observation tower in central Tokyo with panoramic city views.",
     location: { city: "Tokyo", country: countryMap.get("Japan") },
     category: "city" as Category,
-    imageUrls: ["https://images.unsplash.com/photo-1536098561742-ca998e48cbcc"],
+    imageUrls: [
+      "https://images.unsplash.com/photo-1536098561742-ca998e48cbcc?q=80&w=836&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+    ],
     bestTimeToVisit:
       "All year (cherry blossom in March–April, autumn leaves in November)",
     openingHours: "09:00 AM - 11:00 PM",
