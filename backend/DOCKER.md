@@ -12,12 +12,22 @@ From `backend/`, start the API and its local dependencies:
 docker compose -f compose.dev.yaml up --build
 ```
 
-The API is available at `http://localhost:3000`. Source files are bind-mounted
+The API is available at `http://localhost:5000`. Source files are bind-mounted
 for `tsx watch`. MongoDB runs as a single-node replica set because transaction
 based service operations require a replica set; MongoDB and Redis data persist
 in named Docker volumes. Stop the services with `docker compose -f
 compose.dev.yaml down`. Add `-v` only when you also want to remove local database
 data.
+
+### Seeding Development Data
+
+To seed the local database with demo continents, countries, destinations, users, and reviews, execute the seed script inside the running `api` container where MongoDB's replica set hostname (`mongo:27017`) resolves natively:
+
+```sh
+docker compose -f compose.dev.yaml exec api npm run seed -- --force
+```
+
+> **Note:** Seeding is destructive and wipes existing catalog data. The `--force` flag (or `SEED_ALLOW_DESTRUCTIVE=1` environment variable) is required to confirm execution. If you prefer running scripts directly from the host machine outside Docker, map `127.0.0.1 mongo` in your operating system's `hosts` file (`C:\Windows\System32\drivers\etc\hosts` on Windows or `/etc/hosts` on macOS/Linux) so the host can resolve the replica set member.
 
 ## Production image
 
