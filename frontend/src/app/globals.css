@@ -20,28 +20,32 @@
 
 :root {
   /* ---- Brand primitives ------------------------------------------------- */
-  --lime: #bfff50;            /* [M] primary action, selection, active tab. Always ink text on top */
-  --ink: #14130e;             /* [M] warm near-black: text, outlines, black buttons */
-  --cream: #f5f5eb;           /* [M] marketing cards, hero background */
-  --canvas: #f9faf5;          /* [M] in-app canvas and inset panels */
-  --band: #d2d2c8;           /* [M] "trusted by" strip, dividers on cream */
-  --gray-body: #6b6c68;       /* [M] paragraphs and metadata (4.8:1 on cream, 5.3:1 on white) */
-  --line: #ecede8;            /* [M] 1px card border in product UI */
-  --line-strong: #d2d3ce;     /* [M] select/input border */
+  --lime: #bfff50; /* [M] primary action, selection, active tab. Always ink text on top */
+  --ink: #14130e; /* [M] warm near-black: text, outlines, black buttons */
+  --cream: #f5f5eb; /* [M] marketing cards, hero background */
+  --canvas: #f9faf5; /* [M] in-app canvas and inset panels */
+  --band: #d2d2c8; /* [M] "trusted by" strip, dividers on cream */
+  --gray-body: #6b6c68; /* [M] paragraphs and metadata (4.8:1 on cream, 5.3:1 on white) */
+  --line: #ecede8; /* [M] 1px card border in product UI */
+  --line-strong: #d2d3ce; /* [M] select/input border */
 
   /* Decorative pastels (icons and illustration only, never text) [M] */
   --pastel-lavender: #c8aaea;
   --pastel-peach: #ffcead;
-  --pastel-sky: #86e0fa;      /* also the AI sparkle icon color */
+  --pastel-sky: #86e0fa; /* also the AI sparkle icon color */
   --pastel-pink: #fab9fb;
 
   /* ---- Status (AA-safe on their soft backgrounds) [R] -------------------
      Hue follows the observed mint "On time/Compliant" tag and pink delta chip.
      Always pair with text or an icon, never color alone. */
-  --success: #0b6b3a;   --success-soft: #e3f8ec;   /* 5.9:1 */
-  --warning: #8a4b00;   --warning-soft: #fff1d6;   /* 6.1:1 */
-  --danger: #b42318;    --danger-soft: #fde8ec;    /* 5.6:1 */
-  --info: #0b5c7a;      --info-soft: #e0f4fb;      /* 6.5:1 */
+  --success: #0b6b3a;
+  --success-soft: #e3f8ec; /* 5.9:1 */
+  --warning: #8a4b00;
+  --warning-soft: #fff1d6; /* 6.1:1 */
+  --danger: #b42318;
+  --danger-soft: #fde8ec; /* 5.6:1 */
+  --info: #0b5c7a;
+  --info-soft: #e0f4fb; /* 6.5:1 */
 
   /* ---- shadcn semantic tokens ------------------------------------------- */
   --radius: 0.75rem; /* 12px: in-app card radius */
@@ -63,7 +67,7 @@
   --muted: var(--cream);
   --muted-foreground: var(--gray-body);
 
-  --accent: #efefe4;                 /* [R] hover tint, visible on white and cream */
+  --accent: #efefe4; /* [R] hover tint, visible on white and cream */
   --accent-foreground: var(--ink);
 
   --destructive: var(--danger);
@@ -77,13 +81,13 @@
   --chart-2: #c8aaea;
   --chart-3: #86e0fa;
   --chart-4: #ffcead;
-  --chart-5: #bfff50;                /* highlight only; add an ink outline or label */
+  --chart-5: #bfff50; /* highlight only; add an ink outline or label */
 
   --sidebar: var(--canvas);
   --sidebar-foreground: var(--ink);
   --sidebar-primary: var(--ink);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #edeee8;         /* observed: active rail item = light gray rounded square */
+  --sidebar-accent: #edeee8; /* observed: active rail item = light gray rounded square */
   --sidebar-accent-foreground: var(--ink);
   --sidebar-border: var(--line);
   --sidebar-ring: var(--ink);
@@ -149,35 +153,39 @@
   --color-info-soft: var(--info-soft);
 
   /* Radii. shadcn scale kept; named radii express the two surface systems. */
-  --radius-sm: calc(var(--radius) - 4px);   /* 8px */
-  --radius-md: calc(var(--radius) - 2px);   /* 10px */
-  --radius-lg: var(--radius);               /* 12px */
-  --radius-xl: calc(var(--radius) + 4px);   /* 16px */
-  --radius-control: 0.5rem;                 /* 8px: in-app buttons, inputs, selects */
-  --radius-card: 0.75rem;                   /* 12px: in-app cards */
-  --radius-media: 1.25rem;                  /* 20px: photos inside marketing cards */
-  --radius-marketing: 1.75rem;              /* 28px: marketing cards (observed 24-32px) */
+  --radius-sm: calc(var(--radius) - 4px); /* 8px */
+  --radius-md: calc(var(--radius) - 2px); /* 10px */
+  --radius-lg: var(--radius); /* 12px */
+  --radius-xl: calc(var(--radius) + 4px); /* 16px */
+  --radius-control: 0.5rem; /* 8px: in-app buttons, inputs, selects */
+  --radius-card: 0.75rem; /* 12px: in-app cards */
+  --radius-media: 1.25rem; /* 20px: photos inside marketing cards */
+  --radius-marketing: 1.75rem; /* 28px: marketing cards (observed 24-32px) */
 
   /* Type scale (1920px reference, fluid below). Use as text-display, text-headline... */
-  --text-display: clamp(2.5rem, 1.4rem + 3.6vw, 5rem);       /* hero H1, up to 80px */
+  --text-display: clamp(2.5rem, 1.4rem + 3.6vw, 5rem); /* hero H1, up to 80px */
   --text-display--line-height: 1.15;
   --text-display--letter-spacing: -0.03em;
   --text-display--font-weight: 600;
 
-  --text-headline: clamp(2rem, 1.2rem + 2.6vw, 3.875rem);    /* section H2, up to 62px */
+  --text-headline: clamp(
+    2rem,
+    1.2rem + 2.6vw,
+    3.875rem
+  ); /* section H2, up to 62px */
   --text-headline--line-height: 1.2;
   --text-headline--letter-spacing: -0.025em;
   --text-headline--font-weight: 600;
 
-  --text-title: clamp(1.5rem, 1.25rem + 0.9vw, 2rem);        /* card titles, 24-32px */
+  --text-title: clamp(1.5rem, 1.25rem + 0.9vw, 2rem); /* card titles, 24-32px */
   --text-title--line-height: 1.25;
   --text-title--letter-spacing: -0.015em;
   --text-title--font-weight: 600;
 
-  --text-lead: 1.125rem;                                      /* 18px subcopy */
+  --text-lead: 1.125rem; /* 18px subcopy */
   --text-lead--line-height: 1.5;
 
-  --text-eyebrow: 0.8125rem;                                  /* 13px uppercase label */
+  --text-eyebrow: 0.8125rem; /* 13px uppercase label */
   --text-eyebrow--line-height: 1.2;
   --text-eyebrow--letter-spacing: 0.08em;
   --text-eyebrow--font-weight: 500;
@@ -193,6 +201,17 @@
   --container-page: 101.25rem;
 }
 
+@utility max-w-page {
+  max-width: var(--container-page);
+  width: 100%;
+}
+
+/* Minimum touch target for interactive elements (44x44px per WCAG). */
+@utility touch-target {
+  min-width: 44px;
+  min-height: 44px;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -204,7 +223,9 @@
   body {
     @apply bg-background text-foreground;
   }
-  h1, h2, h3 {
+  h1,
+  h2,
+  h3 {
     text-wrap: balance;
   }
 }
