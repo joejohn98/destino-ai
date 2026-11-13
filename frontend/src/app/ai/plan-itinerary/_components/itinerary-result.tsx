@@ -46,7 +46,7 @@ export function ItineraryResult({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-eyebrow text-muted-foreground">Your itinerary</p>
-          <h2 className="mt-2 text-title">
+          <h2 className="mt-2 break-words text-title">
             {itinerary.title || "Custom India journey"}
           </h2>
           <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -71,11 +71,11 @@ export function ItineraryResult({
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               What you asked for
             </p>
-            <p className="mt-2 text-sm leading-6 text-foreground">{query}</p>
+            <p className="mt-2 break-words text-sm leading-6 text-foreground">{query}</p>
           </div>
 
           {itinerary.summary && (
-            <p className="leading-7 text-muted-foreground">
+            <p className="break-words leading-7 text-muted-foreground">
               {itinerary.summary}
             </p>
           )}

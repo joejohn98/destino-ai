@@ -30,8 +30,8 @@ export function Metric({
       <p
         className={
           emphasis
-            ? "text-2xl font-semibold tracking-tight tabular-nums"
-            : "text-lg font-semibold tabular-nums"
+            ? "min-w-0 break-words text-2xl font-semibold tracking-tight tabular-nums"
+            : "min-w-0 break-words text-lg font-semibold tabular-nums"
         }
       >
         {value}
@@ -61,7 +61,7 @@ export function InfoListCard({
                 aria-hidden="true"
                 className="mt-1 size-4 shrink-0 text-success"
               />
-              <span>{item}</span>
+              <span className="min-w-0 break-words">{item}</span>
             </li>
           ))}
         </ul>
@@ -116,7 +116,7 @@ export function TravelerTipsCard({ tips }: { tips: string[] }) {
                 aria-hidden="true"
                 className="mt-1 size-4 shrink-0 text-pastel-sky"
               />
-              <span>{tip}</span>
+              <span className="min-w-0 break-words">{tip}</span>
             </li>
           ))}
         </ul>

@@ -52,7 +52,7 @@ export function ImageThumb({
         type="button"
         onClick={onRemove}
         aria-label={removeAriaLabel}
-        className="absolute right-1 top-1 grid size-6 place-items-center rounded-full bg-ink/70 text-white hover:bg-ink"
+        className="absolute right-1 top-1 grid size-11 place-items-center rounded-full bg-ink/70 text-white hover:bg-ink"
       >
         <Trash2 aria-hidden="true" className="size-3.5" />
       </button>
@@ -91,7 +91,7 @@ export function NewFileThumbnail({
         type="button"
         onClick={onRemove}
         aria-label="Remove this image"
-        className="absolute right-1 top-1 grid size-6 place-items-center rounded-full bg-ink/70 text-white hover:bg-ink"
+        className="absolute right-1 top-1 grid size-11 place-items-center rounded-full bg-ink/70 text-white hover:bg-ink"
       >
         <X aria-hidden="true" className="size-3.5" />
       </button>

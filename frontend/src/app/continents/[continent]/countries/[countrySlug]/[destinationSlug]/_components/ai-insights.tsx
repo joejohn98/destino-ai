@@ -29,7 +29,7 @@ export function DestinationAiInsights({
               <Badge variant="ai">AI-generated</Badge>
             </div>
 
-            <p className="mt-4 text-base leading-relaxed text-ink">
+            <p className="mt-4 break-words text-base leading-relaxed text-ink">
               {destination.aiReviewSummary}
             </p>
 
@@ -48,14 +48,14 @@ export function DestinationAiInsights({
       {destination.travelTips && destination.travelTips.length > 0 && (
         <section aria-labelledby="travel-tips-heading" className="mt-10">
           <Card variant="editorial" className="p-6 sm:p-8">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-eyebrow font-medium uppercase text-muted-foreground">
                   Practical Advice
                 </p>
                 <h2
                   id="travel-tips-heading"
-                  className="mt-1 text-title font-semibold text-ink"
+                  className="mt-1 break-words text-title font-semibold text-ink"
                 >
                   Traveler Tips for {destination.name}
                 </h2>
@@ -72,7 +72,7 @@ export function DestinationAiInsights({
                   <span className="grid size-6 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
                     {idx + 1}
                   </span>
-                  <p className="text-sm leading-relaxed text-ink/90">{tip}</p>
+                  <p className="break-words text-sm leading-relaxed text-ink/90">{tip}</p>
                 </div>
               ))}
             </div>

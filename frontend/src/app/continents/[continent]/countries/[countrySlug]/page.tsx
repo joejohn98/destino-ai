@@ -116,7 +116,7 @@ export default async function CountryDestinationsPage({ params }: Props) {
 
           {/* Destinations Grid */}
           {destinations.length === 0 ? (
-            <Card variant="editorial" className="p-10 text-center">
+            <Card variant="editorial" className="p-6 text-center sm:p-10">
               <CardContent className="flex flex-col items-center gap-3 p-0">
                 <div className="grid size-12 place-items-center rounded-full bg-cream text-muted-foreground">
                   <Compass className="size-6 text-muted-foreground" />

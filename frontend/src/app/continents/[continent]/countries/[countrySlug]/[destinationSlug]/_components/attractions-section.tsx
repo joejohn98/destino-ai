@@ -25,7 +25,7 @@ export function DestinationAttractionsSection({
         </p>
         <h2
           id="attractions-heading"
-          className="mt-1 text-title font-semibold text-ink"
+          className="mt-1 break-words text-title font-semibold text-ink"
         >
           Verified Attractions in {destination.name}
         </h2>
@@ -38,7 +38,7 @@ export function DestinationAttractionsSection({
         {destination.attractions.map((attraction, idx) => (
           <Card key={idx} variant="app" className="bg-background p-6">
             <CardHeader className="gap-2 p-0">
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 {attraction.category && (
                   <Badge variant="outline" className="text-xs capitalize">
                     {attraction.category}
@@ -50,26 +50,26 @@ export function DestinationAttractionsSection({
                   </span>
                 )}
               </div>
-              <h3 className="mt-1 text-title font-semibold text-ink">
+              <h3 className="mt-1 break-words text-title font-semibold text-ink">
                 {attraction.name}
               </h3>
             </CardHeader>
             {attraction.description && (
               <CardContent className="p-0 pt-3">
-                <p className="text-sm leading-relaxed text-muted-foreground">
+                <p className="break-words text-sm leading-relaxed text-muted-foreground">
                   {attraction.description}
                 </p>
               </CardContent>
             )}
             <CardFooter className="flex flex-col items-start gap-2 border-t border-line/60 bg-transparent p-0 pt-4 mt-4 text-xs text-muted-foreground">
               {attraction.openingHours && (
-                <span className="flex items-center gap-1.5">
+                <span className="flex min-w-0 items-center gap-1.5 break-words">
                   <Clock3 className="size-3.5 shrink-0" />
                   {attraction.openingHours}
                 </span>
               )}
               {attraction.suggestedDuration && (
-                <span className="flex items-center gap-1.5">
+                <span className="flex min-w-0 items-center gap-1.5 break-words">
                   <CalendarDays className="size-3.5 shrink-0" />
                   Suggested: {attraction.suggestedDuration}
                 </span>

@@ -8,7 +8,7 @@ export default function NotFound() {
   return (
     <div className="flex flex-1 flex-col bg-background text-foreground">
       <main className="flex flex-1 items-center justify-center px-4 py-20 sm:px-6 lg:px-10">
-        <Card variant="editorial" className="max-w-lg p-10 text-center sm:p-14">
+        <Card variant="editorial" className="max-w-lg p-6 text-center sm:p-10 lg:p-14">
           <CardContent className="p-0">
             <NotFoundGlitch />
             <p className="mt-6 text-eyebrow font-medium uppercase text-muted-foreground">

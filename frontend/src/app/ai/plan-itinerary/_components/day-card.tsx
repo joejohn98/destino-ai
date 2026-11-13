@@ -22,11 +22,11 @@ export function DayCard({
             {String(day.day).padStart(2, "0")}
           </div>
           <div className="min-w-0">
-            <p className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+            <p className="flex min-w-0 flex-wrap items-center gap-1.5 break-words text-sm font-medium text-muted-foreground">
               <MapPin aria-hidden="true" className="size-4" />
               {day.destination}
             </p>
-            <CardTitle className="mt-1 text-base">{day.theme}</CardTitle>
+            <CardTitle className="mt-1 break-words text-base">{day.theme}</CardTitle>
           </div>
         </div>
         {day.estimatedDailyCost && (
@@ -53,7 +53,7 @@ export function DayCard({
                   <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-lime">
                     <Check aria-hidden="true" className="size-3 text-ink" />
                   </span>
-                  <span>{activity}</span>
+                  <span className="min-w-0 break-words">{activity}</span>
                 </li>
               ))}
             </ul>
@@ -67,7 +67,7 @@ export function DayCard({
         {day.accommodation && (
           <div className="rounded-control bg-canvas p-3">
             <p className="text-xs font-medium text-muted-foreground">Stay</p>
-            <p className="mt-1 text-sm">{day.accommodation}</p>
+            <p className="mt-1 break-words text-sm">{day.accommodation}</p>
           </div>
         )}
 
@@ -80,7 +80,7 @@ export function DayCard({
                 AI
               </Badge>
             </div>
-            <ul className="flex flex-col gap-2 text-sm leading-6 text-muted-foreground">
+            <ul className="flex flex-col gap-2 break-words text-sm leading-6 text-muted-foreground">
               {day.tips.map((tip, index) => (
                 <li key={`${tip}-${index}`}>{tip}</li>
               ))}

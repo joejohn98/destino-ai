@@ -27,7 +27,7 @@ export function DestinationHeroCard({
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink/70 via-ink/15 to-transparent"
         />
-        <div className="absolute bottom-6 left-6 flex flex-wrap gap-2">
+        <div className="absolute right-6 bottom-6 left-6 flex flex-wrap gap-2">
           <Badge
             variant="tag"
             className="border-background bg-background/95 text-ink backdrop-blur-xs capitalize"
@@ -45,14 +45,14 @@ export function DestinationHeroCard({
         </div>
       </div>
 
-      <div className="flex flex-col justify-center p-8 sm:p-10 lg:col-span-5 lg:p-12">
+      <div className="flex flex-col justify-center p-6 sm:p-10 lg:col-span-5 lg:p-12">
         <p className="text-eyebrow font-medium uppercase text-muted-foreground">
           Destination guide
         </p>
-        <h1 className="mt-2 text-headline font-semibold text-ink">
+        <h1 className="mt-2 break-words text-headline font-semibold text-ink">
           {destination.name}
         </h1>
-        <p className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
+        <p className="mt-3 flex min-w-0 flex-wrap items-center gap-2 break-words text-sm text-muted-foreground">
           <MapPin
             aria-hidden="true"
             className="size-4 shrink-0 text-pastel-sky"
@@ -61,7 +61,7 @@ export function DestinationHeroCard({
           {destination.location?.country}
         </p>
 
-        <p className="mt-6 text-base leading-relaxed text-muted-foreground sm:text-lg">
+        <p className="mt-6 break-words text-base leading-relaxed text-muted-foreground sm:text-lg">
           {destination.description}
         </p>
 

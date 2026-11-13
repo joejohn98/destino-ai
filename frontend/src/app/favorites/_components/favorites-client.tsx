@@ -101,7 +101,7 @@ export function FavoritesClient() {
             ))}
           </div>
         ) : loadError ? (
-          <Card variant="editorial" className="mt-8 p-12 text-center sm:p-16">
+          <Card variant="editorial" className="mt-8 p-6 text-center sm:p-12 lg:p-16">
             <CardContent className="px-0">
               <CardTitle
                 role="heading"
@@ -125,7 +125,7 @@ export function FavoritesClient() {
             </CardContent>
           </Card>
         ) : visible.length === 0 ? (
-          <Card variant="editorial" className="mt-8 p-12 text-center sm:p-16">
+          <Card variant="editorial" className="mt-8 p-6 text-center sm:p-12 lg:p-16">
             <CardContent className="px-0">
               <Bookmark
                 aria-hidden="true"

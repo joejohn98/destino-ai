@@ -27,8 +27,8 @@ export function MyReviewItem({
 
   return (
     <Card variant="app" className="h-full bg-background p-5">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           <div
             role="img"
             aria-label={`Rated ${review.rating} out of 5`}
@@ -69,13 +69,13 @@ export function MyReviewItem({
           })}
         </span>
       </div>
-      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+      <p className="mt-3 break-words text-sm leading-relaxed text-muted-foreground">
         {review.reviewText}
       </p>
-      <div className="mt-4 flex items-center justify-between gap-3 border-t border-line/60 pt-3">
+      <div className="mt-4 flex flex-col items-start gap-3 border-t border-line/60 pt-3 sm:flex-row sm:items-center sm:justify-between">
         <Link
           href={destHref}
-          className="rounded-sm text-sm font-medium text-ink underline underline-offset-4 transition-colors hover:text-muted-foreground"
+          className="min-w-0 break-words rounded-sm text-sm font-medium text-ink underline underline-offset-4 transition-colors hover:text-muted-foreground"
         >
           {review.destination?.name ?? "Deleted destination"}
           <span className="text-muted-foreground">
@@ -84,7 +84,7 @@ export function MyReviewItem({
               : ""}
           </span>
         </Link>
-        <div className="flex gap-1">
+        <div className="flex w-full flex-wrap justify-end gap-1 sm:w-auto">
           <Button
             variant="ghost"
             size="sm"

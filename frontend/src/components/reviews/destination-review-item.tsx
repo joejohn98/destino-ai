@@ -47,9 +47,9 @@ export function DestinationReviewItem({
       ) : (
         <>
           <div className="flex items-start justify-between gap-3">
-            <div>
+            <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-semibold text-ink">
+                <span className="break-words font-semibold text-ink">
                   {review.authorName || "Anonymous Traveler"}
                 </span>
                 {isOwn && (
@@ -84,7 +84,7 @@ export function DestinationReviewItem({
             <div
               role="img"
               aria-label={`Rated ${review.rating} out of 5`}
-              className="flex items-center gap-1"
+              className="flex shrink-0 items-center gap-1"
             >
               {Array.from({ length: 5 }).map((_, i) => (
                 <Star
@@ -100,7 +100,7 @@ export function DestinationReviewItem({
             </div>
           </div>
 
-          <p className="mt-4 text-sm leading-relaxed text-ink/90">
+          <p className="mt-4 break-words text-sm leading-relaxed text-ink/90">
             &ldquo;{review.reviewText}&rdquo;
           </p>
 
@@ -109,7 +109,7 @@ export function DestinationReviewItem({
               {review.themes.map((theme, i) => (
                 <span
                   key={i}
-                  className="rounded-full bg-canvas px-2.5 py-0.5 text-xs text-muted-foreground"
+                  className="max-w-full break-words rounded-full bg-canvas px-2.5 py-0.5 text-xs text-muted-foreground"
                 >
                   #{theme}
                 </span>
@@ -118,7 +118,7 @@ export function DestinationReviewItem({
           )}
 
           {(isOwn || canDelete) && (
-            <div className="mt-4 flex gap-2 border-t border-line/60 pt-3">
+            <div className="mt-4 flex flex-wrap gap-2 border-t border-line/60 pt-3">
               {isOwn && (
                 <Button
                   variant="ghost"

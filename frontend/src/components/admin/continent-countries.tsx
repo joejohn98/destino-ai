@@ -100,7 +100,7 @@ export function AdminContinentCountries({ slug }: { slug: string }) {
   if (!state.continent) {
     return (
       <div className="mt-6 flex flex-col gap-6">
-        <Card variant="editorial" className="p-10 text-center">
+        <Card variant="editorial" className="p-6 text-center sm:p-10">
           <CardContent className="flex flex-col items-center gap-3 p-0">
             <CardTitle className="text-base text-ink">
               Continent not found
@@ -159,7 +159,7 @@ export function AdminContinentCountries({ slug }: { slug: string }) {
       </div>
 
       {state.countries.length === 0 ? (
-        <Card variant="editorial" className="p-10 text-center">
+        <Card variant="editorial" className="p-6 text-center sm:p-10">
           <CardContent className="flex flex-col items-center gap-3 p-0">
             <CardTitle className="text-base text-ink">
               No countries in {state.continent.name} yet

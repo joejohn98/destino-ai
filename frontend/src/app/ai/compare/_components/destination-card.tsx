@@ -33,7 +33,7 @@ export function ProsCons({
         )}
         {title}
       </p>
-      <ul className="flex flex-col gap-2 text-sm leading-6 text-muted-foreground">
+      <ul className="flex flex-col gap-2 break-words text-sm leading-6 text-muted-foreground">
         {items.map((item, index) => (
           <li key={`${item}-${index}`}>{item}</li>
         ))}
@@ -55,8 +55,8 @@ export function DestinationCard({
             <Badge variant="outline" className="mb-3 capitalize">
               {readableCategory(destination.category)}
             </Badge>
-            <CardTitle className="text-title">{destination.name}</CardTitle>
-            <p className="mt-2 flex items-start gap-1.5 text-sm leading-5 text-muted-foreground">
+            <CardTitle className="break-words text-title">{destination.name}</CardTitle>
+            <p className="mt-2 flex min-w-0 flex-wrap items-start gap-1.5 break-words text-sm leading-5 text-muted-foreground">
               <MapPin aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
               {destination.location}
             </p>
@@ -81,13 +81,13 @@ export function DestinationCard({
         <ProsCons title="Things to consider" items={destination.cons} />
         <div className="rounded-control bg-canvas p-3">
           <p className="text-xs font-medium text-muted-foreground">Best for</p>
-          <p className="mt-1 text-sm leading-6">{destination.bestFor}</p>
+          <p className="mt-1 break-words text-sm leading-6">{destination.bestFor}</p>
         </div>
         <div>
           <p className="text-xs font-medium text-muted-foreground">
             Standout fact
           </p>
-          <p className="mt-1 text-sm leading-6">{destination.standoutFact}</p>
+          <p className="mt-1 break-words text-sm leading-6">{destination.standoutFact}</p>
         </div>
       </CardContent>
     </Card>

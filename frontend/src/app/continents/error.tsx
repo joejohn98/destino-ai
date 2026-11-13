@@ -24,7 +24,7 @@ export default function ContinentsError({
 
   return (
     <main className="flex flex-1 items-center justify-center bg-background px-4 py-20 text-foreground sm:px-6 lg:px-10">
-      <Card variant="editorial" className="w-full max-w-lg p-10 text-center sm:p-14">
+      <Card variant="editorial" className="w-full max-w-lg p-6 text-center sm:p-10 lg:p-14">
         <CardContent className="flex flex-col items-center gap-4 p-0">
           <div className="mx-auto grid size-16 place-items-center rounded-full bg-canvas text-ink">
             <Globe2 aria-hidden="true" className="size-8 text-pastel-sky" />

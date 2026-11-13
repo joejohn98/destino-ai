@@ -35,9 +35,9 @@ export function ComparisonResult({
   return (
     <section aria-live="polite" className="flex flex-col gap-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+        <div className="min-w-0">
           <p className="text-eyebrow text-muted-foreground">Your comparison</p>
-          <h2 className="mt-2 text-title">
+          <h2 className="mt-2 break-words text-title">
             {names.length > 0 ? names.join(" vs ") : "Destination comparison"}
           </h2>
           <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -58,10 +58,10 @@ export function ComparisonResult({
               <Sparkles aria-hidden="true" className="size-4 text-pastel-sky" />
               <p className="text-sm font-semibold">What you asked us to weigh</p>
             </div>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">{query}</p>
+            <p className="mt-2 break-words text-sm leading-6 text-muted-foreground">{query}</p>
           </div>
           {comparison.userContext && (
-            <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+            <p className="max-w-3xl break-words text-sm leading-6 text-muted-foreground">
               <span className="font-medium text-foreground">Key preference: </span>
               {comparison.userContext}
             </p>
@@ -87,7 +87,7 @@ export function ComparisonResult({
           aria-labelledby="destination-profiles-title"
           className="flex flex-col gap-3"
         >
-          <div>
+          <div className="min-w-0">
             <p className="text-eyebrow text-muted-foreground">At a glance</p>
             <h3
               id="destination-profiles-title"
@@ -120,7 +120,7 @@ export function ComparisonResult({
           aria-labelledby="criteria-title"
           className="flex flex-col gap-3"
         >
-          <div>
+          <div className="min-w-0">
             <p className="text-eyebrow text-muted-foreground">The trade-offs</p>
             <h3 id="criteria-title" className="mt-1 text-xl font-semibold">
               Where each destination wins
@@ -129,8 +129,8 @@ export function ComparisonResult({
           <div className="grid gap-3 md:grid-cols-2">
             {comparison.comparisonTable?.map((item, index) => (
               <Card key={`${item.criterion}-${index}`}>
-                <CardHeader className="flex flex-row items-start justify-between gap-3 p-5">
-                  <CardTitle className="text-base">{item.criterion}</CardTitle>
+                <CardHeader className="flex flex-wrap items-start justify-between gap-3 p-5">
+                  <CardTitle className="min-w-0 break-words text-base">{item.criterion}</CardTitle>
                   <Badge
                     variant={
                       item.winner.toLowerCase() === "tie"
@@ -141,7 +141,7 @@ export function ComparisonResult({
                     {item.winner.toLowerCase() === "tie" ? "Tie" : item.winner}
                   </Badge>
                 </CardHeader>
-                <CardContent className="px-5 pb-5 text-sm leading-6 text-muted-foreground">
+                <CardContent className="break-words px-5 pb-5 text-sm leading-6 text-muted-foreground">
                   {item.reason}
                 </CardContent>
               </Card>

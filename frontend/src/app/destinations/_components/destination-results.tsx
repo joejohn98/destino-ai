@@ -46,7 +46,7 @@ export function DestinationResults({
 
   if (loadError) {
     return (
-      <Card variant="editorial" className="mt-8 p-12 text-center sm:p-16">
+      <Card variant="editorial" className="mt-8 p-6 text-center sm:p-12 lg:p-16">
         <CardContent className="px-0">
           <CardTitle role="heading" aria-level={3} className="text-title font-semibold text-ink">
             Destinations could not be loaded.
@@ -61,7 +61,7 @@ export function DestinationResults({
 
   if (destinations.length === 0) {
     return (
-      <Card variant="editorial" className="mt-8 p-12 text-center sm:p-16">
+      <Card variant="editorial" className="mt-8 p-6 text-center sm:p-12 lg:p-16">
         <CardContent className="px-0">
           <CardTitle
             role="heading"
