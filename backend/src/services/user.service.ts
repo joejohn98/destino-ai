@@ -169,7 +169,12 @@ const getMyReviews = async (
 ): Promise<MyReviewsPageDTO> => {
   const totalReviews = await Review.countDocuments({ user: userId });
 
-  type CountrySummary = { name: string; slug: string };
+  type ContinentSummary = { name: string; slug: string };
+  type CountrySummary = {
+    name: string;
+    slug: string;
+    continent?: ContinentSummary | null;
+  };
   type ReviewDestination = {
     _id: { toString(): string };
     name: string;
@@ -189,16 +194,21 @@ const getMyReviews = async (
     .populate<{ destination: ReviewDestination | null }>({
       path: "destination",
       select: "name slug location",
+      populate: {
+        path: "location.country",
+        select: "name slug continent",
+        populate: {
+          path: "continent",
+          select: "name slug",
+        },
+      },
     })
-    .populate<{ destination: ReviewDestination | null }>(
-      "destination.location.country",
-      "name slug",
-    )
     .lean();
 
   const data = reviews.map((review) => {
     const destination = review.destination;
     const country = destination?.location?.country;
+    const continent = country?.continent;
     return {
       _id: review._id.toString(),
       rating: review.rating,
@@ -213,6 +223,7 @@ const getMyReviews = async (
         slug: destination?.slug ?? null,
         countryName: country?.name ?? null,
         countrySlug: country?.slug ?? null,
+        continentSlug: continent?.slug ?? null,
       },
     };
   });
