@@ -49,14 +49,14 @@ export function DestinationClient(props: DestinationClientProps) {
       />
 
       {/* Results Header */}
-      <div className="mt-10 flex items-end justify-between gap-4 border-b border-line pb-4">
-        <div>
+      <div className="mt-10 flex flex-col items-start gap-3 border-b border-line pb-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
           <p className="text-eyebrow font-medium uppercase text-muted-foreground">
             Verified database listings
           </p>
           <h2
             id="destination-results-heading"
-            className="mt-1 text-title font-semibold text-ink"
+            className="mt-1 break-words text-title font-semibold text-ink"
           >
             {activeLocation ? `Destinations in ${activeLocation}` : "All Destinations"}
           </h2>

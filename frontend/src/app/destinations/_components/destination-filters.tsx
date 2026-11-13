@@ -58,7 +58,7 @@ export function DestinationFilters({
             <button
               type="button"
               onClick={() => onSearch("")}
-              className="rounded-full p-1 text-muted-foreground hover:text-ink"
+              className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:text-ink"
               aria-label="Clear search"
             >
               <X className="size-4" />
@@ -66,18 +66,18 @@ export function DestinationFilters({
           )}
         </label>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {activeLocation && (
             <Badge
               variant="tag"
-              className="flex items-center gap-1.5 border-ink bg-white px-3 py-1 text-xs capitalize"
+              className="flex h-11 min-w-0 max-w-full items-center gap-1.5 border-ink bg-white px-3 py-1 text-xs capitalize"
             >
-              <span>{activeLocation}</span>
+              <span className="min-w-0 break-words">{activeLocation}</span>
               <button
                 type="button"
                 onClick={onClearLocation}
                 aria-label={`Remove ${activeLocation} filter`}
-                className="hover:text-danger"
+                className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full hover:text-danger"
               >
                 <X className="size-3" />
               </button>
@@ -120,7 +120,7 @@ export function DestinationFilters({
           aria-valuetext={
             minRating === 0 ? "Any rating" : `${minRating} stars and above`
           }
-          className="h-2 w-full cursor-pointer accent-ink"
+          className="min-h-11 w-full cursor-pointer accent-ink"
         />
         <output
           htmlFor="minimum-rating"
@@ -131,7 +131,7 @@ export function DestinationFilters({
       </div>
 
       {/* Categories Segmented Control */}
-      <div className="mt-6 max-w-full overflow-x-auto pb-1">
+      <div className="mt-6 max-w-full">
         <ToggleGroup
           aria-label="Filter destinations by category"
           value={[selectedCategory]}
@@ -139,7 +139,7 @@ export function DestinationFilters({
           onValueChange={(val) => onCategoryChange(val[0] ?? "all")}
           variant="segmented"
           size="lg"
-          className="min-w-max"
+          className="w-full min-w-0 flex-wrap justify-start rounded-none bg-transparent p-0 shadow-none"
         >
           {CATEGORIES.map((cat) => (
             <ToggleGroupItem
