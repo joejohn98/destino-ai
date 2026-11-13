@@ -30,9 +30,14 @@ const seed = async () => {
     if (config.nodeEnv === "production") {
       throw new Error("Seeding is disabled in production.");
     }
-    if (process.env.SEED_ALLOW_DESTRUCTIVE !== "1") {
+    const allowDestructive =
+      process.env.SEED_ALLOW_DESTRUCTIVE === "1" ||
+      process.argv.includes("--force") ||
+      process.argv.includes("--confirm");
+
+    if (!allowDestructive) {
       throw new Error(
-        "Seeding deletes all existing data. Set SEED_ALLOW_DESTRUCTIVE=1 to continue.",
+        "Seeding deletes all existing data. Run with 'npm run seed -- --force' or set SEED_ALLOW_DESTRUCTIVE=1 to continue.",
       );
     }
 
