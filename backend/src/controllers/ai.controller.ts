@@ -17,6 +17,20 @@ export const generateDestinationTips = catchAsync(async (req, res, _next) => {
   });
 });
 
+export const regenerateDestinationTips = catchAsync(async (req, res) => {
+  const destinationId = String(req.params.destinationId);
+
+  if (!isValidObjectId(destinationId)) {
+    throw new AppError("Invalid destination ID", 400);
+  }
+
+  const tips = await aiService.generateDestinationTips(destinationId, true);
+  res.status(200).json({
+    status: "success",
+    data: tips,
+  });
+});
+
 export const generateDestinationSummary = catchAsync(async (req, res) => {
   const destinationId = String(req.params.destinationId);
 
@@ -42,6 +56,11 @@ export const regenerateDestinationSummary = catchAsync(async (req, res) => {
     destinationId,
     true,
   );
+
+  if (!summary.summary && summary.message) {
+    throw new AppError(summary.message, 400);
+  }
+
   res.status(200).json({
     status: "success",
     data: summary,

@@ -3,6 +3,7 @@ import slugify from "slugify";
 import { Destination } from "../models/Destination.model";
 import { Country } from "../models/Country.model";
 import { Review, User } from "../models";
+import aiService from "./ai.service";
 import { AppError } from "../utils/AppError";
 import { escapeRegex, isValidObjectId } from "../utils/validation";
 import {
@@ -81,6 +82,14 @@ export const createDestination = async (data: CreateDestinationInput) => {
 
   const newDest = await Destination.create(payload);
   const { __v: _v, ...rest } = newDest.toObject();
+
+  // Pre-generate AI travel tips in background on destination creation
+  aiService.generateDestinationTips(newDest._id.toString()).catch((err) => {
+    console.warn(
+      `[createDestination] Background tips generation failed for ${newDest._id}:`,
+      err,
+    );
+  });
 
   // A new destination changes listing pages, country destinations, and continent/country counts
   await invalidateKeys(
@@ -230,6 +239,16 @@ export const updateDestination = async (
   }
   await invalidateKeys(...keysToInvalidate);
   await invalidatePattern(DEST_LISTING_PATTERN);
+
+  // Pre-generate AI travel tips if relevant context changed
+  if (contextChanged) {
+    aiService.generateDestinationTips(id).catch((err) => {
+      console.warn(
+        `[updateDestination] Background tips generation failed for ${id}:`,
+        err,
+      );
+    });
+  }
 
   return updatedDest;
 };

@@ -4,6 +4,7 @@ import { Destination } from "../models/Destination.model";
 import { Review } from "../models/Review.model";
 import { AppError } from "../utils/AppError";
 import { loadAiSdk } from "../utils/ai-sdk";
+import { CACHE_KEYS, invalidateKeys } from "../utils/cache";
 
 const sentimentAnalysisSchema = z.object({
   sentiment: z.enum(["positive", "neutral", "negative"]),
@@ -34,7 +35,7 @@ const analyzeSentiment = async (reviewText: string) => {
   const { generateText, Output, google } = await loadAiSdk();
 
   const { output } = await generateText({
-    model: google("gemini-3.5-flash-lite"),
+    model: google("gemini-3.8-flash"),
     output: Output.object({
       schema: sentimentAnalysisSchema,
     }),
@@ -44,11 +45,14 @@ const analyzeSentiment = async (reviewText: string) => {
   return output;
 };
 
-const generateDestinationTips = async (destinationId: string) => {
+const generateDestinationTips = async (
+  destinationId: string,
+  force = false,
+) => {
   const destination = await Destination.findById(destinationId)
     .populate<{
-      location: { city: string; country: { name: string } };
-    }>("location.country", "name")
+      location: { city: string; country: { name: string; slug: string } };
+    }>("location.country", "name slug")
     .lean();
   if (!destination) {
     throw new AppError("Destination not found", 404);
@@ -71,6 +75,7 @@ const generateDestinationTips = async (destinationId: string) => {
     .digest("hex");
 
   if (
+    !force &&
     destination.travelTips?.length &&
     destination.travelTipsContextHash === contextHash
   ) {
@@ -79,7 +84,7 @@ const generateDestinationTips = async (destinationId: string) => {
 
   const { generateText, google, Output } = await loadAiSdk();
   const { output } = await generateText({
-    model: google("gemini-3.5-flash-lite"),
+    model: google("gemini-3.8-flash"),
     output: Output.object({
       schema: TIPS_SCHEMA,
     }),
@@ -105,6 +110,10 @@ const generateDestinationTips = async (destinationId: string) => {
     .select("travelTips")
     .lean();
 
+  if (destination.slug && country.slug) {
+    await invalidateKeys(CACHE_KEYS.destBySlug(country.slug, destination.slug));
+  }
+
   return { tips: savedDestination?.travelTips ?? output.tips };
 };
 
@@ -114,8 +123,11 @@ const generateDestinationSummary = async (
 ) => {
   const destination = await Destination.findById(destinationId)
     .select(
-      "+reviewContentVersion name ratingsCount aiReviewSummary summaryGeneratedAtRatingCount",
+      "+reviewContentVersion name slug location.country ratingsCount aiReviewSummary summaryGeneratedAtRatingCount",
     )
+    .populate<{
+      location: { country: { slug: string } };
+    }>("location.country", "slug")
     .lean();
   if (!destination) throw new AppError("Destination not found", 404);
 
@@ -160,7 +172,7 @@ const generateDestinationSummary = async (
 
   const { generateText, google } = await loadAiSdk();
   const { text } = await generateText({
-    model: google("gemini-3.5-flash-lite"),
+    model: google("gemini-3.8-flash"),
     system: SUMMARY_SYSTEM_PROMPT,
     prompt: `Summarize these ${reviews.length} reviews of ${JSON.stringify(destination.name)}. Each item contains a rating out of 5 and review text:\n${JSON.stringify(reviews.map(({ rating, reviewText }) => ({ rating, reviewText })))}`,
   });
@@ -200,6 +212,11 @@ const generateDestinationSummary = async (
       "Reviews changed while the summary was being generated. Please retry.",
       409,
     );
+  }
+
+  const countrySlug = destination.location?.country?.slug;
+  if (destination.slug && countrySlug) {
+    await invalidateKeys(CACHE_KEYS.destBySlug(countrySlug, destination.slug));
   }
 
   return {

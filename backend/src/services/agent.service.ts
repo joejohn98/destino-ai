@@ -65,7 +65,7 @@ const planItinerary = async (query: string) => {
 
   const agent = new ToolLoopAgent({
     id: "destino-travel-planner",
-    model: google("gemini-3.5-flash-lite"),
+    model: google("gemini-3.8-flash"),
     instructions: PLANNER_SYSTEM,
     tools: plannerTools,
     stopWhen: isStepCount(10),
@@ -124,7 +124,7 @@ const compareDestinations = async (query: string) => {
 
   const comparisonAgent = new ToolLoopAgent({
     id: "destino-travel-comparison",
-    model: google("gemini-3.5-flash-lite"),
+    model: google("gemini-3.8-flash"),
     instructions: COMPARISON_SYSTEM,
     tools: comparisonTools,
     stopWhen: isStepCount(10),

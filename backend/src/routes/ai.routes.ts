@@ -3,6 +3,7 @@ import {
   generateDestinationSummary,
   generateDestinationTips,
   regenerateDestinationSummary,
+  regenerateDestinationTips,
 } from "../controllers/ai.controller";
 import { protect, restrictTo } from "../middleware/auth.middleware";
 import { aiLimiter } from "../middleware/ratelimit.middleware";
@@ -25,6 +26,12 @@ aiRoutes.get(
   "/destinations/:destinationId/tips",
   aiLimiter,
   generateDestinationTips,
+);
+aiRoutes.post(
+  "/destinations/:destinationId/tips/regenerate",
+  protect,
+  restrictTo("admin"),
+  regenerateDestinationTips,
 );
 
 export default aiRoutes;
