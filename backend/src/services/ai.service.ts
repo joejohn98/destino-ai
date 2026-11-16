@@ -35,7 +35,7 @@ const analyzeSentiment = async (reviewText: string) => {
   const { generateText, Output, google } = await loadAiSdk();
 
   const { output } = await generateText({
-    model: google("gemini-3.8-flash"),
+    model: google("gemini-3.5-flash-lite"),
     output: Output.object({
       schema: sentimentAnalysisSchema,
     }),
@@ -84,7 +84,7 @@ const generateDestinationTips = async (
 
   const { generateText, google, Output } = await loadAiSdk();
   const { output } = await generateText({
-    model: google("gemini-3.8-flash"),
+    model: google("gemini-3.5-flash-lite"),
     output: Output.object({
       schema: TIPS_SCHEMA,
     }),
@@ -105,7 +105,7 @@ const generateDestinationTips = async (
         travelTipsContextHash: contextHash,
       },
     },
-    { new: true },
+    { returnDocument: "after" },
   )
     .select("travelTips")
     .lean();
@@ -172,7 +172,7 @@ const generateDestinationSummary = async (
 
   const { generateText, google } = await loadAiSdk();
   const { text } = await generateText({
-    model: google("gemini-3.8-flash"),
+    model: google("gemini-3.5-flash-lite"),
     system: SUMMARY_SYSTEM_PROMPT,
     prompt: `Summarize these ${reviews.length} reviews of ${JSON.stringify(destination.name)}. Each item contains a rating out of 5 and review text:\n${JSON.stringify(reviews.map(({ rating, reviewText }) => ({ rating, reviewText })))}`,
   });
@@ -202,7 +202,7 @@ const generateDestinationSummary = async (
         summaryGeneratedAtRatingCount: destination.ratingsCount,
       },
     },
-    { new: true },
+    { returnDocument: "after" },
   )
     .select("aiReviewSummary ratingsCount summaryGeneratedAtRatingCount")
     .lean();

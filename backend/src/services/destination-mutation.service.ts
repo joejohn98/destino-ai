@@ -203,7 +203,7 @@ export const updateDestination = async (
         ? { $unset: { travelTips: 1, travelTipsContextHash: 1 } }
         : {}),
     },
-    { new: true, runValidators: true },
+    { returnDocument: "after", runValidators: true },
   )
     .select("-__v")
     .lean();

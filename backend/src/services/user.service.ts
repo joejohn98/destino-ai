@@ -33,7 +33,7 @@ const updateProfile = async (
   }
 
   const user = await User.findByIdAndUpdate(userId, profileData, {
-    new: true,
+    returnDocument: "after",
     runValidators: true,
   }).select("-password");
 
@@ -133,7 +133,7 @@ const addFavorite = async (userId: string, destinationId: string) => {
   const user = await User.findByIdAndUpdate(
     userId,
     { $addToSet: { favoriteDestinations: destinationId } },
-    { new: true },
+    { returnDocument: "after" },
   )
     .select("favoriteDestinations")
     .lean();
@@ -151,7 +151,7 @@ const removeFavorite = async (userId: string, destinationId: string) => {
   const user = await User.findByIdAndUpdate(
     userId,
     { $pull: { favoriteDestinations: destinationId } },
-    { new: true },
+    { returnDocument: "after" },
   )
     .select("favoriteDestinations")
     .lean();
