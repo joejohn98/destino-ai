@@ -1,9 +1,23 @@
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   DestinationForm,
   destinationToFormInitial,
 } from "@/components/admin/destination-form";
+import { resolveCountryId } from "@/components/admin/destination-form-helpers";
 import type { AdminContinent, Destination } from "@/lib/api";
+
+function getEditInitial(
+  destination: Destination,
+  continents: AdminContinent[],
+  presetCountry?: string,
+) {
+  const initial = destinationToFormInitial(destination);
+  initial.location.countryId = resolveCountryId(
+    destination.location?.country,
+    continents,
+    presetCountry,
+  );
+  return initial;
+}
 
 interface AdminDestinationDialogsProps {
   continents: AdminContinent[];
@@ -26,47 +40,28 @@ export function AdminDestinationDialogs({
 }: AdminDestinationDialogsProps) {
   return (
     <>
-      <Dialog open={createOpen} onOpenChange={(open) => !open && onCloseCreate()}>
-        <DialogContent className="max-w-3xl">
-          <DestinationForm
-            continents={continents}
-            presetCountry={presetCountry}
-            onSaved={() => {
-              onCloseCreate();
-              onSaved();
-            }}
-          />
-        </DialogContent>
-      </Dialog>
+      {createOpen && (
+        <DestinationForm
+          continents={continents}
+          presetCountry={presetCountry}
+          onSaved={() => {
+            onCloseCreate();
+            onSaved();
+          }}
+        />
+      )}
 
-      <Dialog
-        open={editing !== null}
-        onOpenChange={(open) => !open && onCloseEdit()}
-      >
-        <DialogContent className="max-w-3xl">
-          {editing && (
-            <DestinationForm
-              continents={continents}
-              initial={{
-                ...destinationToFormInitial(editing),
-                ...(presetCountry
-                  ? {
-                      location: {
-                        ...editing.location,
-                        countryId: presetCountry,
-                      },
-                    }
-                  : {}),
-              }}
-              presetCountry={presetCountry}
-              onSaved={() => {
-                onCloseEdit();
-                onSaved();
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      {editing && (
+        <DestinationForm
+          continents={continents}
+          initial={getEditInitial(editing, continents, presetCountry)}
+          presetCountry={presetCountry}
+          onSaved={() => {
+            onCloseEdit();
+            onSaved();
+          }}
+        />
+      )}
     </>
   );
 }

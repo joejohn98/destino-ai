@@ -125,7 +125,7 @@ export function AdminCountryDestinations({
         return res;
       },
       {
-        loading: "Synthesizing AI review summary with Gemini…",
+        loading: "Synthesizing AI review summary with AI...",
         success: () => "AI review summary generated successfully.",
         error: (err: unknown) =>
           err instanceof Error
@@ -149,7 +149,7 @@ export function AdminCountryDestinations({
         return res;
       },
       {
-        loading: "Generating practical travel tips with Gemini…",
+        loading: "Generating practical travel tips with AI...",
         success: (res) =>
           `Generated ${res.data.tips.length} travel tips successfully.`,
         error: (err: unknown) =>

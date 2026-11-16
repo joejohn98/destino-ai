@@ -11,6 +11,16 @@ import {
 } from "@/components/ui/select";
 import type { AdminContinent } from "@/lib/api";
 import { CATEGORIES, type DestinationFormData } from "@/schemas/admin.schema";
+import {
+  countryLabel,
+  countryOptions,
+  type SelectOption,
+} from "./destination-form-helpers";
+
+const CATEGORY_OPTIONS: SelectOption[] = CATEGORIES.map((category) => ({
+  value: category,
+  label: category.charAt(0).toUpperCase() + category.slice(1),
+}));
 
 export function DestinationDetailsGrid({
   control,
@@ -23,6 +33,8 @@ export function DestinationDetailsGrid({
   errors: FieldErrors<DestinationFormData>;
   continents: AdminContinent[];
 }) {
+  const countryItems = countryOptions(continents);
+
   return (
     <div className="grid gap-5 sm:grid-cols-2">
       {/* Category */}
@@ -32,14 +44,18 @@ export function DestinationDetailsGrid({
           control={control}
           name="category"
           render={({ field }) => (
-            <Select value={field.value} onValueChange={field.onChange}>
+            <Select
+              value={field.value}
+              onValueChange={field.onChange}
+              items={CATEGORY_OPTIONS}
+            >
               <SelectTrigger id="dest-cat">
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
-                {CATEGORIES.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
-                    {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                {CATEGORY_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -60,7 +76,14 @@ export function DestinationDetailsGrid({
           control={control}
           name="country"
           render={({ field }) => (
-            <Select value={field.value} onValueChange={field.onChange}>
+            <Select
+              value={field.value}
+              onValueChange={field.onChange}
+              items={countryItems}
+              itemToStringLabel={(value: string) =>
+                countryLabel(value, continents) ?? ""
+              }
+            >
               <SelectTrigger id="dest-country">
                 <SelectValue placeholder="Select country" />
               </SelectTrigger>

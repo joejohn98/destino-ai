@@ -14,7 +14,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ATTRACTION_CATEGORIES } from "@/schemas/admin.schema";
-import type { AttractionDraft } from "./destination-form-helpers";
+import type { AttractionDraft, SelectOption } from "./destination-form-helpers";
+
+const CATEGORY_OPTIONS: SelectOption[] = ATTRACTION_CATEGORIES.map(
+  (category) => ({
+    value: category,
+    label: category.replace("-", " "),
+  }),
+);
 
 export function AttractionRow({
   attraction,
@@ -45,14 +52,15 @@ export function AttractionRow({
             <Select
               value={attraction.category ?? ""}
               onValueChange={(value) => onChange("category", value ?? "")}
+              items={CATEGORY_OPTIONS}
             >
               <SelectTrigger id={`attr-cat-${id}`}>
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
-                {ATTRACTION_CATEGORIES.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
-                    {cat.replace("-", " ")}
+                {CATEGORY_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
                   </SelectItem>
                 ))}
               </SelectContent>

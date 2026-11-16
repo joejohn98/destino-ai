@@ -1,6 +1,61 @@
-import type { Attraction, Destination } from "@/lib/api";
+import type { Attraction, AdminContinent, Destination } from "@/lib/api";
 import type { ImagePickerValue } from "@/components/admin/image-input";
 import type { DestinationFormData } from "@/schemas/admin.schema";
+
+export interface SelectOption {
+  value: string;
+  label: string;
+}
+
+/** Flatten continents into `{ value, label }` options for the country select. */
+export function countryOptions(continents: AdminContinent[]): SelectOption[] {
+  return continents.flatMap((continent) =>
+    continent.countries.map((country) => ({
+      value: country._id,
+      label: country.name,
+    })),
+  );
+}
+
+/**
+ * Display label for a country value that may be an id, a name, or an empty string.
+ * Raw database ids are never shown to the user.
+ */
+export function countryLabel(
+  value: string | null | undefined,
+  continents: AdminContinent[],
+): string | null {
+  const raw = value?.trim();
+  if (!raw) return null;
+
+  const country = countryOptions(continents).find(
+    (option) =>
+      option.value.toLowerCase() === raw.toLowerCase() ||
+      option.label.toLowerCase() === raw.toLowerCase(),
+  );
+  if (country) return country.label;
+
+  return /^[a-f\d]{24}$/i.test(raw) ? "Country unavailable" : raw;
+}
+
+/** Resolve a stored country id/name to the canonical country id used by the form. */
+export function resolveCountryId(
+  countryValue: string | undefined,
+  continents: AdminContinent[],
+  presetCountry?: string,
+): string {
+  if (presetCountry) return presetCountry;
+
+  const raw = countryValue?.trim();
+  if (!raw) return "";
+
+  const country = countryOptions(continents).find(
+    (option) =>
+      option.value.toLowerCase() === raw.toLowerCase() ||
+      option.label.toLowerCase() === raw.toLowerCase(),
+  );
+  return country?.value ?? raw;
+}
 
 export interface AttractionDraft {
   /** Stable id for React reconciliation — never sent to the API. */
@@ -87,7 +142,7 @@ export function toDefaultValues(
     city: initial.location.city,
     state: initial.location.state ?? "",
     // countryId is set by the parent before passing initial in
-    country: initial.location.countryId ?? "",
+    country: initial.location.countryId || initial.location.country || "",
     bestTimeToVisit: initial.bestTimeToVisit ?? "",
     openingHours: initial.openingHours ?? "",
     ticketPrice: initial.ticketPrice ?? "",
