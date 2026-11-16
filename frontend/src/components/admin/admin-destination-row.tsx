@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ExternalLink, Loader2, Pencil, RefreshCw, Star, Trash2 } from "lucide-react";
+import { ExternalLink, Loader2, Pencil, RefreshCw, Sparkles, Star, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -10,15 +10,19 @@ export function AdminDestinationRow({
   destination,
   previewHref,
   isRegenerating,
+  isRegeneratingTips,
   onEdit,
   onRegenerate,
+  onRegenerateTips,
   onDelete,
 }: {
   destination: Destination;
   previewHref?: string;
   isRegenerating: boolean;
+  isRegeneratingTips?: boolean;
   onEdit: () => void;
   onRegenerate: () => void;
+  onRegenerateTips?: () => void;
   onDelete: () => void;
 }) {
   const href = previewHref ?? destinationHref(destination);
@@ -44,7 +48,7 @@ export function AdminDestinationRow({
 
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <p className="min-w-0 break-words font-semibold text-ink">{destination.name}</p>
+          <p className="min-w-0 wrap-break-word font-semibold text-ink">{destination.name}</p>
           <Badge
             variant="tag"
             className="rounded-full px-2 py-0.5 text-xs normal-case"
@@ -52,8 +56,11 @@ export function AdminDestinationRow({
             {destination.category}
           </Badge>
           {destination.aiReviewSummary && <Badge variant="ai">AI summary</Badge>}
+          {destination.travelTips && destination.travelTips.length > 0 && (
+            <Badge variant="ai">AI tips</Badge>
+          )}
         </div>
-        <p className="mt-1 min-w-0 break-words text-sm text-muted-foreground">
+        <p className="mt-1 min-w-0 wrap-break-word text-sm text-muted-foreground">
           {destination.location?.city ? `${destination.location.city}, ` : ""}
           {destination.location?.country}
         </p>
@@ -103,6 +110,21 @@ export function AdminDestinationRow({
           )}
           AI summary
         </Button>
+        {onRegenerateTips && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onRegenerateTips}
+            disabled={isRegeneratingTips}
+          >
+            {isRegeneratingTips ? (
+              <Loader2 aria-hidden="true" className="animate-spin" />
+            ) : (
+              <Sparkles aria-hidden="true" />
+            )}
+            AI tips
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="sm"

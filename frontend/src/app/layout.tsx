@@ -29,7 +29,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${jakarta.variable} h-full antialiased`}>
-      <body className="min-h-dvh flex flex-col bg-background text-foreground antialiased">
+      <body
+        suppressHydrationWarning
+        className="min-h-dvh flex flex-col bg-background text-foreground antialiased"
+      >
         <AuthProvider>
           <TooltipProvider>
             <Header />

@@ -19,6 +19,39 @@ import {
   UpdateReviewInput,
 } from "../validators/review.validators";
 
+const triggerAiSummaryIfEligible = async (
+  destinationId: string | { toString(): string },
+) => {
+  try {
+    const dest = await Destination.findById(destinationId)
+      .select("ratingsCount summaryGeneratedAtRatingCount aiReviewSummary")
+      .lean();
+    if (!dest || dest.ratingsCount < 3) return;
+
+    const lastCount = dest.summaryGeneratedAtRatingCount ?? 0;
+    const shouldRegenerate =
+      !dest.aiReviewSummary ||
+      dest.ratingsCount - lastCount >= 5 ||
+      dest.ratingsCount < lastCount;
+
+    if (shouldRegenerate) {
+      aiService
+        .generateDestinationSummary(destinationId.toString())
+        .catch((err) => {
+          console.warn(
+            `[triggerAiSummary] Background generation failed for ${destinationId}:`,
+            err,
+          );
+        });
+    }
+  } catch (err) {
+    console.warn(
+      `[triggerAiSummary] Check failed for ${destinationId}:`,
+      err,
+    );
+  }
+};
+
 const getDestinationReviews = async (
   countrySlug: string,
   destinationSlug: string,
@@ -163,6 +196,8 @@ const createReview = async (
   await invalidateKeys(CACHE_KEYS.destBySlug(countrySlug, destinationSlug));
   await invalidatePattern(DEST_LISTING_PATTERN);
 
+  triggerAiSummaryIfEligible(destination._id);
+
   return review;
 };
 
@@ -213,6 +248,8 @@ const updateReview = async (
   }
   await invalidatePattern(DEST_LISTING_PATTERN);
 
+  triggerAiSummaryIfEligible(review.destination);
+
   return review;
 };
 
@@ -247,6 +284,7 @@ const deleteReview = async (reviewId: string, userId: string, role: string) => {
       );
     }
     await invalidatePattern(DEST_LISTING_PATTERN);
+    triggerAiSummaryIfEligible(deletedReview.destination);
   }
 
   return deletedReview;

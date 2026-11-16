@@ -29,7 +29,7 @@ export function DestinationAiInsights({
               <Badge variant="ai">AI-generated</Badge>
             </div>
 
-            <p className="mt-4 break-words text-base leading-relaxed text-ink">
+            <p className="mt-4 wrap-break-word text-base leading-relaxed text-ink">
               {destination.aiReviewSummary}
             </p>
 
@@ -55,7 +55,7 @@ export function DestinationAiInsights({
                 </p>
                 <h2
                   id="travel-tips-heading"
-                  className="mt-1 break-words text-title font-semibold text-ink"
+                  className="mt-1 wrap-break-word text-title font-semibold text-ink"
                 >
                   Traveler Tips for {destination.name}
                 </h2>
@@ -72,7 +72,7 @@ export function DestinationAiInsights({
                   <span className="grid size-6 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
                     {idx + 1}
                   </span>
-                  <p className="break-words text-sm leading-relaxed text-ink/90">{tip}</p>
+                  <p className="wrap-break-word text-sm leading-relaxed text-ink/90">{tip}</p>
                 </div>
               ))}
             </div>

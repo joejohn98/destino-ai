@@ -50,9 +50,35 @@ export const adminEndpoints = {
 
   async regenerateAiSummary(
     destinationId: string,
-  ): Promise<{ status: string; data: { summary?: string | null } }> {
-    return fetchApi<{ status: string; data: { summary?: string | null } }>(
+  ): Promise<{
+    status: string;
+    data: {
+      summary?: string | null;
+      message?: string;
+      ratingsCount?: number;
+    };
+  }> {
+    return fetchApi<{
+      status: string;
+      data: {
+        summary?: string | null;
+        message?: string;
+        ratingsCount?: number;
+      };
+    }>(
       `/api/ai/destinations/${encodeURIComponent(destinationId)}/summary/regenerate`,
+      {
+        method: "POST",
+        credentials: "include",
+      },
+    );
+  },
+
+  async regenerateAiTips(
+    destinationId: string,
+  ): Promise<{ status: string; data: { tips: string[] } }> {
+    return fetchApi<{ status: string; data: { tips: string[] } }>(
+      `/api/ai/destinations/${encodeURIComponent(destinationId)}/tips/regenerate`,
       {
         method: "POST",
         credentials: "include",

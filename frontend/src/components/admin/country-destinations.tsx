@@ -49,6 +49,7 @@ export function AdminCountryDestinations({
   const [continents, setContinents] = useState<AdminContinent[]>([]);
   const [loading, setLoading] = useState(true);
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
+  const [regeneratingTipsId, setRegeneratingTipsId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Destination | null>(null);
 
@@ -111,19 +112,53 @@ export function AdminCountryDestinations({
     }
   };
 
-  const handleRegenerate = async (id: string) => {
+  const handleRegenerate = (id: string) => {
     setRegeneratingId(id);
-    try {
-      const res = await api.regenerateAiSummary(id);
-      toast.success(
-        res.data?.summary ? "AI summary regenerated" : "AI summary generated",
-      );
-      load();
-    } catch {
-      toast.error("Couldn't regenerate AI summary");
-    } finally {
-      setRegeneratingId(null);
-    }
+
+    toast.promise(
+      async () => {
+        const res = await api.regenerateAiSummary(id);
+        if (!res.data?.summary && res.data?.message) {
+          throw new Error(res.data.message);
+        }
+        await load();
+        return res;
+      },
+      {
+        loading: "Synthesizing AI review summary with Gemini…",
+        success: () => "AI review summary generated successfully.",
+        error: (err: unknown) =>
+          err instanceof Error
+            ? err.message
+            : "Couldn't regenerate AI review summary.",
+        finally: () => setRegeneratingId(null),
+      },
+    );
+  };
+
+  const handleRegenerateTips = (id: string) => {
+    setRegeneratingTipsId(id);
+
+    toast.promise(
+      async () => {
+        const res = await api.regenerateAiTips(id);
+        if (!res.data?.tips?.length) {
+          throw new Error("No travel tips were returned by the AI service.");
+        }
+        await load();
+        return res;
+      },
+      {
+        loading: "Generating practical travel tips with Gemini…",
+        success: (res) =>
+          `Generated ${res.data.tips.length} travel tips successfully.`,
+        error: (err: unknown) =>
+          err instanceof Error
+            ? err.message
+            : "Couldn't regenerate travel tips.",
+        finally: () => setRegeneratingTipsId(null),
+      },
+    );
   };
 
   if (loading) {
@@ -215,8 +250,10 @@ export function AdminCountryDestinations({
             destination={dest}
             previewHref={destinationHref(dest, countrySlug, continentSlug)}
             isRegenerating={regeneratingId === dest._id}
+            isRegeneratingTips={regeneratingTipsId === dest._id}
             onEdit={() => handleEdit(dest)}
             onRegenerate={() => handleRegenerate(dest._id)}
+            onRegenerateTips={() => handleRegenerateTips(dest._id)}
             onDelete={() => setPendingDelete(dest)}
           />
         ))

@@ -90,10 +90,6 @@ async function refreshDestinationRatings(
       ratingsCount: stats?.ratingsCount ?? 0,
     },
     $inc: { reviewContentVersion: 1 },
-    $unset: {
-      aiReviewSummary: 1,
-      summaryGeneratedAtRatingCount: 1,
-    },
   });
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ImagePlus, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +43,20 @@ export function ImagePicker({
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const urlInputRef = useRef<HTMLInputElement | null>(null);
+  const onChangeRef = useRef(onChange);
+
+  // Keep the latest callback without making image-state notifications depend on
+  // the caller's function identity.
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
+  // Notify the parent after this component has committed its own state. Calling
+  // the parent from a state-updater makes React update DestinationForm while
+  // ImagePicker is rendering, which triggers a render-time update warning.
+  useEffect(() => {
+    onChangeRef.current({ existingUrls, newUrls, newFiles, removedUrls });
+  }, [existingUrls, newUrls, newFiles, removedUrls]);
 
   const remaining = max - existingUrls.length - newUrls.length - newFiles.length;
   const limitReached = remaining <= 0;
@@ -53,36 +67,22 @@ export function ImagePicker({
       f.type.startsWith("image/"),
     );
     setNewFiles((prev) => {
-      const next = [...prev, ...incoming].slice(
+      return [...prev, ...incoming].slice(
         0,
         max - existingUrls.length - newUrls.length,
       );
-      onChange({ existingUrls, newUrls, newFiles: next, removedUrls });
-      return next;
     });
   };
 
   const removeFile = (index: number) => {
     setNewFiles((prev) => {
-      const next = prev.filter((_, i) => i !== index);
-      onChange({ existingUrls, newUrls, newFiles: next, removedUrls });
-      return next;
+      return prev.filter((_, i) => i !== index);
     });
   };
 
   const removeExisting = (url: string) => {
-    setExistingUrls((prev) => {
-      const nextExisting = prev.filter((u) => u !== url);
-      const nextRemoved = [...removedUrls, url];
-      setRemovedUrls(nextRemoved);
-      onChange({
-        existingUrls: nextExisting,
-        newUrls,
-        newFiles,
-        removedUrls: nextRemoved,
-      });
-      return nextExisting;
-    });
+    setExistingUrls((prev) => prev.filter((u) => u !== url));
+    setRemovedUrls((prev) => [...prev, url]);
   };
 
   const addUrl = () => {
@@ -98,9 +98,7 @@ export function ImagePicker({
       return;
     }
     setNewUrls((prev) => {
-      const next = [...prev, trimmed];
-      onChange({ existingUrls, newUrls: next, newFiles, removedUrls });
-      return next;
+      return [...prev, trimmed];
     });
     setUrlDraft("");
     setUrlError(null);
@@ -108,9 +106,7 @@ export function ImagePicker({
 
   const removeNewUrl = (url: string) => {
     setNewUrls((prev) => {
-      const next = prev.filter((u) => u !== url);
-      onChange({ existingUrls, newUrls: next, newFiles, removedUrls });
-      return next;
+      return prev.filter((u) => u !== url);
     });
   };
 
