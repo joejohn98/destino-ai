@@ -1,10 +1,22 @@
 import type { Destination } from "./types";
 
-const publicApiBase =
-  process.env.NEXT_PUBLIC_API_URL ||
-  (typeof window !== "undefined"
+function getPublicApiBase(): string {
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "[Security] NEXT_PUBLIC_API_URL is required in production builds but was not configured. Set NEXT_PUBLIC_API_URL to the public API domain.",
+    );
+  }
+
+  return typeof window !== "undefined"
     ? "http://localhost:5000"
-    : "http://127.0.0.1:5000");
+    : "http://127.0.0.1:5000";
+}
+
+const publicApiBase = getPublicApiBase();
 
 export const API_BASE =
   typeof window === "undefined"

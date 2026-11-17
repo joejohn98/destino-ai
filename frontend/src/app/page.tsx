@@ -20,12 +20,16 @@ export const metadata: Metadata = {
 export default async function Page() {
   let destinations: Destination[] = [];
   let continents: ContinentStat[] = [];
+  let destinationsError: string | undefined;
+  let continentsError: string | undefined;
 
   try {
     const destRes = await api.getDestinations({ limit: 6 });
     destinations = destRes.data || [];
   } catch (error) {
     console.error("Failed to load featured destinations:", error);
+    destinationsError =
+      "Unable to fetch featured destinations right now. Please check back later.";
   }
 
   try {
@@ -33,6 +37,8 @@ export default async function Page() {
     continents = contRes.data || [];
   } catch (error) {
     console.error("Failed to load continents:", error);
+    continentsError =
+      "Unable to fetch continents right now. Please check back later.";
   }
 
   const heroDestination = destinations[0];
@@ -41,9 +47,15 @@ export default async function Page() {
     <div className="flex-1 bg-background text-foreground">
       <main className="flex-1">
         <HomeHeroSection heroDestination={heroDestination} />
-        <FeaturedDestinationsSection destinations={destinations} />
+        <FeaturedDestinationsSection
+          destinations={destinations}
+          error={destinationsError}
+        />
         <HowItWorksSection />
-        <ContinentsSection continents={continents} />
+        <ContinentsSection
+          continents={continents}
+          error={continentsError}
+        />
         <CtaSection />
       </main>
     </div>

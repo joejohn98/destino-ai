@@ -4,8 +4,10 @@ import type { ContinentStat } from "@/lib/api";
 
 export function ContinentsSection({
   continents,
+  error,
 }: {
   continents: ContinentStat[];
+  error?: string;
 }) {
   return (
     <section
@@ -33,27 +35,38 @@ export function ContinentsSection({
         </Link>
       </div>
 
-      <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {continents.map((continent) => (
-          <Link
-            key={continent.continent}
-            href={`/continents/${encodeURIComponent(continent.continent.toLowerCase().replace(/\s+/g, "-"))}`}
-            className="group flex min-h-24 items-center justify-between gap-4 rounded-marketing bg-cream p-5 text-ink transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
-          >
-            <div>
-              <h3 className="text-title font-semibold text-ink">
-                {continent.continent}
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                {continent.countryCount} countries · {continent.destinationCount} destinations
-              </p>
-            </div>
-            <div className="grid size-10 place-items-center rounded-full bg-background transition-transform group-hover:translate-x-1">
-              <ArrowUpRight aria-hidden="true" className="size-5 text-ink" />
-            </div>
-          </Link>
-        ))}
-      </div>
+      {error ? (
+        <div className="mt-10 rounded-marketing border border-line bg-cream p-8 text-center sm:p-10">
+          <h3 className="text-title font-semibold text-ink">
+            Unable to load continents
+          </h3>
+          <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+            {error}
+          </p>
+        </div>
+      ) : (
+        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {continents.map((continent) => (
+            <Link
+              key={continent.continent}
+              href={`/continents/${encodeURIComponent(continent.continent.toLowerCase().replace(/\s+/g, "-"))}`}
+              className="group flex min-h-24 items-center justify-between gap-4 rounded-marketing bg-cream p-5 text-ink transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+            >
+              <div>
+                <h3 className="text-title font-semibold text-ink">
+                  {continent.continent}
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  {continent.countryCount} countries · {continent.destinationCount} destinations
+                </p>
+              </div>
+              <div className="grid size-10 place-items-center rounded-full bg-background transition-transform group-hover:translate-x-1">
+                <ArrowUpRight aria-hidden="true" className="size-5 text-ink" />
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

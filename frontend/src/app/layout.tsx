@@ -34,11 +34,19 @@ export default function RootLayout({
         suppressHydrationWarning
         className="min-h-dvh flex flex-col bg-background text-foreground antialiased"
       >
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:rounded-control focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-foreground focus:shadow-md focus:ring-2 focus:ring-ring focus:outline-none"
+        >
+          Skip to content
+        </a>
         <AuthProvider>
           <FavoritesProvider>
             <TooltipProvider>
               <Header />
-              <div className="flex flex-1 flex-col">{children}</div>
+              <div id="main-content" tabIndex={-1} className="flex flex-1 flex-col outline-none">
+                {children}
+              </div>
               <Footer />
             </TooltipProvider>
           </FavoritesProvider>

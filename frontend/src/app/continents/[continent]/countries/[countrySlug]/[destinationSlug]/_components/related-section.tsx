@@ -58,6 +58,7 @@ export function DestinationRelatedSection({
                       src={item.imageUrls[0]}
                       alt={item.name}
                       fill
+                      loading="lazy"
                       unoptimized={shouldBypassImageOptimization(item.imageUrls[0])}
                       sizes="(max-width: 768px) 100vw, 33vw"
                       className="object-cover transition-transform duration-500 group-hover:scale-105"

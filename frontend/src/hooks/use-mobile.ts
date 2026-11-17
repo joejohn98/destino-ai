@@ -1,6 +1,16 @@
 import * as React from "react"
 
-const MOBILE_BREAKPOINT = 768
+/**
+ * Breakpoint configuration aligned with Tailwind CSS:
+ * - Tailwind 'sm' = 640px
+ * - Tailwind 'md' = 768px
+ *
+ * In Destino's layout and shadcn components (like Sidebar), "mobile" viewports
+ * encompass screens narrower than the Tailwind 'md' breakpoint (< 768px, i.e. max-width: 767px).
+ * Desktop/tablet layouts activate at 'md' (>= 768px).
+ */
+export const TAILWIND_MD_BREAKPOINT = 768
+export const MOBILE_BREAKPOINT = TAILWIND_MD_BREAKPOINT
 const MOBILE_QUERY = `(max-width: ${MOBILE_BREAKPOINT - 1}px)`
 
 function subscribe(onChange: () => void) {
