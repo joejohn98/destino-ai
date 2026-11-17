@@ -1,34 +1,23 @@
 import mongoose, { Document } from "mongoose";
 import slugify from "slugify";
+import {
+  CATEGORIES,
+  ATTRACTION_CATEGORIES,
+  SENTIMENTS,
+  type Category,
+  type AttractionCategory,
+  type Sentiment,
+} from "@destino/shared";
 import { normalizeSearchValue } from "../utils/search-normalization";
 
-export const CATEGORIES = [
-  "beach",
-  "mountain",
-  "city",
-  "historical",
-  "adventure",
-  "wildlife",
-] as const;
-
-export const ATTRACTION_CATEGORIES = [
-  "monument",
-  "museum",
-  "market",
-  "nature",
-  "wildlife",
-  "viewpoint",
-  "day-trip",
-  "activity",
-  "religious",
-  "entertainment",
-] as const;
-
-export const SENTIMENTS = ["positive", "neutral", "negative"] as const;
-
-export type Category = (typeof CATEGORIES)[number];
-export type AttractionCategory = (typeof ATTRACTION_CATEGORIES)[number];
-export type Sentiment = (typeof SENTIMENTS)[number];
+export {
+  CATEGORIES,
+  ATTRACTION_CATEGORIES,
+  SENTIMENTS,
+  type Category,
+  type AttractionCategory,
+  type Sentiment,
+};
 
 /**
  * A verified local sight, excursion, or activity tied to a Destination.

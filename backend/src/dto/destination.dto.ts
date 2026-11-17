@@ -3,36 +3,9 @@ import type {
   Category,
   IDestination,
 } from "../models/Destination.model";
+import type { DestinationCardDTO } from "@destino/shared";
 
-export interface DestinationCardDTO {
-  _id: string;
-  name: string;
-  slug: string;
-  description: string;
-  location: {
-    city: string;
-    state?: string;
-    country: string;
-    countrySlug: string | null;
-  };
-  category: Category;
-  imageUrls: string[];
-  attractions: Array<Omit<IAttraction, "_id"> & { _id?: string }>;
-  bestTimeToVisit?: string;
-  travelTips?: string[];
-  aiReviewSummary?: string;
-  summaryGeneratedAtRatingCount?: number;
-  openingHours?: string;
-  ticketPrice?: string;
-  website?: string;
-  averageRating: number;
-  ratingsCount: number;
-  isFeatured: boolean;
-  createdAt: string;
-  updatedAt: string;
-  continent: string | null;
-  continentSlug: string | null;
-}
+export type { DestinationCardDTO };
 
 export type DestinationCardRecord = Omit<Pick<
   IDestination,
