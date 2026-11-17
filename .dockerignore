@@ -1,0 +1,11 @@
+**
+!frontend/
+!frontend/**
+frontend/node_modules
+frontend/.next
+frontend/.env*
+!packages/
+!packages/shared/
+!packages/shared/**
+packages/shared/node_modules
+packages/shared/dist

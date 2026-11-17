@@ -1,0 +1,23 @@
+{
+  "name": "@destino/shared",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "description": "Shared types, DTO contracts, and domain constants for Destino AI",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [
+    "destino",
+    "shared",
+    "types"
+  ],
+  "author": "",
+  "license": "ISC"
+}
