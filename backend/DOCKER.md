@@ -34,7 +34,7 @@ docker compose -f compose.dev.yaml exec api npm run seed -- --force
 Build the production image from `backend/`:
 
 ```sh
-docker build --target production -t destino-backend:production .
+docker build --target production -t destino-backend:production -f Dockerfile ..
 ```
 
 The image compiles TypeScript in a build stage, contains production dependencies

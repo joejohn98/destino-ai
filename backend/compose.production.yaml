@@ -1,7 +1,8 @@
 services:
   api:
     build:
-      context: .
+      context: ..
+      dockerfile: backend/Dockerfile
       target: production
     image: destino-backend:production
     init: true
