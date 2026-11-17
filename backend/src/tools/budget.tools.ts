@@ -1,17 +1,34 @@
 import mongoose from "mongoose";
 import z from "zod";
 import { Destination } from "../models/Destination.model";
+import {
+  calculateDestinationBudget,
+  calculateTripBudget,
+  type PopulatedDestination,
+  type StopBreakdownItem,
+} from "../services/budget-calculation.service";
 
-// ─── Tool: Estimate trip budget ───────────────────────────────────────────────
-// Used by: Planner Agent only
-// When: Agent has decided on destinations and needs to calculate total cost
+// Re-export shared types for external consumers and tool type declarations
+export type { PopulatedDestination, StopBreakdownItem };
 
-const estimateTripBudgetInput = z.object({
-  destinationIds: z
-    .array(z.string().min(1))
+// ─── Budget Limit Input Schema ────────────────────────────────────────────────
+const budgetLimitInputSchema = z.union([
+  z.number().nonnegative(),
+  z.object({
+    amount: z.number().nonnegative().describe("Budget limit amount"),
+    currency: z
+      .string()
+      .default("INR")
+      .describe("Currency code, e.g. USD, EUR, GBP, JPY, INR"),
+  }),
+]);
+
+// ─── Tool 1 Schema: Estimate Destination Budget ───────────────────────────────
+const estimateDestinationBudgetInput = z.object({
+  destinationId: z
+    .string()
     .min(1)
-    .max(10)
-    .describe("Array of destination IDs (MongoDB ObjectId strings)"),
+    .describe("MongoDB ObjectId string of the destination to estimate"),
   durationDays: z
     .number()
     .int()
@@ -22,47 +39,124 @@ const estimateTripBudgetInput = z.object({
   travelStyle: z
     .enum(["budget", "moderate", "luxury"])
     .describe("Travel style preference"),
-  budgetLimit: z
-    .number()
-    .nonnegative()
+  budgetLimit: budgetLimitInputSchema
     .optional()
     .describe(
-      "Maximum budget limit in INR (converted to INR if the user specified an international currency like USD, EUR, or GBP)",
+      "Optional user budget limit (e.g. 50000 or { amount: 1500, currency: 'USD' })",
     ),
 });
 
-const DAILY_RATES = {
-  budget: {
-    accommodation: 800,
-    food: 700,
-    localTransport: 300,
-    activities: 500,
-    intercityTransport: 1500,
-  },
-  moderate: {
-    accommodation: 1800,
-    food: 1400,
-    localTransport: 700,
-    activities: 1200,
-    intercityTransport: 2500,
-  },
-  luxury: {
-    accommodation: 5000,
-    food: 3500,
-    localTransport: 1800,
-    activities: 3500,
-    intercityTransport: 6000,
-  },
-} as const;
+// ─── Tool 2 Schema: Estimate Trip Budget ──────────────────────────────────────
+const stopInputSchema = z.object({
+  destinationId: z
+    .string()
+    .min(1)
+    .describe("MongoDB ObjectId string of the destination"),
+  days: z
+    .number()
+    .int()
+    .min(1)
+    .max(30)
+    .optional()
+    .describe("Number of days to spend at this stop"),
+});
 
-const formatInr = (amount: number) => `₹${amount.toLocaleString("en-IN")}`;
+const estimateTripBudgetInput = z.object({
+  stops: z
+    .array(stopInputSchema)
+    .min(1)
+    .max(10)
+    .optional()
+    .describe(
+      "List of itinerary stops with destination IDs and allocated days. Highly recommended for multi-stop itineraries.",
+    ),
+  destinationIds: z
+    .array(z.string().min(1))
+    .min(1)
+    .max(10)
+    .optional()
+    .describe(
+      "Array of destination IDs (fallback when stops array is not provided)",
+    ),
+  durationDays: z
+    .number()
+    .int()
+    .min(1)
+    .max(30)
+    .describe("Total trip duration in days"),
+  travellers: z.number().int().min(1).max(20).describe("Number of travellers"),
+  travelStyle: z
+    .enum(["budget", "moderate", "luxury"])
+    .describe("Travel style preference"),
+  budgetLimit: budgetLimitInputSchema
+    .optional()
+    .describe(
+      "Optional user budget limit (e.g. 50000 or { amount: 2000, currency: 'USD' })",
+    ),
+});
 
 export const budgetTools = {
+  /**
+   * Estimate budget for a single destination independently.
+   * Useful for comparing alternatives without intercity transit charges.
+   */
+  estimateDestinationBudget: {
+    description:
+      "Estimate travel costs for a single destination independently using verified destination-specific local rates converted to INR. Ideal for evaluating destinations and comparing alternatives (e.g. Japan vs Thailand).",
+    inputSchema: estimateDestinationBudgetInput,
+    execute: async ({
+      destinationId,
+      durationDays,
+      travellers,
+      travelStyle,
+      budgetLimit,
+    }: z.infer<typeof estimateDestinationBudgetInput>) => {
+      try {
+        if (!mongoose.isValidObjectId(destinationId)) {
+          return { error: `Invalid destination ID: ${destinationId}` };
+        }
+
+        const destination = (await Destination.findById(destinationId)
+          .select("_id name location")
+          .populate("location.country", "name slug")
+          .lean()) as unknown as PopulatedDestination | null;
+
+        if (!destination) {
+          return {
+            error: `Destination with ID ${destinationId} was not found in the database.`,
+          };
+        }
+
+        return calculateDestinationBudget({
+          destination,
+          durationDays,
+          travellers,
+          travelStyle,
+          budgetLimit,
+        });
+      } catch (error) {
+        console.error(
+          "[estimateDestinationBudget] Error executing tool:",
+          error,
+        );
+        return {
+          error:
+            "Failed to estimate destination budget due to an internal error.",
+        };
+      }
+    },
+  },
+
+  /**
+   * Estimate budget for an itinerary (multi-stop or single destination).
+   * Allocates days per stop, computes stop-specific local costs, and estimates transit between stops.
+   */
   estimateTripBudget: {
     description:
-      "Estimate an INR trip budget from verified destination IDs, duration, travellers, and travel style. This is an estimate, not a booking quote.",
+      "Estimate an INR trip budget for a planned itinerary from destination stops, duration, travellers, travel style, and budget limit. Applies destination-specific daily rates and intercity transit legs.",
     inputSchema: estimateTripBudgetInput,
     execute: async ({
+      stops,
       destinationIds,
       durationDays,
       travellers,
@@ -70,87 +164,57 @@ export const budgetTools = {
       budgetLimit,
     }: z.infer<typeof estimateTripBudgetInput>) => {
       try {
-        const invalidId = destinationIds.find(
-          (destinationId) => !mongoose.isValidObjectId(destinationId),
+        const rawStops: Array<{ destinationId: string; days?: number }> =
+          stops && stops.length > 0
+            ? stops
+            : (destinationIds ?? []).map((id) => ({ destinationId: id }));
+
+        if (rawStops.length === 0) {
+          return {
+            error:
+              "Please provide at least one destination stop or destination ID.",
+          };
+        }
+
+        const invalidId = rawStops.find(
+          (s) => !mongoose.isValidObjectId(s.destinationId),
         );
         if (invalidId) {
           return {
-            error: `Invalid destination ID: ${invalidId}`,
+            error: `Invalid destination ID: ${invalidId.destinationId}`,
           };
         }
 
-        const destinations = await Destination.find({
-          _id: { $in: destinationIds },
-        })
-          .select("_id name")
-          .lean();
+        const uniqueIds = [...new Set(rawStops.map((s) => s.destinationId))];
 
-        const foundIds = new Set(
-          destinations.map((destination) => String(destination._id)),
-        );
-        const missingIds = destinationIds.filter((id) => !foundIds.has(id));
-        if (missingIds.length > 0) {
+        const destinations = (await Destination.find({
+          _id: { $in: uniqueIds },
+        })
+          .select("_id name location")
+          .populate("location.country", "name slug")
+          .lean()) as unknown as PopulatedDestination[];
+
+        const foundMap = new Map(destinations.map((d) => [String(d._id), d]));
+        const missing = uniqueIds.filter((id) => !foundMap.has(id));
+        if (missing.length > 0) {
           return {
             error: "Some destination IDs were not found in the database.",
-            missingIds,
+            missingIds: missing,
           };
         }
 
-        const rate = DAILY_RATES[travelStyle];
-        const dailyPerTraveller =
-          rate.accommodation +
-          rate.food +
-          rate.localTransport +
-          rate.activities;
-        const intercityTotal =
-          Math.max(0, destinations.length - 1) *
-          rate.intercityTransport *
-          travellers;
-        const dailyTotal = dailyPerTraveller * durationDays * travellers;
-        const total = dailyTotal + intercityTotal;
-
-        return {
-          currency: "INR",
-          travelStyle,
-          destinations: destinations.map((destination) => ({
-            id: String(destination._id),
-            name: destination.name,
-          })),
+        return calculateTripBudget({
+          rawStops,
+          destinations,
           durationDays,
           travellers,
-          totalEstimatedCost: total,
-          totalEstimatedCostFormatted: formatInr(total),
-          perPersonCost: Math.round(total / travellers),
-          perPersonCostFormatted: formatInr(Math.round(total / travellers)),
-          breakdown: {
-            accommodation: formatInr(
-              rate.accommodation * durationDays * travellers,
-            ),
-            food: formatInr(rate.food * durationDays * travellers),
-            localTransport: formatInr(
-              rate.localTransport * durationDays * travellers,
-            ),
-            activities: formatInr(rate.activities * durationDays * travellers),
-            intercityTransport: formatInr(intercityTotal),
-          },
-          budgetStatus:
-            budgetLimit === undefined
-              ? "not-provided"
-              : total <= budgetLimit
-                ? "within-budget"
-                : "over-budget",
-          budgetLimit:
-            budgetLimit === undefined ? null : formatInr(budgetLimit),
-          assumptions: [
-            "Estimates are per the selected travel style and expressed in Indian rupees.",
-            "Accommodation, food, local transport, activities, and intercity transport are included.",
-            "Flights, visas, shopping, and unusual seasonal surcharges are not included.",
-          ],
-        };
+          travelStyle,
+          budgetLimit,
+        });
       } catch (error) {
         console.error("[estimateTripBudget] Error executing tool:", error);
         return {
-          error: "Failed to estimate trip budget due to a database error.",
+          error: "Failed to estimate trip budget due to an internal error.",
         };
       }
     },
