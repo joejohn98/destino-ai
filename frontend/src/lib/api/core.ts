@@ -1,10 +1,15 @@
 import type { Destination } from "./types";
 
-export const API_BASE =
+const publicApiBase =
   process.env.NEXT_PUBLIC_API_URL ||
   (typeof window !== "undefined"
     ? "http://localhost:5000"
     : "http://127.0.0.1:5000");
+
+export const API_BASE =
+  typeof window === "undefined"
+    ? process.env.API_INTERNAL_URL || publicApiBase
+    : publicApiBase;
 
 export function destinationHref(
   destination: Destination,

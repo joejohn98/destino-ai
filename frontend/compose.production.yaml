@@ -1,0 +1,25 @@
+services:
+  frontend:
+    build:
+      context: ..
+      dockerfile: frontend/Dockerfile
+      target: production
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?Set NEXT_PUBLIC_API_URL to the browser-accessible API origin}
+    image: destino-frontend:production
+    init: true
+    restart: unless-stopped
+    ports:
+      - "${HOST_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      API_INTERNAL_URL: ${API_INTERNAL_URL:-}
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/frontend/.next/cache
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true

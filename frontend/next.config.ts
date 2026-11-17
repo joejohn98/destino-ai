@@ -1,7 +1,14 @@
 import type { NextConfig } from "next";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const frontendDirectory = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
   /* config options here */
+  output: "standalone",
+  outputFileTracingRoot: path.join(frontendDirectory, ".."),
+  transpilePackages: ["@destino/shared"],
   reactCompiler: true,
   images: {
     remotePatterns: [
@@ -32,6 +39,7 @@ const nextConfig: NextConfig = {
     ],
   },
   turbopack: {
+    root: path.join(frontendDirectory, ".."),
     rules: {
       "*.css": {
         loaders: ["@tailwindcss/turbopack"],
