@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { budgetTools } from "../tools/budget.tools";
 import { destinationTools } from "../tools/destination.tools";
 import { reviewTools } from "../tools/review.tools";
 
@@ -23,8 +24,11 @@ RESEARCH WORKFLOW:
 5. Select the best matching result for each available requested destination and keep the returned destination ID.
 6. Call getDestinationDetails once for every selected destination ID to retrieve full profile data.
 7. Call getDestinationReviews once with all selected destination IDs, requesting up to 10 reviews per destination to evaluate real visitor feedback.
-8. Compare the destinations only after gathering all required data across every requested destination.
-9. Return the final structured output conforming to the schema.
+8. When the user asks about costs, budget, affordability, or when comparing overall value across destinations:
+   - Call estimateDestinationBudget for EACH destination separately (using the same duration, travellers, and travel style).
+   - This provides authentic, destination-specific local rates converted to INR, without applying erroneous intercity transit charges between alternatives.
+9. Compare the destinations only after gathering all required data across every requested destination.
+10. Return the final structured output conforming to the schema.
 
 DECISION & RECOMMENDATION POLICY:
 - Prioritize explicit user preferences (e.g. stated interests, pace, budget style, preferred vibe) as the primary decision driver.
@@ -35,8 +39,9 @@ DECISION & RECOMMENDATION POLICY:
   * Only consider group size if the user explicitly linked it to a concrete requirement (e.g. "we need wheelchair accessibility for our group" or "kid-friendly shallow waters for our toddler").
   * Base the recommendation strictly on verified destination qualities, activity breadth, traveler reviews, and explicitly stated traveler interests.
 - GROUNDED CRITERIA RESTRICTION FOR comparisonTable:
-  * Only include budget, transport, accessibility, or elevation criteria when those facts are explicitly returned by a tool (e.g. in travelTips, reviewText, or destination details). Otherwise, omit that criterion from comparisonTable entirely.
-  * Never generalize, assume, or invent cost, public transit, road connectivity, or elevation. Compare only on dimensions verified in the tool results (e.g. Review Rating, Traveler Sentiment, Activity Variety, Stated Highlights, Seasonal Timing).
+  * When comparing budget, daily cost, or affordability, use the exact cost estimates and local currencies returned by estimateDestinationBudget.
+  * Only include budget, transport, accessibility, or elevation criteria when those facts are explicitly returned by a tool (e.g. estimateDestinationBudget, travelTips, reviewText, or destination details). Otherwise, omit that criterion from comparisonTable entirely.
+  * Never generalize, assume, or invent cost, public transit, road connectivity, or elevation. Compare only on dimensions verified in the tool results (e.g. Estimated Budget / Affordability, Review Rating, Traveler Sentiment, Activity Variety, Stated Highlights, Seasonal Timing).
 - TIES IN COMPARISON CRITERIA:
   * In the comparison table, evaluate each criterion fairly across all destinations.
   * When destinations perform equally well on a criterion (e.g. identical or near-identical ratings, similar seasonal fit, or comparable atmosphere), set "winner" to "Tie". Do NOT pick an arbitrary winner.
@@ -61,12 +66,14 @@ EVIDENCE & INTEGRITY RULES:
 export const comparisonTools = {
   ...destinationTools,
   ...reviewTools,
+  ...budgetTools,
 };
 
 export const COMPARISON_TOOLS_ORDER = [
   "searchDestinations",
   "getDestinationDetails",
   "getDestinationReviews",
+  "estimateDestinationBudget",
 ] as const;
 
 // ─── Output Schema ────────────────────────────────────────────────────────────

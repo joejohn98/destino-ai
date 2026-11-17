@@ -14,8 +14,19 @@ import {
   enforceAttractionGrounding,
   validateAndEnforceComparisonGrounding,
 } from "./agent-grounding.service";
-import { AppError } from "../utils/AppError";
+import { classifyAgentError } from "./agent-error.service";
+import { AgentError } from "../utils/AgentError";
 import { loadAiSdk } from "../utils/ai-sdk";
+
+const PLANNER_ERROR_CONTEXT = {
+  agent: "itinerary_planner",
+  operation: "generate_itinerary",
+} as const;
+
+const COMPARISON_ERROR_CONTEXT = {
+  agent: "destination_comparison",
+  operation: "compare_destinations",
+} as const;
 
 // ─── Query Bounds Helpers ───────────────────────────────────────────────────
 
@@ -61,38 +72,47 @@ const planItinerary = async (query: string) => {
     };
   }
 
-  const { ToolLoopAgent, Output, google, isStepCount } = await loadAiSdk();
-
-  const agent = new ToolLoopAgent({
-    id: "destino-travel-planner",
-    model: google("gemini-3.5-flash-lite"),
-    instructions: PLANNER_SYSTEM,
-    tools: plannerTools,
-    stopWhen: isStepCount(10),
-    toolOrder: PLANNER_TOOL_ORDER,
-    output: Output.object({
-      schema: itinerarySchema,
-    }),
-    onStepEnd: ({ stepNumber, toolCalls }) => {
-      const toolsUsed = toolCalls?.map((tc) => tc.toolName) ?? [];
-      console.log(
-        `[Planner] Step ${stepNumber + 1} - tools: ${
-          toolsUsed.join(", ") || "none"
-        }`,
-      );
-    },
-    maxRetries: 2,
-    temperature: 0.2,
-  });
-
+  let sdk: Awaited<ReturnType<typeof loadAiSdk>> | undefined;
   try {
+    sdk = await loadAiSdk();
+    const { ToolLoopAgent, Output, google, isStepCount } = sdk;
+    const agent = new ToolLoopAgent({
+      id: "destino-travel-planner",
+      model: google("gemini-3.5-flash-lite"),
+      instructions: PLANNER_SYSTEM,
+      tools: plannerTools,
+      stopWhen: isStepCount(10),
+      toolOrder: PLANNER_TOOL_ORDER,
+      output: Output.object({
+        schema: itinerarySchema,
+      }),
+      onStepEnd: ({ stepNumber, toolCalls }) => {
+        const toolsUsed = toolCalls?.map((tc) => tc.toolName) ?? [];
+        console.log(
+          `[Planner] Step ${stepNumber + 1} - tools: ${
+            toolsUsed.join(", ") || "none"
+          }`,
+        );
+      },
+      maxRetries: 2,
+      temperature: 0.2,
+    });
+
     const result = await agent.generate({ prompt: query });
 
     if (!result.output) {
-      throw new AppError(
-        "The planner did not return a valid structured itinerary",
-        502,
-      );
+      const stepLimitReached = result.steps.length >= 10;
+      throw new AgentError({
+        code: stepLimitReached
+          ? "AGENT_STEP_LIMIT_REACHED"
+          : "AI_OUTPUT_MISSING",
+        message: stepLimitReached
+          ? "This request was too complex to complete. Try a shorter or more specific itinerary request."
+          : "The planner could not produce a usable itinerary. Please try again.",
+        statusCode: stepLimitReached ? 422 : 502,
+        context: PLANNER_ERROR_CONTEXT,
+        retryable: !stepLimitReached,
+      });
     }
 
     await enforceAttractionGrounding(result.output);
@@ -109,60 +129,67 @@ const planItinerary = async (query: string) => {
 
     return result;
   } catch (error) {
-    if (error instanceof AppError) {
+    if (error instanceof AgentError) {
       throw error;
     }
-
-    throw new AppError("Unable to generate the travel itinerary", 502, error);
+    throw classifyAgentError(error, PLANNER_ERROR_CONTEXT, sdk);
   }
 };
 
 // ─── Agent 2: Destination Comparison Agent ───────────────────────────────────
 
 const compareDestinations = async (query: string) => {
-  const { ToolLoopAgent, Output, google, isStepCount } = await loadAiSdk();
-
-  const comparisonAgent = new ToolLoopAgent({
-    id: "destino-travel-comparison",
-    model: google("gemini-3.5-flash-lite"),
-    instructions: COMPARISON_SYSTEM,
-    tools: comparisonTools,
-    stopWhen: isStepCount(10),
-    toolOrder: COMPARISON_TOOLS_ORDER,
-    output: Output.object({
-      schema: comparisonSchema,
-    }),
-    onStepEnd: ({ stepNumber, toolCalls }) => {
-      const toolsUsed = toolCalls?.map((tc) => tc.toolName) ?? [];
-      console.log(
-        `[Comparison] Step ${stepNumber + 1} - tools: ${
-          toolsUsed.join(", ") || "none"
-        }`,
-      );
-    },
-    maxRetries: 2,
-    temperature: 0.2,
-  });
-
+  let sdk: Awaited<ReturnType<typeof loadAiSdk>> | undefined;
   try {
+    sdk = await loadAiSdk();
+    const { ToolLoopAgent, Output, google, isStepCount } = sdk;
+    const comparisonAgent = new ToolLoopAgent({
+      id: "destino-travel-comparison",
+      model: google("gemini-3.5-flash-lite"),
+      instructions: COMPARISON_SYSTEM,
+      tools: comparisonTools,
+      stopWhen: isStepCount(10),
+      toolOrder: COMPARISON_TOOLS_ORDER,
+      output: Output.object({
+        schema: comparisonSchema,
+      }),
+      onStepEnd: ({ stepNumber, toolCalls }) => {
+        const toolsUsed = toolCalls?.map((tc) => tc.toolName) ?? [];
+        console.log(
+          `[Comparison] Step ${stepNumber + 1} - tools: ${
+            toolsUsed.join(", ") || "none"
+          }`,
+        );
+      },
+      maxRetries: 2,
+      temperature: 0.2,
+    });
+
     const result = await comparisonAgent.generate({ prompt: query });
 
     if (!result.output) {
-      throw new AppError(
-        "The comparison agent did not return a valid structured comparison",
-        502,
-      );
+      const stepLimitReached = result.steps.length >= 10;
+      throw new AgentError({
+        code: stepLimitReached
+          ? "AGENT_STEP_LIMIT_REACHED"
+          : "AI_OUTPUT_MISSING",
+        message: stepLimitReached
+          ? "This comparison was too complex to complete. Try a shorter or more specific request."
+          : "The comparison agent could not produce a usable result. Please try again.",
+        statusCode: stepLimitReached ? 422 : 502,
+        context: COMPARISON_ERROR_CONTEXT,
+        retryable: !stepLimitReached,
+      });
     }
 
     validateAndEnforceComparisonGrounding(result.output);
 
     return result;
   } catch (error) {
-    if (error instanceof AppError) {
+    if (error instanceof AgentError) {
       throw error;
     }
-
-    throw new AppError("Unable to compare the destinations", 502, error);
+    throw classifyAgentError(error, COMPARISON_ERROR_CONTEXT, sdk);
   }
 };
 

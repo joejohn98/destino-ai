@@ -15,6 +15,18 @@ const agentMeta = ({ steps, usage }: AgentResult) => ({
   totalTokens: usage.totalTokens ?? "N/A",
 });
 
+const agentError = (
+  code: "AGENT_INVALID_REQUEST" | "DESTINATION_UNAVAILABLE",
+  message: string,
+  agent: "itinerary_planner" | "destination_comparison",
+  operation: "generate_itinerary" | "compare_destinations",
+) => ({
+  code,
+  message,
+  context: { agent, operation },
+  retryable: false,
+});
+
 export const generateItinerary = catchAsyncBody<PlanRequestInput>(
   async (req, res) => {
     const { query } = req.body;
@@ -22,11 +34,18 @@ export const generateItinerary = catchAsyncBody<PlanRequestInput>(
     const itinerary = await agentService.planItinerary(query);
 
     if (itinerary.output?.status === "invalid_request") {
+      const message =
+        itinerary.output.message ||
+        "Requested parameters exceed supported limits";
       res.status(422).json({
         status: "fail",
-        message:
-          itinerary.output.message ||
-          "Requested parameters exceed supported limits",
+        message,
+        error: agentError(
+          "AGENT_INVALID_REQUEST",
+          message,
+          "itinerary_planner",
+          "generate_itinerary",
+        ),
         data: {
           query,
           result: itinerary.output,
@@ -37,11 +56,18 @@ export const generateItinerary = catchAsyncBody<PlanRequestInput>(
     }
 
     if (itinerary.output?.status === "unavailable") {
+      const message =
+        itinerary.output.message ||
+        "Requested destination is not available in the database";
       res.status(404).json({
         status: "fail",
-        message:
-          itinerary.output.message ||
-          "Requested destination is not available in the database",
+        message,
+        error: agentError(
+          "DESTINATION_UNAVAILABLE",
+          message,
+          "itinerary_planner",
+          "generate_itinerary",
+        ),
         data: {
           query,
           result: itinerary.output,
@@ -69,11 +95,18 @@ export const compareDestinations = catchAsyncBody<CompareRequestInput>(
 
     const comparison = await agentService.compareDestinations(query);
     if (comparison.output?.status === "invalid_request") {
+      const message =
+        comparison.output.message ||
+        "Requested parameters exceed supported limits";
       res.status(422).json({
         status: "fail",
-        message:
-          comparison.output.message ||
-          "Requested parameters exceed supported limits",
+        message,
+        error: agentError(
+          "AGENT_INVALID_REQUEST",
+          message,
+          "destination_comparison",
+          "compare_destinations",
+        ),
         data: {
           query,
           result: comparison.output,
@@ -84,11 +117,18 @@ export const compareDestinations = catchAsyncBody<CompareRequestInput>(
     }
 
     if (comparison.output?.status === "unavailable") {
+      const message =
+        comparison.output.message ||
+        "One or more requested destinations are not available in the database";
       res.status(404).json({
         status: "fail",
-        message:
-          comparison.output.message ||
-          "One or more requested destinations are not available in the database",
+        message,
+        error: agentError(
+          "DESTINATION_UNAVAILABLE",
+          message,
+          "destination_comparison",
+          "compare_destinations",
+        ),
         data: {
           query,
           result: comparison.output,

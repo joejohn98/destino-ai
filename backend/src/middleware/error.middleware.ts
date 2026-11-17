@@ -5,6 +5,7 @@ import { ZodError } from "zod";
 import { MulterError } from "multer";
 
 import { AppError } from "../utils/AppError";
+import { AgentError } from "../utils/AgentError";
 import { config } from "../config/config";
 
 export interface SerializedError {
@@ -150,6 +151,20 @@ export const globalErrorHandler = (
     console.error("Unhandled request error", logPayload);
   } else {
     console.warn("Request rejected", logPayload);
+  }
+
+  if (appError instanceof AgentError) {
+    res.status(statusCode).json({
+      status,
+      message: appError.message,
+      error: {
+        code: appError.code,
+        message: appError.message,
+        context: appError.context,
+        retryable: appError.retryable,
+      },
+    });
+    return;
   }
 
   // Response formatting based on environment

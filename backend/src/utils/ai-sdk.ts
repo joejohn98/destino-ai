@@ -9,6 +9,12 @@ const importAiSdk = async () => {
     Output: aiSdk.Output,
     isStepCount: aiSdk.isStepCount,
     NoOutputGeneratedError: aiSdk.NoOutputGeneratedError,
+    APICallError: aiSdk.APICallError,
+    LoadAPIKeyError: aiSdk.LoadAPIKeyError,
+    InvalidResponseDataError: aiSdk.InvalidResponseDataError,
+    TypeValidationError: aiSdk.TypeValidationError,
+    JSONParseError: aiSdk.JSONParseError,
+    RetryError: aiSdk.RetryError,
     generateText: aiSdk.generateText,
     google: googleSdk.google,
   };
