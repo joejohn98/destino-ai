@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { ArrowRight, CalendarDays, MapPin, Star } from "lucide-react";
+import { ArrowRight, CalendarDays, MapPin } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { RatingBadge } from "@/components/ui/rating-badge";
 import {
   CardContent,
   CardDescription,
@@ -53,12 +54,7 @@ export function DestinationCard({ destination }: { destination: Destination }) {
               >
                 {destination.name}
               </CardTitle>
-              {destination.averageRating > 0 && (
-                <span className="flex shrink-0 items-center gap-1 rounded-sm bg-pastel-peach/30 px-2 py-0.5 text-xs font-semibold text-ink">
-                  <Star className="size-3.5 fill-pastel-peach text-pastel-peach" />
-                  {destination.averageRating.toFixed(1)}
-                </span>
-              )}
+              <RatingBadge rating={destination.averageRating} />
             </div>
             <CardDescription className="flex min-w-0 flex-wrap items-center gap-1.5 break-words text-xs text-muted-foreground">
               <MapPin aria-hidden="true" className="size-3.5 shrink-0" />

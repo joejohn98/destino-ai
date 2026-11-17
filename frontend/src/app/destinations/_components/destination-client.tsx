@@ -56,7 +56,7 @@ export function DestinationClient(props: DestinationClientProps) {
           </p>
           <h2
             id="destination-results-heading"
-            className="mt-1 break-words text-title font-semibold text-ink"
+            className="mt-1 wrap-break-word text-title font-semibold text-ink"
           >
             {activeLocation ? `Destinations in ${activeLocation}` : "All Destinations"}
           </h2>

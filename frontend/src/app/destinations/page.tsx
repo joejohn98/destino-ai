@@ -17,6 +17,7 @@ type DestinationsPageProps = {
     location?: string | string[];
     category?: string | string[];
     minRating?: string | string[];
+    page?: string | string[];
   }>;
 };
 
@@ -36,12 +37,15 @@ export default async function DestinationsPage({
     Number.isFinite(rawMinRating) && rawMinRating > 0 && rawMinRating <= 5
       ? rawMinRating
       : undefined;
+  const rawPage = parseInt(firstSearchParam(filters.page) ?? "1", 10);
+  const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
   let initialDestinations: Destination[] = [];
   let initialTotalDestinations = 0;
   let initialTotalPages = 0;
 
   try {
     const res = await api.getDestinations({
+      page,
       limit: 24,
       ...(search && search.trim().length >= 2
         ? { search: search.trim() }

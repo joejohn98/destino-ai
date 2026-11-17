@@ -2,18 +2,12 @@
 
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  AdminFormDialog,
+  FormFieldError,
+} from "@/components/admin/admin-form-dialog";
 import {
   Field,
   FieldControl,
@@ -123,120 +117,86 @@ export function EntityForm({
   // --- Render ---
 
   return (
-    <Dialog
+    <AdminFormDialog
       open={open}
-      onOpenChange={(next) => {
-        // Backdrop click / Escape key: just close, don't trigger a data reload.
-        if (!next && !isSubmitting) onClose();
-      }}
+      title={title}
+      description={description}
+      isSubmitting={isSubmitting}
+      submitLabel={isEdit ? "Save changes" : "Create"}
+      onClose={onClose}
+      onSubmit={handleSubmit(onFormSubmit)}
     >
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
+      {/* Name */}
+      <Field>
+        <FieldLabel htmlFor="entity-name">Name *</FieldLabel>
+        <FieldControl
+          id="entity-name"
+          {...register("name")}
+          placeholder="e.g. Europe"
+        />
+        <FormFieldError message={errors.name?.message} />
+      </Field>
 
-        <form
-          onSubmit={handleSubmit(onFormSubmit)}
-          noValidate
-          className="flex flex-col gap-5"
-        >
-          {/* Name */}
-          <Field>
-            <FieldLabel htmlFor="entity-name">Name *</FieldLabel>
-            <FieldControl
-              id="entity-name"
-              {...register("name")}
-              placeholder="e.g. Europe"
-            />
-            {errors.name && (
-              <p role="alert" className="text-xs text-destructive">
-                {errors.name.message}
-              </p>
-            )}
-          </Field>
+      {/* Description */}
+      <Field>
+        <FieldLabel htmlFor="entity-desc">Description</FieldLabel>
+        <FieldTextarea
+          id="entity-desc"
+          {...register("description")}
+          placeholder="Optional description (10–1000 chars)"
+        />
+      </Field>
 
-          {/* Description */}
-          <Field>
-            <FieldLabel htmlFor="entity-desc">Description</FieldLabel>
-            <FieldTextarea
-              id="entity-desc"
-              {...register("description")}
-              placeholder="Optional description (10–1000 chars)"
-            />
-          </Field>
+      {/* Image — file upload or URL */}
+      <Field data-invalid={!!errors.imageUrl}>
+        <FieldLabel htmlFor="entity-image">
+          Image{isEdit && initial?.imageUrl ? "" : " *"}
+        </FieldLabel>
 
-          {/* Image — file upload or URL */}
-          <Field data-invalid={!!errors.imageUrl}>
-            <FieldLabel htmlFor="entity-image">
-              Image{isEdit && initial?.imageUrl ? "" : " *"}
-            </FieldLabel>
+        <ImagePreview
+          previewUrl={previewUrl}
+          imageUrl={imageUrl}
+          savedUrl={initial?.imageUrl}
+        />
 
-            <ImagePreview
-              previewUrl={previewUrl}
-              imageUrl={imageUrl}
-              savedUrl={initial?.imageUrl}
-            />
+        <FieldControl
+          id="entity-image"
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="mt-1"
+          onChange={(e) => {
+            handleFileChange(e.target.files?.[0] ?? null);
+            if (e.target.files?.[0]) {
+              setValue("imageUrl", "");
+              clearErrors("imageUrl");
+            }
+          }}
+        />
 
-            <FieldControl
-              id="entity-image"
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="mt-1"
-              onChange={(e) => {
-                handleFileChange(e.target.files?.[0] ?? null);
-                if (e.target.files?.[0]) {
-                  setValue("imageUrl", "");
-                  clearErrors("imageUrl");
-                }
-              }}
-            />
+        <FieldLabel htmlFor="entity-image-url">
+          Or use an image URL
+        </FieldLabel>
+        <FieldControl
+          id="entity-image-url"
+          type="url"
+          {...register("imageUrl")}
+          onChange={(e) => {
+            handleImageUrlChange();
+            setValue("imageUrl", e.target.value);
+          }}
+          placeholder="Or paste an image URL (https://…)"
+          aria-invalid={!!errors.imageUrl}
+        />
 
-            <FieldLabel htmlFor="entity-image-url">
-              Or use an image URL
-            </FieldLabel>
-            <FieldControl
-              id="entity-image-url"
-              type="url"
-              {...register("imageUrl")}
-              onChange={(e) => {
-                handleImageUrlChange();
-                setValue("imageUrl", e.target.value);
-              }}
-              placeholder="Or paste an image URL (https://…)"
-              aria-invalid={!!errors.imageUrl}
-            />
-
-            {errors.imageUrl ? (
-              <p role="alert" className="text-xs text-destructive">
-                {errors.imageUrl.message}
-              </p>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                Choose a file or provide an HTTP or HTTPS image URL.
-              </p>
-            )}
-          </Field>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && (
-                <Loader2 aria-hidden="true" className="animate-spin" />
-              )}
-              {isEdit ? "Save changes" : "Create"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+        {errors.imageUrl ? (
+          <FormFieldError message={errors.imageUrl.message} />
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Choose a file or provide an HTTP or HTTPS image URL.
+          </p>
+        )}
+      </Field>
+    </AdminFormDialog>
   );
 }

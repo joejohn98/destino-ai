@@ -44,6 +44,7 @@ export function DestinationImageCarousel({
                 alt={`${destinationName} photo ${index + 1} of ${validImages.length}`}
                 fill
                 priority={priority && index === 0}
+                loading={priority && index === 0 ? undefined : "lazy"}
                 unoptimized={shouldBypassImageOptimization(src)}
                 sizes={sizes}
                 className="object-cover"

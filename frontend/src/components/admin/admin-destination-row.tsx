@@ -44,6 +44,7 @@ export function AdminDestinationRow({
               src={destination.imageUrls[0]}
               alt={destination.name}
               fill
+              loading="lazy"
               sizes="(max-width: 639px) calc(100vw - 4rem), 112px"
               className="object-cover"
             />

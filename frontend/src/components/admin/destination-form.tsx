@@ -3,28 +3,22 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+import {
+  AdminFormDialog,
+  FormFieldError,
+} from "@/components/admin/admin-form-dialog";
 import {
   ImagePicker,
   type ImagePickerValue,
 } from "@/components/admin/image-input";
-import { Button } from "@/components/ui/button";
 import {
   Field,
   FieldControl,
   FieldLabel,
   FieldTextarea,
 } from "@/components/ui/field";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { api } from "@/lib/api";
 import type { AdminContinent } from "@/lib/api";
 import {
@@ -135,101 +129,63 @@ export function DestinationForm({
   };
 
   return (
-    <Dialog
+    <AdminFormDialog
       open
-      onOpenChange={(open) => {
-        if (!open && !isSubmitting) onSaved();
-      }}
+      title={isEdit ? "Edit destination" : "New destination"}
+      description="Add or update a verified destination. Fields marked * are required."
+      isSubmitting={isSubmitting}
+      submitLabel={isEdit ? "Save changes" : "Create destination"}
+      contentClassName="max-h-[85vh] overflow-y-auto sm:max-w-2xl"
+      onClose={onSaved}
+      onSubmit={handleSubmit(onFormSubmit)}
     >
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>
-            {isEdit ? "Edit destination" : "New destination"}
-          </DialogTitle>
-          <DialogDescription>
-            Add or update a verified destination. Fields marked * are required.
-          </DialogDescription>
-        </DialogHeader>
+      {/* Name */}
+      <Field>
+        <FieldLabel htmlFor="dest-name">Name *</FieldLabel>
+        <FieldControl
+          id="dest-name"
+          {...register("name")}
+          placeholder="e.g. Taj Mahal"
+        />
+        <FormFieldError message={errors.name?.message} />
+      </Field>
 
-        <form
-          onSubmit={handleSubmit(onFormSubmit)}
-          noValidate
-          className="flex flex-col gap-5"
-        >
-          {/* Name */}
-          <Field>
-            <FieldLabel htmlFor="dest-name">Name *</FieldLabel>
-            <FieldControl
-              id="dest-name"
-              {...register("name")}
-              placeholder="e.g. Taj Mahal"
-            />
-            {errors.name && (
-              <p role="alert" className="text-xs text-destructive">
-                {errors.name.message}
-              </p>
-            )}
-          </Field>
+      {/* Description */}
+      <Field>
+        <FieldLabel htmlFor="dest-desc">Description *</FieldLabel>
+        <FieldTextarea
+          id="dest-desc"
+          {...register("description")}
+          placeholder="Describe this destination (10–2000 chars)"
+        />
+        <FormFieldError message={errors.description?.message} />
+      </Field>
 
-          {/* Description */}
-          <Field>
-            <FieldLabel htmlFor="dest-desc">Description *</FieldLabel>
-            <FieldTextarea
-              id="dest-desc"
-              {...register("description")}
-              placeholder="Describe this destination (10–2000 chars)"
-            />
-            {errors.description && (
-              <p role="alert" className="text-xs text-destructive">
-                {errors.description.message}
-              </p>
-            )}
-          </Field>
+      {/* Grid: Category, Country, City, State, and optional details */}
+      <DestinationDetailsGrid
+        control={control}
+        register={register}
+        errors={errors}
+        continents={continents}
+      />
 
-          {/* Grid: Category, Country, City, State, and optional details */}
-          <DestinationDetailsGrid
-            control={control}
-            register={register}
-            errors={errors}
-            continents={continents}
-          />
+      {/* Images */}
+      <div className="flex flex-col gap-2">
+        <p className="text-sm font-medium">Images (up to 5)</p>
+        <ImagePicker
+          initialUrls={images.existingUrls}
+          max={5}
+          onChange={setImages}
+        />
+      </div>
 
-          {/* Images */}
-          <div className="flex flex-col gap-2">
-            <p className="text-sm font-medium">Images (up to 5)</p>
-            <ImagePicker
-              initialUrls={images.existingUrls}
-              max={5}
-              onChange={setImages}
-            />
-          </div>
-
-          {/* Attractions */}
-          <AttractionsSection
-            attractions={attractions}
-            onAdd={addAttraction}
-            onUpdate={updateAttraction}
-            onRemove={removeAttraction}
-          />
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onSaved}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && (
-                <Loader2 aria-hidden="true" className="animate-spin" />
-              )}
-              {isEdit ? "Save changes" : "Create destination"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      {/* Attractions */}
+      <AttractionsSection
+        attractions={attractions}
+        onAdd={addAttraction}
+        onUpdate={updateAttraction}
+        onRemove={removeAttraction}
+      />
+    </AdminFormDialog>
   );
 }

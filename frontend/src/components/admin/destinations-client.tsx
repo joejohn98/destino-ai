@@ -7,6 +7,7 @@ import { Plus } from "lucide-react";
 import { AdminDestinationRow } from "@/components/admin/admin-destination-row";
 import { AdminDeleteDialog } from "@/components/admin/admin-delete-dialog";
 import { AdminDestinationDialogs } from "@/components/admin/admin-destination-dialogs";
+import { AdminRowSkeleton } from "@/components/admin/admin-row-skeleton";
 import {
   AdminDestinationsFilter,
   AdminDestinationsPagination,
@@ -218,29 +219,52 @@ export function AdminDestinationsHome() {
       </div>
 
       <div className="flex flex-col gap-3">
-        {destinations.map((dest) => (
-          <AdminDestinationRow
-            key={dest._id}
-            destination={dest}
-            isRegenerating={regeneratingId === dest._id}
-            isRegeneratingTips={regeneratingTipsId === dest._id}
-            onEdit={() => handleEdit(dest)}
-            onRegenerate={() => handleRegenerate(dest._id)}
-            onRegenerateTips={() => handleRegenerateTips(dest._id)}
-            onDelete={() => setPendingDelete(dest)}
-          />
-        ))}
+        {loading ? (
+          Array.from({ length: 5 }).map((_, i) => (
+            <AdminRowSkeleton key={i} />
+          ))
+        ) : (
+          destinations.map((dest) => (
+            <AdminDestinationRow
+              key={dest._id}
+              destination={dest}
+              isRegenerating={regeneratingId === dest._id}
+              isRegeneratingTips={regeneratingTipsId === dest._id}
+              onEdit={() => handleEdit(dest)}
+              onRegenerate={() => handleRegenerate(dest._id)}
+              onRegenerateTips={() => handleRegenerateTips(dest._id)}
+              onDelete={() => setPendingDelete(dest)}
+            />
+          ))
+        )}
       </div>
 
       {!loading && destinations.length === 0 && (
         <Card variant="editorial" className="p-8 text-center">
-          <CardContent className="px-0">
+          <CardContent className="flex flex-col items-center px-0">
             <CardTitle role="heading" aria-level={3} className="text-base font-semibold text-ink">
               No destinations found
             </CardTitle>
             <CardDescription className="mt-1 text-sm">
-              Try adjusting your search or category filter.
+              {search.trim().length > 0 || category !== "all"
+                ? "No destinations match your current filters. Try resetting them or adjusting your search."
+                : "No destinations have been added yet."}
             </CardDescription>
+            {(search.trim().length > 0 || category !== "all") && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-4"
+                onClick={() => {
+                  setSearch("");
+                  setCategory("all");
+                  setPage(1);
+                }}
+              >
+                Reset all filters
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}

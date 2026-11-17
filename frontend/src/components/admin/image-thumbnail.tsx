@@ -35,6 +35,7 @@ export function ImageThumb({
               src={src}
               alt={alt}
               fill
+              loading="lazy"
               sizes="112px"
               unoptimized
               className="object-contain"
