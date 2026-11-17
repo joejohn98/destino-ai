@@ -29,7 +29,7 @@ export function DestinationCard({ destination }: { destination: Destination }) {
           />
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink/60 via-transparent to-transparent"
+            className="pointer-events-none absolute inset-0 bg-linear-to-t from-ink/60 via-transparent to-transparent"
           />
           <Badge
             variant="tag"
@@ -49,7 +49,7 @@ export function DestinationCard({ destination }: { destination: Destination }) {
               <CardTitle
                 role="heading"
                 aria-level={3}
-                className="min-w-0 break-words text-title font-semibold text-ink"
+                className="min-w-0 wrap-break-word text-title font-semibold text-ink"
               >
                 {destination.name}
               </CardTitle>

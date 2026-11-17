@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Bookmark, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { useAuth } from "@/components/auth-provider";
+import { useFavorites } from "@/components/favorites-provider";
 import { DestinationCard } from "@/components/destination-card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -20,7 +21,8 @@ const PAGE_SIZE = 12;
 
 export function FavoritesClient() {
   const router = useRouter();
-  const { status, favoriteIds } = useAuth();
+  const { status } = useAuth();
+  const { favoriteIds } = useFavorites();
 
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<Destination[]>([]);

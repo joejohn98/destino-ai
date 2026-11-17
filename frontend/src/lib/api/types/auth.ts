@@ -1,16 +1,8 @@
 import type { Destination } from "./destinations";
+import type { AuthUserDTO, MyReviewDTO } from "@destino/shared";
 
-export interface AuthUser {
-  _id: string;
-  firstName: string;
-  lastName: string;
-  username: string;
-  email: string;
-  role: "user" | "admin";
-  avatarUrl?: string;
-  bio?: string;
-  favoriteDestinations?: string[];
-}
+export type AuthUser = AuthUserDTO;
+export type MyReview = MyReviewDTO;
 
 export interface AuthResponse {
   status: string;
@@ -39,23 +31,6 @@ export interface FavoritesResponse {
   data: Destination[];
 }
 
-export interface MyReview {
-  _id: string;
-  rating: number;
-  reviewText: string;
-  sentiment?: "positive" | "neutral" | "negative";
-  themes: string[];
-  createdAt: string;
-  updatedAt: string;
-  destination: {
-    _id: string | null;
-    name: string;
-    slug: string | null;
-    countryName: string | null;
-    countrySlug: string | null;
-    continentSlug?: string | null;
-  };
-}
 
 export interface MyReviewsResponse {
   status: string;

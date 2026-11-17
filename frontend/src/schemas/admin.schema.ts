@@ -1,25 +1,7 @@
 import { z } from "zod";
+import { CATEGORIES, ATTRACTION_CATEGORIES } from "@destino/shared";
 
-export const CATEGORIES = [
-  "beach",
-  "mountain",
-  "city",
-  "historical",
-  "adventure",
-  "wildlife",
-] as const;
-
-export const ATTRACTION_CATEGORIES = [
-  "monument",
-  "museum",
-  "market",
-  "nature",
-  "viewpoint",
-  "day-trip",
-  "activity",
-  "religious",
-  "entertainment",
-] as const;
+export { CATEGORIES, ATTRACTION_CATEGORIES };
 
 /** Shared schema for the continent and country "single-image entity" forms. */
 export const entitySchema = z.object({

@@ -52,7 +52,7 @@ export function AgentProgress({ label, className }: AgentProgressProps) {
         className,
       )}
     >
-      <span aria-hidden="true" className="grid size-5 shrink-0 grid-cols-3 gap-[2px]">
+      <span aria-hidden="true" className="grid size-5 shrink-0 grid-cols-3 gap-0.5">
         {GRID_CELLS.map(({ id, delay }) => (
           <motion.span
             key={id}

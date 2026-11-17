@@ -6,6 +6,7 @@ import { Bookmark } from "lucide-react";
 import { toast } from "sonner";
 
 import { useAuth } from "@/components/auth-provider";
+import { useFavorites } from "@/components/favorites-provider";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -23,7 +24,8 @@ export function FavoriteButton({
   variant = "icon",
   className,
 }: FavoriteButtonProps) {
-  const { status, isFavorite, toggleFavorite } = useAuth();
+  const { status } = useAuth();
+  const { isFavorite, toggleFavorite } = useFavorites();
   const router = useRouter();
   const [pending, setPending] = useState(false);
 

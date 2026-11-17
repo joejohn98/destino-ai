@@ -1,50 +1,10 @@
-export interface Attraction {
-  _id?: string;
-  name: string;
-  description?: string;
-  ticketPrice?: string;
-  suggestedDuration?: string;
-  openingHours?: string;
-  category?: string;
-}
+import type {
+  DestinationCardDTO,
+  AttractionDTO,
+} from "@destino/shared";
 
-export interface Destination {
-  _id: string;
-  name: string;
-  slug: string;
-  description: string;
-  location: {
-    city: string;
-    state?: string;
-    country: string;
-    countrySlug?: string;
-  };
-  category:
-    | "beach"
-    | "mountain"
-    | "city"
-    | "historical"
-    | "adventure"
-    | "wildlife"
-    | string;
-  imageUrls: string[];
-  attractions?: Attraction[];
-  bestTimeToVisit?: string;
-  travelTips?: string[];
-  travelTipsContextHash?: string;
-  aiReviewSummary?: string;
-  summaryGeneratedAtRatingCount?: number;
-  openingHours?: string;
-  ticketPrice?: string;
-  website?: string;
-  averageRating: number;
-  ratingsCount: number;
-  isFeatured?: boolean;
-  continent?: string;
-  continentSlug?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
+export type Attraction = AttractionDTO;
+export type Destination = DestinationCardDTO;
 
 export interface Review {
   _id: string;

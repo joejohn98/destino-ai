@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { AuthProvider } from "@/components/auth-provider";
+import { FavoritesProvider } from "@/components/favorites-provider";
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -34,11 +35,13 @@ export default function RootLayout({
         className="min-h-dvh flex flex-col bg-background text-foreground antialiased"
       >
         <AuthProvider>
-          <TooltipProvider>
-            <Header />
-            <div className="flex flex-1 flex-col">{children}</div>
-            <Footer />
-          </TooltipProvider>
+          <FavoritesProvider>
+            <TooltipProvider>
+              <Header />
+              <div className="flex flex-1 flex-col">{children}</div>
+              <Footer />
+            </TooltipProvider>
+          </FavoritesProvider>
         </AuthProvider>
         <Toaster position="top-right" richColors />
       </body>
