@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { CurrentYear } from "@/components/current-year";
 import { Compass } from "lucide-react";
 import type { AuthUser } from "@/lib/api";
 import { SignUpBanner } from "@/components/auth/signup-banner";
@@ -76,7 +77,7 @@ export default function SignUpPage() {
 
         {/* Bottom subtle copyright */}
         <div className="mt-8 text-center text-xs text-[#657069]/70">
-          © {new Date().getFullYear()} Destino Travel Inc. All rights reserved.
+          © <CurrentYear /> Destino Travel Inc. All rights reserved.
         </div>
       </div>
     </div>

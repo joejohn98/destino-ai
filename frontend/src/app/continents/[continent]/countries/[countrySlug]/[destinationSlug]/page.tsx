@@ -1,8 +1,12 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { cacheLife, cacheTag } from "next/cache";
-import { api, type Destination, type Review } from "@/lib/api";
-import { ReviewsSection } from "@/components/reviews/reviews-section";
+import { api, type Destination } from "@/lib/api";
+import {
+  DestinationReviews,
+  DestinationReviewsFallback,
+} from "./_components/destination-reviews";
 import {
   DestinationAiInsights,
   DestinationAttractionsSection,
@@ -63,9 +67,6 @@ export default async function DestinationDetailPage({
   const { continent, countrySlug, destinationSlug } = await params;
 
   let destination: Destination | null = null;
-  let reviews: Review[] = [];
-  let totalReviews = 0;
-  let totalReviewPages = 0;
   let relatedDestinations: Destination[] = [];
 
   try {
@@ -77,15 +78,6 @@ export default async function DestinationDetailPage({
 
   if (!destination) {
     notFound();
-  }
-
-  try {
-    const reviewRes = await api.getDestinationReviews(countrySlug, destinationSlug);
-    reviews = reviewRes.data || [];
-    totalReviews = reviewRes.totalReviews ?? reviews.length;
-    totalReviewPages = reviewRes.totalPages ?? 0;
-  } catch {
-    // Reviews might be empty
   }
 
   // Fetch related destinations from the same canonical country
@@ -147,14 +139,13 @@ export default async function DestinationDetailPage({
           <DestinationAttractionsSection destination={destination} />
 
           {/* Traveler Reviews Section */}
-          <ReviewsSection
-            destinationName={destination.name}
-            countrySlug={countrySlug}
-            destinationSlug={destination.slug}
-            initialReviews={reviews}
-            initialTotalReviews={totalReviews}
-            initialTotalPages={totalReviewPages}
-          />
+          <Suspense fallback={<DestinationReviewsFallback />}>
+            <DestinationReviews
+              destinationName={destination.name}
+              countrySlug={countrySlug}
+              destinationSlug={destination.slug}
+            />
+          </Suspense>
 
           <DestinationRelatedSection
             countryName={destination.location?.country}

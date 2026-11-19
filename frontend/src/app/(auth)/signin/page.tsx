@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { CurrentYear } from "@/components/current-year";
 import { Compass, Sparkles, CheckCircle2 } from "lucide-react";
 import type { AuthUser } from "@/lib/api";
 import { SignInBanner } from "@/components/auth/signin-banner";
@@ -68,7 +69,8 @@ export default function SignInPage() {
                 href="/destinations"
                 className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#18372b] py-3 text-sm font-semibold text-white transition hover:bg-[#285441]"
               >
-                Continue Exploring <Sparkles className="size-4 text-[#e8a83e]" />
+                Continue Exploring{" "}
+                <Sparkles className="size-4 text-[#e8a83e]" />
               </Link>
             </div>
           ) : (
@@ -89,7 +91,7 @@ export default function SignInPage() {
 
         {/* Bottom subtle copyright */}
         <div className="mt-8 text-center text-xs text-[#657069]/70">
-          © {new Date().getFullYear()} Destino Travel Inc. All rights reserved.
+          © <CurrentYear /> Destino Travel Inc. All rights reserved.
         </div>
       </div>
     </div>

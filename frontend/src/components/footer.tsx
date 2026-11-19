@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cacheLife } from "next/cache";
 import { ArrowUpRight, Compass, Globe, Sparkles } from "lucide-react";
 
 interface FooterLink {
@@ -79,8 +80,15 @@ const legalLinks: FooterLink[] = [
   { label: "Accessibility", href: "#accessibility" },
 ];
 
-export function Footer() {
-  const currentYear = new Date().getFullYear();
+async function getCurrentYear() {
+  "use cache";
+
+  cacheLife("days");
+  return new Date().getFullYear();
+}
+
+export async function Footer() {
+  const currentYear = await getCurrentYear();
 
   return (
     <footer
@@ -173,9 +181,10 @@ export function Footer() {
             </Link>
 
             <p className="mt-3 text-sm leading-relaxed text-ink/85">
-              Intelligent, database-grounded trip planning and destination discovery.
-              Explore verified sights, transparent day-by-day itineraries, and realistic
-              budget estimates without AI hallucinations.
+              Intelligent, database-grounded trip planning and destination
+              discovery. Explore verified sights, transparent day-by-day
+              itineraries, and realistic budget estimates without AI
+              hallucinations.
             </p>
 
             {/* AI Grounding indicator pill */}
@@ -228,16 +237,19 @@ export function Footer() {
         {/* Ethical Grounding Note */}
         <div className="pt-6 sm:pt-8">
           <p className="max-w-4xl text-xs leading-relaxed text-ink/75">
-            <strong>Database Grounding:</strong> Destino AI generates day-by-day itineraries
-            and destination comparisons strictly using verified destination records, curated
-            attractions, and genuine traveler reviews. All budget figures, costs, and travel
-            durations are realistic estimates meant for planning guidance.
+            <strong>Database Grounding:</strong> Destino AI generates day-by-day
+            itineraries and destination comparisons strictly using verified
+            destination records, curated attractions, and genuine traveler
+            reviews. All budget figures, costs, and travel durations are
+            realistic estimates meant for planning guidance.
           </p>
         </div>
 
         {/* Bottom bar: Copyright & legal links */}
         <div className="mt-6 flex flex-col items-start justify-between gap-4 text-xs font-medium text-ink sm:flex-row sm:items-center">
-          <p>© {currentYear} Destino AI. Built for authentic, unhurried journeys.</p>
+          <p>
+            © {currentYear} Destino AI. Built for authentic, unhurried journeys.
+          </p>
 
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
             {legalLinks.map((item) => (

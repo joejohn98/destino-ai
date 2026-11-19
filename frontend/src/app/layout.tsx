@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -43,9 +44,27 @@ export default function RootLayout({
         <AuthProvider>
           <FavoritesProvider>
             <TooltipProvider>
-              <Header />
-              <div id="main-content" tabIndex={-1} className="flex flex-1 flex-col outline-none">
-                {children}
+              <Suspense fallback={<div className="h-20" aria-hidden="true" />}>
+                <Header />
+              </Suspense>
+              <div
+                id="main-content"
+                tabIndex={-1}
+                className="flex flex-1 flex-col outline-none"
+              >
+                <Suspense
+                  fallback={
+                    <div
+                      className="mx-auto flex min-h-[50vh] w-full max-w-page flex-col gap-6 px-4 py-10 sm:px-6 lg:px-10"
+                      aria-busy="true"
+                    >
+                      <div className="h-8 w-48 animate-pulse rounded bg-muted" />
+                      <div className="h-48 animate-pulse rounded-marketing bg-muted" />
+                    </div>
+                  }
+                >
+                  {children}
+                </Suspense>
               </div>
               <Footer />
             </TooltipProvider>

@@ -20,8 +20,8 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "@destino/shared": ["../packages/shared/src"],
-      "@destino/shared/*": ["../packages/shared/src/*"]
+      "@destino/shared": ["../packages/shared/dist"],
+      "@destino/shared/*": ["../packages/shared/dist/*"]
     }
   },
   "include": [
