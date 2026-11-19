@@ -19,5 +19,8 @@
     "types"
   ],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "typescript": "^7.0.2"
+  }
 }

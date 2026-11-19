@@ -36,8 +36,9 @@ export const getCountryCostProfile = (
   const match = Object.keys(COUNTRY_COST_PROFILES).find(
     (k) => key.includes(k) || k.includes(key),
   );
-  if (match && COUNTRY_COST_PROFILES[match]) {
-    return COUNTRY_COST_PROFILES[match]!;
+  const matchedProfile = match ? COUNTRY_COST_PROFILES[match] : undefined;
+  if (matchedProfile) {
+    return matchedProfile;
   }
 
   return {

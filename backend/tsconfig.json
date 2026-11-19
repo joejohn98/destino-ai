@@ -4,7 +4,6 @@
     // File Layout
     "rootDir": "./src",
     "outDir": "./dist",
-    "baseUrl": ".",
     "paths": {
       "@destino/shared": ["../packages/shared/dist"],
       "@destino/shared/*": ["../packages/shared/dist/*"]
