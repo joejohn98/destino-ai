@@ -19,6 +19,7 @@ import {
   CardDescription,
   CardTitle,
 } from "@/components/ui/card";
+import { triggerRevalidation } from "@/lib/api/revalidate";
 import { api, type AdminContinent, type Destination } from "@/lib/api";
 import { useAdminDelete } from "@/hooks/use-admin-delete";
 
@@ -43,7 +44,10 @@ export function AdminDestinationsHome() {
       successMessage: "Destination deleted",
       errorMessage: "Couldn't delete destination",
       itemName: "destination",
-      onDeleted: () => load(page),
+      onDeleted: () => {
+        void triggerRevalidation("destinations");
+        load(page);
+      },
     });
 
   // Load continents once on mount for form dropdowns
@@ -282,7 +286,10 @@ export function AdminDestinationsHome() {
         onCloseCreate={() => setFormOpen(false)}
         editing={editing}
         onCloseEdit={() => setEditing(null)}
-        onSaved={() => load(page)}
+        onSaved={() => {
+          void triggerRevalidation("destinations");
+          load(page);
+        }}
       />
 
       <AdminDeleteDialog

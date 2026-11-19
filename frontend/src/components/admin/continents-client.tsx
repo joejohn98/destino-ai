@@ -15,6 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { triggerRevalidation } from "@/lib/api/revalidate";
 import { api, type AdminContinent } from "@/lib/api";
 
 export function AdminContinentsHome() {
@@ -176,6 +177,7 @@ export function AdminContinentsHome() {
         onClose={closeContinentForm}
         onSaved={() => {
           closeContinentForm();
+          void triggerRevalidation("continent-stats");
           load();
         }}
         onSubmit={(fd) =>

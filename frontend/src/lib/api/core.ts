@@ -81,12 +81,12 @@ export async function fetchApi<T>(
     const isFormData = options?.body instanceof FormData;
 
     const res = await fetch(url, {
+      cache: options?.cache ?? "no-store",
       ...options,
       headers: {
         ...(isFormData ? {} : { "Content-Type": "application/json" }),
         ...options?.headers,
       },
-      cache: "no-store", // Ensure we don't cache API responses
     });
 
     if (!res.ok) {

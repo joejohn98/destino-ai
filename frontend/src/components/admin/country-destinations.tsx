@@ -16,6 +16,7 @@ import {
   CardDescription,
   CardTitle,
 } from "@/components/ui/card";
+import { triggerRevalidation } from "@/lib/api/revalidate";
 import {
   api,
   destinationHref,
@@ -100,7 +101,10 @@ export function AdminCountryDestinations({
       successMessage: "Destination deleted",
       errorMessage: "Couldn't delete destination",
       itemName: "destination",
-      onDeleted: load,
+      onDeleted: () => {
+        void triggerRevalidation("destinations");
+        load();
+      },
     });
 
   const handleEdit = async (dest: Destination) => {
@@ -266,7 +270,10 @@ export function AdminCountryDestinations({
         onCloseCreate={() => setFormOpen(false)}
         editing={editing}
         onCloseEdit={() => setEditing(null)}
-        onSaved={load}
+        onSaved={() => {
+          void triggerRevalidation("destinations");
+          load();
+        }}
       />
 
       <AdminDeleteDialog
