@@ -1,36 +1,150 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Destino AI — Frontend Application
 
-## Getting Started
+The frontend client for Destino AI is built with Next.js 16 (App Router) and React 19. It delivers a fast, responsive, and luxury editorial travel experience with server-side rendering, client state management, catalog discovery, interactive itinerary builders, and an administrative management portal.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Tech Stack
+
+* **Framework & Runtime:** Next.js 16 (`next@16.4.6`), React 19 (`react@19.3.0`, `react-dom@19.3.0`), TypeScript
+* **Styling & Design System:** Tailwind CSS v4 (`@tailwindcss/turbopack`), Custom Editorial Theme (`bg-cream`, `text-ink`, `rounded-marketing`), `tw-animate-css`
+* **UI Components & Primitives:** Base UI (`@base-ui/react`) components, Lucide React icons, Embla Carousel (`embla-carousel-react`)
+* **Forms & Validation:** React Hook Form (`react-hook-form`), Zod v4 (`zod`), `@hookform/resolvers`
+* **Notifications & Feedback:** Sonner toast manager
+* **Monorepo Integration:** Consumes shared contracts and DTO types from `@destino/shared`
+
+---
+
+## Directory Structure
+
+```text
+frontend/
+├── src/
+│   ├── app/                    # Next.js App Router routes & layouts
+│   │   ├── (auth)/             # Authentication pages (signin, signup)
+│   │   ├── admin/              # Administrative catalog portal (continents, countries, destinations)
+│   │   ├── ai/                 # AI travel tools (plan-itinerary, compare)
+│   │   ├── continents/         # Continent discovery and drill-down pages
+│   │   ├── destinations/       # Destination browsing, search, and detail views
+│   │   ├── favorites/          # Authenticated user saved destinations
+│   │   ├── profile/            # User profile and account settings
+│   │   ├── layout.tsx          # Root layout (Header, Footer, AuthProvider, FavoritesProvider)
+│   │   └── page.tsx            # Editorial landing page & curated hero showcase
+│   ├── components/             # Reusable UI components
+│   │   ├── admin/              # Admin shell, entity forms, image input pickers
+│   │   ├── ai/                 # Itinerary display, comparison tables, agent progress widgets
+│   │   ├── auth/               # Auth modal/forms and social OAuth buttons
+│   │   ├── reviews/            # Review list, submission form, rating displays
+│   │   ├── ui/                 # Base buttons, cards, dialogs, dropdowns, inputs, badges
+│   │   ├── auth-provider.tsx   # React Context for session management and user state
+│   │   └── header.tsx / footer.tsx # Global editorial navigation and footer
+│   ├── hooks/                  # Custom React hooks (responsive state, image input, admin delete)
+│   ├── lib/
+│   │   └── api/                # Modular API client for destinations, auth, admin, reviews
+│   └── schemas/                # Client-side form validation schemas (Zod)
+├── public/                     # Static assets, branding, and images
+├── compose.dev.yaml            # Docker Compose dev configuration
+├── compose.production.yaml     # Docker Compose production configuration
+├── Dockerfile                  # Standalone production container build
+├── DOCKER.md                   # Docker usage and internal networking instructions
+├── next.config.ts              # Next.js compiler and image domain configurations
+└── package.json                # Workspace dependencies and scripts
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Create `frontend/.env.local` for local development:
 
-## Learn More
+```dotenv
+NEXT_PUBLIC_API_URL=http://localhost:5000
+```
 
-To learn more about Next.js, take a look at the following resources:
+| Variable | Required | Context | Description | Default / Example |
+| :--- | :---: | :--- | :--- | :--- |
+| `NEXT_PUBLIC_API_URL` | Required in production | Client & Server | The public API base URL reachable by browser clients. Defaults to localhost:5000 in development. | `http://localhost:5000` |
+| `API_INTERNAL_URL` | Optional | Server-side only | Backend URL for server-side requests; overrides the public API URL on the server. | `http://host.docker.internal:5000` in Docker development |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Set `NEXT_PUBLIC_API_URL` before running a production build; the value is embedded in the browser bundle. The Docker production guide supplies it as a build argument.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## Development Setup
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 1. Native Setup
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Install dependencies from the repository root:
+   ```bash
+   npm install
+   ```
+2. Build the `@destino/shared` library dependency:
+   ```bash
+   npm run build:shared
+   ```
+3. Start the Next.js development server:
+   ```bash
+   npm run dev:frontend
+   # Or inside frontend/:
+   npm run dev
+   ```
+4. Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+### 2. Docker Setup
+
+To develop using Docker, run from the repository root:
+
+```bash
+docker compose -f frontend/compose.dev.yaml up --build
+```
+
+Review [`DOCKER.md`](DOCKER.md) for details on container-to-host backend communication.
+
+---
+
+## Features & Routing
+
+* **Editorial Home (`/`)**: Dynamic curated hero banners, featured destination carousels, and quick AI entry points.
+* **Destinations Explorer (`/destinations`)**: Filterable catalog with search, category pills (Beach, Mountain, Historical, City, Adventure, Wildlife), and rating filters.
+* **Canonical Destination Pages (`/continents/[continentSlug]/countries/[countrySlug]/[destinationSlug]`)**: Detailed view with attraction lists, ticket pricing, opening hours, AI review summaries, and community reviews.
+* **AI Trip Planning (`/ai/plan-itinerary`)**: Interactive natural-language prompt interface generating multi-day structured itineraries with day-by-day breakdowns and budget estimates.
+* **AI Destination Comparison (`/ai/compare`)**: Side-by-side criteria evaluation matrix comparing multiple destinations.
+* **Admin Management Portal (`/admin`)**:
+  * `/admin/continents` — Add and edit continents and upload cover imagery.
+  * `/admin/continents/[slug]` — Country management drill-down.
+  * `/admin/destinations` — Destination catalog management with multi-image uploaders and AI summary regeneration controls.
+* **User Accounts & Favorites (`/favorites`, `/profile`)**: Bookmark destinations, review history, and account profile management.
+
+---
+
+## Development Scripts
+
+| Command | Action |
+| :--- | :--- |
+| `npm run dev` | Starts Next.js development server on port 3000. |
+| `npm run build` | Compiles an optimized production build (standalone mode enabled). |
+| `npm run start` | Runs Next.js using its standard start command. The Docker production image runs the generated standalone `server.js` directly. |
+| `npm run lint` | Runs Next.js ESLint validation. |
+| `npx tsc --noEmit` | Runs full TypeScript verification across the frontend. |
+
+---
+
+## Production Deployment
+
+The frontend produces a self-contained standalone server (`output: "standalone"` in `next.config.ts`), making it ideal for Docker deployment.
+
+To build and run the production image:
+
+```bash
+docker build -f frontend/Dockerfile --target production \
+  --build-arg NEXT_PUBLIC_API_URL=https://api.yourdomain.com \
+  -t destino-frontend:production .
+```
+
+---
+
+## Related Documentation
+
+* ⬅️ **[Monorepo Root README](../README.md)**
+* ➡️ **[Backend Documentation](../backend/README.md)**
+* 🐳 **[Frontend Docker Guide](DOCKER.md)**

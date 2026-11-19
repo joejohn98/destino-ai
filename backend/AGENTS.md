@@ -1,790 +1,388 @@
 # Destino AI — Backend Codebase Context for AI Agents
 
-> **Purpose:** This file is the authoritative reference for AI coding agents (Codex, Claude Code, OpenCode, Cursor, etc.) working on this codebase. Read it fully before generating any code, suggesting edits, or answering questions about the project. Do **not** invent details not found here.
+> **Purpose:** This file is the authoritative reference for AI coding agents (Antigravity, Codex, Claude Code, Cursor, etc.) working on this codebase. Read it fully before generating code, suggesting edits, or answering questions about the project. Do **not** invent details not found here.
 
 ---
 
-## 1. Project Identity
+## 1. Project Identity & Stack
 
-| Field | Value |
-|-------|-------|
-| Name | `destino-backend` |
-| Runtime | Node.js (CommonJS — `"type": "commonjs"` in package.json) |
-| Language | TypeScript 5.x |
-| Framework | **Express.js v5** (`^5.2.1`) |
-| Database | MongoDB via **Mongoose 9** |
-| Cache | **Redis 6** (using the `redis` npm package v6) |
-| AI SDK | **Vercel AI SDK** (`ai@^7`) + `@ai-sdk/google` for Gemini |
-| Auth | JWT (cookie + Bearer) + Passport.js (Google OAuth2, GitHub OAuth2) |
-| Validation | **Zod v4** throughout |
-| File Uploads | **Multer v2** (memory storage) → streamed to **Cloudinary v2** |
-| Dev runner | `tsx watch` (no `ts-node`, no `nodemon`) |
-| Build | `tsc` → `dist/` |
-| Package manager | npm |
+| Field | Value | Notes |
+|-------|-------|-------|
+| Package Name | `@destino/backend` | Root package in monorepo structure |
+| Runtime | Node.js (CommonJS — `"type": "commonjs"`) | Node 22 in production Docker |
+| Language | TypeScript 5.9.x | Strictest compiler settings, target ES2022 |
+| Framework | **Express.js v5** (`^5.2.1`) | Native async error forwarding in routes |
+| Shared Types | `@destino/shared` | Monorepo package for shared DTOs & constants |
+| Database | MongoDB via **Mongoose 9.x** | Configured connection pool (`maxPoolSize: 20`) |
+| Cache & Rate Limiting | **Redis 6.x** (`redis` npm client) | Graceful fallback if Redis is unavailable |
+| AI Integration | **Vercel AI SDK** (`ai@^7`) + `@ai-sdk/google` | Lazy dynamic import via `src/utils/ai-sdk.ts` |
+| Authentication | JWT (HTTP-only cookie + Bearer header) | Passport.js (Google & GitHub OAuth2) |
+| Validation | **Zod v4** throughout | Body validation & typed query param parsing |
+| Media Storage | **Multer v2** (memory storage) → **Cloudinary v2** | Streamed image uploads |
+| Dev Runner | `tsx watch src/index.ts` | Hot-reloading TypeScript dev runner |
+| Build Tool | `tsc` → `dist/` | Standard TypeScript compilation |
 
 ---
 
-## 2. Directory Structure (Exact)
+## 2. Directory Structure
 
 ```
 backend/
 ├── src/
-│   ├── index.ts              ← process entry, graceful shutdown, server bootstrap
-│   ├── app.ts                ← Express app factory, middleware stack, route mounts
+│   ├── index.ts                     ← Server entry, graceful shutdown, AWS ALB keep-alive
+│   ├── app.ts                       ← Express app factory, middleware stack, route mounts
 │   │
 │   ├── config/
-│   │   ├── config.ts         ← centralised env var access (dotenv.config here)
-│   │   ├── db.ts             ← Mongoose connect/disconnect
-│   │   ├── redis.ts          ← Redis client creation, connect/disconnect helpers
-│   │   ├── passport.ts       ← Passport Google + GitHub strategies
-│   │   └── cloudinary.ts     ← Cloudinary SDK configuration
+│   │   ├── config.ts                ← Centralized env vars with Zod validation
+│   │   ├── db.ts                    ← Mongoose connection & pool settings
+│   │   ├── redis.ts                 ← Redis client, connect/disconnect, fallback logic
+│   │   ├── passport.ts              ← Passport Google & GitHub OAuth strategies
+│   │   ├── cloudinary.ts            ← Cloudinary SDK initialization
+│   │   └── country-cost-profiles.ts ← Country-specific cost tiers & transit multipliers
 │   │
 │   ├── models/
-│   │   ├── index.ts          ← barrel re-export of all models
-│   │   ├── User.model.ts
-│   │   ├── Destination.model.ts
-│   │   ├── Country.model.ts
-│   │   ├── Continent.model.ts
-│   │   └── Review.model.ts
+│   │   ├── index.ts                 ← Barrel export of all models
+│   │   ├── User.model.ts            ← Users, auth providers, favorites
+│   │   ├── Destination.model.ts     ← Destinations, attractions, ratings, categories
+│   │   ├── Country.model.ts         ← Countries with continent reference & virtuals
+│   │   ├── Continent.model.ts       ← Continents
+│   │   └── Review.model.ts          ← Destination reviews & sentiment
+│   │
+│   ├── dto/                         ← Typed Data Transfer Objects
+│   │   ├── destination.dto.ts       ← Destination cards, lists, detail DTOs
+│   │   ├── review.dto.ts            ← Review DTOs, author summaries
+│   │   └── user.dto.ts              ← User profile, favorites page DTOs
 │   │
 │   ├── controllers/
-│   │   ├── auth.controller.ts
-│   │   ├── user.controller.ts
-│   │   ├── destination.controller.ts
-│   │   ├── continent.controller.ts
-│   │   ├── country.controller.ts
-│   │   ├── review.controller.ts
-│   │   ├── ai.controller.ts
-│   │   └── agent.controller.ts
+│   │   ├── auth.controller.ts       ← Register, login, logout, OAuth callbacks
+│   │   ├── user.controller.ts       ← Profile, user favorites, my reviews
+│   │   ├── destination.controller.ts← Public & admin destination handlers
+│   │   ├── continent.controller.ts  ← Admin continent handlers
+│   │   ├── country.controller.ts    ← Admin country handlers
+│   │   ├── review.controller.ts     ← Review CRUD
+│   │   ├── ai.controller.ts         ← Destination summaries & travel tips
+│   │   └── agent.controller.ts      ← Multi-step AI planner & comparison
 │   │
 │   ├── services/
-│   │   ├── auth.service.ts
-│   │   ├── user.service.ts
-│   │   ├── destination.service.ts
-│   │   ├── continent.service.ts
-│   │   ├── country.service.ts
-│   │   ├── review.service.ts
-│   │   ├── ai.service.ts
-│   │   ├── agent.service.ts
-│   │   ├── agent-grounding.service.ts
-│   │   └── cloudinary.service.ts
+│   │   ├── auth.service.ts          ← Pure business logic for auth & social login
+│   │   ├── user.service.ts          ← Profile updates, user favorites mutations
+│   │   ├── destination.service.ts   ← Facade orchestrator for destination queries/mutations
+│   │   ├── destination-query.service.ts    ← Search, pagination, category & location filters
+│   │   ├── destination-mutation.service.ts ← Destination creation, updates, transactional deletes
+│   │   ├── destination-stats.service.ts    ← Continent & country statistics aggregations
+│   │   ├── continent.service.ts     ← Continent queries & transactional deletes
+│   │   ├── country.service.ts       ← Country queries & transactional deletes
+│   │   ├── review.service.ts        ← Review operations with sentiment analysis
+│   │   ├── ai.service.ts            ← Gemini review summaries & travel tips
+│   │   ├── agent.service.ts         ← ToolLoopAgent planner & comparison runner
+│   │   ├── agent-grounding.service.ts      ← Enforces verified attraction & review grounding
+│   │   ├── agent-error.service.ts   ← Categorizes AI/provider errors into AgentError
+│   │   ├── budget-calculation.service.ts   ← Trip & destination budget estimation
+│   │   ├── cost-profile.service.ts  ← Daily cost profiles by country & travel style
+│   │   ├── currency.service.ts      ← Multi-currency conversion & formatting
+│   │   └── cloudinary.service.ts    ← Cloudinary stream upload & deletion
 │   │
 │   ├── routes/
-│   │   ├── auth.routes.ts
-│   │   ├── user.routes.ts
-│   │   ├── destination.routes.ts
-│   │   ├── continent.routes.ts
-│   │   ├── country.routes.ts
-│   │   ├── review.routes.ts
-│   │   ├── ai.routes.ts
-│   │   └── agent.routes.ts
+│   │   ├── auth.routes.ts           ← /api/auth
+│   │   ├── user.routes.ts           ← /api/users
+│   │   ├── destination.routes.ts    ← /api/destinations
+│   │   ├── continent.routes.ts      ← /api/admin/continents
+│   │   ├── country.routes.ts        ← /api/admin/countries & continent sub-routes
+│   │   ├── review.routes.ts         ← /api/countries/.../reviews & /api/reviews
+│   │   ├── ai.routes.ts             ← /api/ai
+│   │   └── agent.routes.ts          ← /api/ai/agents
 │   │
 │   ├── middleware/
 │   │   ├── auth.middleware.ts       ← protect(), restrictTo()
-│   │   ├── error.middleware.ts      ← globalErrorHandler, notFoundHandler
-│   │   ├── validation.middleware.ts ← validate(zodSchema) → RequestHandler
+│   │   ├── error.middleware.ts      ← globalErrorHandler, notFoundHandler, serializeError
+│   │   ├── validation.middleware.ts ← validate(zodSchema), parseQuery(zodSchema)
 │   │   ├── upload.middleware.ts     ← uploadSingle(), uploadArray() via Multer
-│   │   └── ratelimit.middleware.ts  ← agentLimiter, authLimiter
+│   │   └── ratelimit.middleware.ts  ← agentLimiter, aiLimiter, authLimiter (Redis-backed)
 │   │
 │   ├── validators/
-│   │   ├── auth.validators.ts
-│   │   ├── user.validators.ts
-│   │   ├── destination.validators.ts
-│   │   ├── continent.validators.ts
-│   │   ├── country.validators.ts
-│   │   ├── review.validators.ts
-│   │   └── ai.validators.ts
+│   │   ├── auth.validators.ts       ← Register, login schemas
+│   │   ├── user.validators.ts       ← Update profile schemas
+│   │   ├── destination.validators.ts← Destination create/update schemas
+│   │   ├── continent.validators.ts  ← Continent create/update schemas
+│   │   ├── country.validators.ts    ← Country create/update schemas
+│   │   ├── review.validators.ts     ← Review create/update & pagination schemas
+│   │   ├── query.validators.ts      ← Query string schemas (pagination, search, filter)
+│   │   └── ai.validators.ts         ← AI agent query request schemas
 │   │
 │   ├── agents/
-│   │   ├── planner.agent.ts     ← itinerary agent: system prompt, tools, Zod output schema
-│   │   └── comparison.agent.ts  ← comparison agent: system prompt, tools, Zod output schema
+│   │   ├── planner.agent.ts         ← Itinerary planner system prompt, tools & schema
+│   │   └── comparison.agent.ts      ← Destination comparison prompt, tools & schema
 │   │
 │   ├── tools/
-│   │   ├── destination.tools.ts ← searchDestinations, getDestinationDetails
-│   │   ├── review.tools.ts      ← getDestinationReviews
-│   │   └── budget.tools.ts      ← estimateTripBudget
+│   │   ├── destination.tools.ts     ← searchDestinations, getDestinationDetails
+│   │   ├── review.tools.ts          ← getDestinationReviews
+│   │   └── budget.tools.ts          ← estimateTripBudget, estimateDestinationBudget
 │   │
 │   ├── utils/
-│   │   ├── AppError.ts          ← custom Error class
-│   │   ├── catchAsync.ts        ← async RequestHandler wrapper
-│   │   ├── cache.ts             ← withCache(), invalidateKeys()
-│   │   ├── utils.ts             ← createSendToken(), generateToken()
-│   │   ├── ai-sdk.ts            ← lazy singleton ESM loader for the AI SDK
-│   │   └── validation.ts        ← isValidObjectId()
+│   │   ├── AppError.ts              ← Operational HTTP error class
+│   │   ├── AgentError.ts            ← Structured error class for AI agent failures
+│   │   ├── catchAsync.ts            ← Async route handler wrappers
+│   │   ├── cache.ts                 ← withCache, invalidateKeys, invalidatePattern
+│   │   ├── mongo-transactions.ts    ← withMongoTransaction helper
+│   │   ├── search-normalization.ts  ← Normalization helpers for search & indexes
+│   │   ├── ai-sdk.ts                ← Dynamic ESM loader singleton for Vercel AI SDK
+│   │   ├── validation.ts            ← isValidObjectId, escapeRegex
+│   │   └── utils.ts                 ← JWT creation, cookie options, sanitizeUser
 │   │
 │   └── scripts/
-│       └── seed.ts              ← standalone destructive DB seed script (run via: npm run seed)
+│       ├── seed.ts                  ← Destructive DB seed runner (requires --force)
+│       └── seed-data/               ← Fixtures for continents, countries, destinations, users, reviews
 │
-├── dist/                        ← compiled output (gitignored)
+├── dist/                            ← Compiled JavaScript (gitignored)
+├── Dockerfile                       ← Production multi-stage Alpine container
+├── compose.dev.yaml                 ← Docker compose for local dev (App, Mongo, Redis)
+├── compose.production.yaml          ← Production compose setup
 ├── package.json
-├── tsconfig.json
-├── .env                         ← real secrets (gitignored)
-└── .env.example                 ← currently empty — must be populated
+└── tsconfig.json
 ```
 
 ---
 
-## 3. Environment Variables (All Required Unless Marked Optional)
+## 3. Environment Variables (`src/config/config.ts`)
 
-Read exclusively from `src/config/config.ts` (which calls `dotenv.config()`).
-**Exception (known bug):** `src/config/passport.ts` reads OAuth vars directly from `process.env` with `!` non-null assertions.
+Validated at application startup using a strict **Zod** schema with custom `.superRefine()` rules for production mode.
 
-```
-PORT                          # default: 3000
-NODE_ENV                      # "development" | "production"
-DATABASE_URL                  # MongoDB connection string (required)
-JWT_SECRET                    # min 32 chars (required)
-JWT_EXPIRATION                # e.g. "7d" (required; cookie maxAge is hardcoded 7d — known bug)
-REDIS_URL                     # default: redis://localhost:6379
-TRUST_PROXY                   # default: false; set proxy hop count or trusted IP/CIDRs behind a reverse proxy
-GOOGLE_GENERATIVE_AI_API_KEY  # Gemini API key (required for AI features)
-CLIENT_URL                    # e.g. http://localhost:5173 (CORS / OAuth redirect base)
-CLOUDINARY_CLOUD_NAME         # required for image uploads
-CLOUDINARY_API_KEY            # required for image uploads
-CLOUDINARY_API_SECRET         # required for image uploads
-GOOGLE_CLIENT_ID              # OAuth (required for Google login)
-GOOGLE_CLIENT_SECRET          # OAuth (required for Google login)
-GOOGLE_CALLBACK_URL           # OAuth (required for Google login)
-GITHUB_CLIENT_ID              # OAuth (required for GitHub login)
-GITHUB_CLIENT_SECRET          # OAuth (required for GitHub login)
-GITHUB_CALLBACK_URL           # OAuth (required for GitHub login)
-```
+| Variable | Required in Prod | Default / Fallback | Purpose |
+|----------|:----------------:|-------------------|---------|
+| `PORT` | No | `3000` | HTTP listening port |
+| `NODE_ENV` | No | `"development"` | `"development"`, `"test"`, or `"production"` |
+| `DATABASE_URL` | **Yes** | — | MongoDB URI (must start with `mongodb://` or `mongodb+srv://`) |
+| `JWT_SECRET` | **Yes** | — | Minimum 32 chars in prod, no placeholder text |
+| `JWT_EXPIRATION` | No | `"7d"` | Duration string parsed by `ms` (e.g. `"7d"`, `"24h"`) |
+| `REDIS_URL` | **Yes** | `redis://localhost:6379` | Redis connection URL (`redis://` or `rediss://`) |
+| `TRUST_PROXY` | No | `false` | Reverse proxy hop count (e.g. `1` for ALB) or CIDR array |
+| `CLIENT_URL` | **Yes** | `http://localhost:3000` (dev) | Frontend origin for CORS whitelist (must be `https://` in prod) |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | **Yes** | — | Gemini API key for AI tips, summaries, & agents |
+| `CLOUDINARY_CLOUD_NAME` | **Yes** | — | Cloudinary cloud identifier |
+| `CLOUDINARY_API_KEY` | **Yes** | — | Cloudinary API key |
+| `CLOUDINARY_API_SECRET` | **Yes** | — | Cloudinary API secret |
+| `GOOGLE_CLIENT_ID` | Optional | — | Google OAuth2 client ID (strategy disabled if omitted) |
+| `GOOGLE_CLIENT_SECRET` | Optional | — | Google OAuth2 client secret |
+| `GOOGLE_CALLBACK_URL` | Optional | — | Google OAuth2 redirect callback URL |
+| `GITHUB_CLIENT_ID` | Optional | — | GitHub OAuth2 client ID (strategy disabled if omitted) |
+| `GITHUB_CLIENT_SECRET` | Optional | — | GitHub OAuth2 client secret |
+| `GITHUB_CALLBACK_URL` | Optional | — | GitHub OAuth2 redirect callback URL |
+| `SEED_ALLOW_DESTRUCTIVE` | No | `0` | Set to `1` or pass `--force` to run `npm run seed` |
 
 ---
 
-## 4. MongoDB Data Models
+## 4. Database Models & Schema Design
+
+All constants (`CATEGORIES`, `ATTRACTION_CATEGORIES`, `SENTIMENTS`) are imported from `@destino/shared`.
 
 ### 4.1 User (`src/models/User.model.ts`)
-
-**Collection:** `users` | **Interface:** `IUser extends Document`
-
-| Field | Type | Notes |
-|-------|------|-------|
-| `firstName` | `String` | required, trim |
-| `lastName` | `String` | required, trim |
-| `username` | `String` | required, unique, min 3, max 30 |
-| `email` | `String` | required, unique, lowercase |
-| `password` | `String` | optional (not required when `authProviders` populated), `select: false`, bcrypt hashed on save |
-| `authProviders` | `[{ provider, providerId }]` | `provider` in `["google", "github"]` |
-| `role` | `String` | `"user"` or `"admin"`, default `"user"` |
-| `avatarUrl` | `String?` | optional |
-| `bio` | `String?` | max 500 chars |
-| `favoriteDestinations` | `ObjectId[]` | ref `Destination` |
-| `createdAt`, `updatedAt` | `Date` | timestamps |
-
-**Indexes:**
-- `{ "authProviders.provider": 1, "authProviders.providerId": 1 }` — unique, sparse
-
-**Instance method:** `comparePassword(candidatePassword): Promise<boolean>`
-**Pre-save hook:** Hashes `password` with bcrypt rounds=12 when modified.
-
----
+- **Collection:** `users`
+- **Fields:** `firstName`, `lastName`, `username` (unique, lowercase), `email` (unique, lowercase), `password` (`select: false`, bcrypt hashed with cost 12), `authProviders` (`[{ provider: "google"|"github", providerId }]`), `role` (`"user" | "admin"`), `avatarUrl`, `bio`, `favoriteDestinations` (`ObjectId[]` ref `Destination`), `reviewCount` (`Number`, default 0).
+- **Methods:** `comparePassword(candidate): Promise<boolean>`.
+- **Hooks:** Pre-save hashes password when modified.
 
 ### 4.2 Destination (`src/models/Destination.model.ts`)
-
-**Collection:** `destinations` | **Interface:** `IDestination extends Document`
-
-| Field | Type | Notes |
-|-------|------|-------|
-| `name` | `String` | required |
-| `slug` | `String` | required, lowercase; auto-generated from `name` via slugify |
-| `description` | `String` | required |
-| `location.city` | `String` | required |
-| `location.state` | `String?` | optional |
-| `location.country` | `ObjectId` | ref `Country`, required |
-| `category` | `String` | enum — see CATEGORIES below |
-| `imageUrls` | `String[]` | default `[]` |
-| `attractions` | `IAttraction[]` | subdocuments with `_id: true` |
-| `bestTimeToVisit` | `String?` | optional |
-| `travelTips` | `String[]?` | AI-generated, optional |
-| `travelTipsContextHash` | `String?` | SHA-256 of context; used to skip tip regeneration |
-| `aiReviewSummary` | `String?` | AI-generated review summary |
-| `summaryGeneratedAtRatingCount` | `Number?` | ratingsCount when summary was last generated |
-| `openingHours` | `String?` | optional |
-| `ticketPrice` | `String?` | optional |
-| `website` | `String?` | optional |
-| `averageRating` | `Number` | default 0, range 0-5; updated by Review model hooks |
-| `ratingsCount` | `Number` | default 0; updated by Review model hooks |
-| `isFeatured` | `Boolean` | default false |
-| `createdAt`, `updatedAt` | `Date` | timestamps |
-
-**Indexes:**
-- `{ createdAt: -1, _id: -1 }` — stable default paginated listing order
-- `{ category: 1, createdAt: -1, _id: -1 }` — category filter and default listing order
-- `{ "location.country": 1, createdAt: -1, _id: -1 }` — country filter and default listing order
-- `{ category: 1, averageRating: -1, _id: 1 }` and `{ averageRating: -1, _id: 1 }` — rating filter ordering
-- `{ searchCity: 1 }` — normalized city prefix filtering
-- `{ "location.country": 1, slug: 1 }` — **UNIQUE** (canonical lookup key)
-- `{ name: "text", description: "text", "location.city": "text" }` — word-based destination search
-
-**IAttraction subdocument fields:** `name` (required), `description?`, `ticketPrice?`, `suggestedDuration?`, `openingHours?`, `category?` (enum ATTRACTION_CATEGORIES)
-
-**Exported constants (used in validators and tools):**
-```ts
-CATEGORIES = ["beach","mountain","city","historical","adventure","wildlife"] as const
-ATTRACTION_CATEGORIES = ["monument","museum","market","nature","viewpoint","day-trip","activity","religious","entertainment"] as const
-SENTIMENTS = ["positive","neutral","negative"] as const
-```
-
-**Pre-validate hook:** Auto-generates `slug` from `name` via `slugify({ lower: true, strict: true })`.
-**Pre-findOneAndUpdate hook:** Regenerates `slug` if `name` or `$set.name` is updated.
-
----
+- **Collection:** `destinations`
+- **Fields:** `name`, `slug` (auto-generated lowercase), `description`, `location: { city, state?, country: ObjectId ref Country }`, `category` (enum), `imageUrls` (`String[]`), `attractions` (`IAttraction[]` subdocuments), `bestTimeToVisit`, `travelTips` (`String[]`), `travelTipsContextHash`, `aiReviewSummary`, `summaryGeneratedAtRatingCount`, `reviewContentVersion`, `searchCity` (normalized prefix search field), `openingHours`, `ticketPrice`, `website`, `averageRating` (0-5, aggregated), `ratingsCount` (aggregated), `isFeatured` (`Boolean`).
+- **Attraction Subdocument (`IAttraction`):** `name` (required), `description`, `ticketPrice`, `suggestedDuration`, `openingHours`, `category` (from `ATTRACTION_CATEGORIES`).
+- **Indexes:**
+  - Compound Unique: `{ "location.country": 1, slug: 1 }` (Canonical lookup key).
+  - Listing & Sorting: `{ createdAt: -1, _id: -1 }`, `{ category: 1, createdAt: -1, _id: -1 }`, `{ "location.country": 1, createdAt: -1, _id: -1 }`.
+  - Ratings: `{ category: 1, averageRating: -1, _id: 1 }`, `{ averageRating: -1, _id: 1 }`.
+  - Search: `{ searchCity: 1 }`, `{ name: "text", description: "text", "location.city": "text" }`.
+- **Hooks:** Pre-validate generates `slug` and `searchCity`. Pre-findOneAndUpdate updates `slug` and `searchCity` when name/city changes.
 
 ### 4.3 Country (`src/models/Country.model.ts`)
-
-**Collection:** `countries` | **Interface:** `ICountry extends Document`
-
-| Field | Type | Notes |
-|-------|------|-------|
-| `name` | `String` | required, trim |
-| `searchName` | `String` | normalized, hidden indexed field for location prefix search |
-| `slug` | `String` | required, unique, lowercase; auto-generated from name |
-| `imageUrl` | `String` | required |
-| `description` | `String?` | optional |
-| `continent` | `ObjectId` | ref `Continent`, required |
-
-**Virtual:** `destinations` — populates `Destination` docs where `location.country == _id`
-**Indexes:** `{ continent: 1 }`, `{ searchName: 1 }`, `{ name: "text" }`
-**Slug hooks:** Same pattern as Destination model.
-
----
+- **Collection:** `countries`
+- **Fields:** `name`, `searchName` (hidden normalized field), `slug` (unique, lowercase), `imageUrl`, `description`, `continent` (`ObjectId` ref `Continent`).
+- **Virtuals:** `destinations` (populates destinations where `location.country === _id`).
+- **Indexes:** `{ continent: 1 }`, `{ searchName: 1 }`, `{ name: "text" }`.
 
 ### 4.4 Continent (`src/models/Continent.model.ts`)
-
-**Collection:** `continents` | **Interface:** `IContinent extends Document`
-
-| Field | Type | Notes |
-|-------|------|-------|
-| `name` | `String` | required, unique |
-| `slug` | `String` | required, unique, lowercase; auto-generated from name |
-| `description` | `String?` | optional |
-| `imageUrl` | `String` | required |
-
-**Virtual:** `countries` — populates `Country` docs where `continent == _id`
-**Slug hook:** Same pre-validate pattern as Destination.
-
----
+- **Collection:** `continents`
+- **Fields:** `name` (unique), `slug` (unique, lowercase), `description`, `imageUrl`.
+- **Virtuals:** `countries` (populates countries where `continent === _id`).
 
 ### 4.5 Review (`src/models/Review.model.ts`)
-
-**Collection:** `reviews` | **Interface:** `IReview extends Document`
-
-| Field | Type | Notes |
-|-------|------|-------|
-| `destination` | `ObjectId` | ref `Destination`, required |
-| `user` | `ObjectId or null` | ref `User`, default `null` (anonymous allowed) |
-| `authorName` | `String` | required, default `"Anonymous"` |
-| `rating` | `Number` | required, min 1, max 5 |
-| `reviewText` | `String` | required, max 500 chars |
-| `sentiment` | `String?` | `"positive"`, `"neutral"`, or `"negative"` |
-| `themes` | `String[]` | default `[]` |
-| `createdAt`, `updatedAt` | `Date` | timestamps |
-
-**Indexes:**
-- `{ destination: 1, user: 1 }` — unique with `partialFilterExpression: { user: { $type: "objectId" } }` (one review per user per destination; multiple anonymous reviews allowed)
-- `{ destination: 1, createdAt: -1 }`
-
-**Post-save hook:** Calls `refreshDestinationRatings(review.destination)` — recalculates `averageRating` and `ratingsCount` on the parent Destination via aggregation.
-**Post-findOneAndDelete hook:** Same refresh call.
-**CRITICAL:** `deleteMany()` does NOT trigger these hooks — `averageRating` will NOT be updated if reviews are bulk-deleted.
+- **Collection:** `reviews`
+- **Fields:** `destination` (`ObjectId` ref `Destination`), `user` (`ObjectId` ref `User` or `null` for anonymous/deleted user reviews), `authorName`, `rating` (1-5), `reviewText` (max 500), `sentiment` (`"positive" | "neutral" | "negative"`), `themes` (`String[]`).
+- **Indexes:**
+  - Unique per user: `{ destination: 1, user: 1 }` with `partialFilterExpression: { user: { $type: "objectId" } }`.
+  - Sorting: `{ destination: 1, createdAt: -1 }`.
+- **Hooks:** Post-save and post-findOneAndDelete recalculate `averageRating` and `ratingsCount` on the destination.
 
 ---
 
 ## 5. API Route Map
 
-Base URL: `/api`
+All routes are mounted under `/api` in `src/app.ts`, with root health probes at `/health`.
 
-### Auth — `/api/auth`
-| Method | Path | Auth | Rate Limit | Notes |
-|--------|------|------|-----------|-------|
-| POST | `/register` | None | authLimiter (10/15min) | Zod: registerSchema |
-| POST | `/login` | None | authLimiter | Zod: loginSchema |
-| POST | `/logout` | None | None | Clears cookie |
-| GET | `/google` | None | None | Passport Google redirect |
-| GET | `/google/callback` | None | None | Sets JWT cookie, redirects to clientUrl/oauth-success |
-| GET | `/github` | None | None | Passport GitHub redirect |
-| GET | `/github/callback` | None | None | Sets JWT cookie, redirects to clientUrl/oauth-success |
+### 5.1 Authentication — `/api/auth`
+| Method | Endpoint | Auth | Rate Limit | Description |
+|--------|----------|------|------------|-------------|
+| POST | `/register` | Public | `authLimiter` (10/15m) | Register new user via `registerSchema` |
+| POST | `/login` | Public | `authLimiter` (10/15m) | Login user via `loginSchema` |
+| POST | `/logout` | Public | None | Clears `token` HTTP-only cookie |
+| GET | `/google` | Public | None | Initiates Google OAuth2 consent |
+| GET | `/google/callback` | Public | None | Issues JWT cookie & redirects to `${CLIENT_URL}/oauth-success` |
+| GET | `/github` | Public | None | Initiates GitHub OAuth2 consent |
+| GET | `/github/callback` | Public | None | Issues JWT cookie & redirects to `${CLIENT_URL}/oauth-success` |
 
-### Users — `/api/users`
-All routes guarded by `router.use(protect)`.
+### 5.2 Users — `/api/users`
+All user routes require `protect`.
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/profile` | `protect` | Returns current user profile (password excluded) |
+| PATCH | `/profile` | `protect` | Updates profile details via `updateProfileSchema` |
+| DELETE | `/profile` | `protect` | Anonymizes user reviews & deletes account |
+| GET | `/favorites` | `protect` | Paginated list of favorited destinations |
+| POST | `/favorites/:destinationId` | `protect` | Adds destination to user's favorites |
+| DELETE | `/favorites/:destinationId` | `protect` | Removes destination from user's favorites |
+| GET | `/reviews` | `protect` | Paginated list of reviews authored by the user |
 
-| Method | Path | Zod Schema |
-|--------|------|-----------|
-| GET | `/profile` | — |
-| PATCH | `/profile` | updateProfileSchema |
-| DELETE | `/profile` | — |
+### 5.3 Destinations — `/api/destinations`
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/` | Public | Paginated catalog (`page`, `limit`, `q`, `location`, `category`, `minRating`). Cached. |
+| GET | `/search` | Public | Full-text search (?q=..., min 2 chars). Not cached. |
+| GET | `/location/:location` | Public | Filter by city or country name |
+| GET | `/category/:category` | Public | Filter by destination category |
+| GET | `/continents` | Public | Aggregate stats for all continents (Cached 30m) |
+| GET | `/continents/:continent/countries` | Public | Country stats for a continent (Cached 30m) |
+| GET | `/:name` | Public | Fallback single destination lookup by name, slug, or ID |
+| POST | `/` | `protect`, `restrictTo("admin")` | Create destination (Multer `images` max 5) |
+| PUT | `/:id` | `protect`, `restrictTo("admin")` | Update destination (Multer `images` max 5) |
+| DELETE | `/:id` | `protect`, `restrictTo("admin")` | Transactional delete with review cleanup & cache eviction |
 
-### Destinations — `/api/destinations`
-| Method | Path | Auth | Upload | Notes |
-|--------|------|------|--------|-------|
-| GET | `/` | None | — | ?page=1&limit=12; cached per page+limit |
-| GET | `/search` | None | — | ?q=... (min 2 chars); word-based text search; NOT cached |
-| GET | `/rating` | None | — | All docs sorted by rating DESC; NO pagination (known bug) |
-| GET | `/location/:location` | None | — | Filter by city/country; NO limit (known bug) |
-| GET | `/filter/:minRating` | None | — | Filter by min rating; NO limit (known bug) |
-| GET | `/category/:category` | None | — | Filter by category; NO limit (known bug) |
-| GET | `/continents` | None | — | Aggregation stats; cached 30min |
-| GET | `/continents/:continent/countries` | None | — | Country stats per continent; cached 30min |
-| GET | `/:name` | None | — | Legacy name/slug lookup; NOT cached; registered LAST |
-| POST | `/` | JWT + admin | images[] (max 5) | createDestinationSchema |
-| PUT | `/:id` | JWT + admin | images[] (max 5) | updateDestinationSchema |
-| DELETE | `/:id` | JWT + admin | — | Cascade-deletes associated reviews |
+### 5.4 Canonical Hierarchy Routes (Mounted on `app`)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/countries/:countrySlug/destinations` | Public | Destinations belonging to a specific country |
+| GET | `/api/countries/:countrySlug/destinations/:destinationSlug` | Public | Canonical destination detail (Cached 10m) |
+| GET | `/api/countries/:countrySlug/destinations/:destinationSlug/reviews` | Public | Paginated destination reviews |
+| POST | `/api/countries/:countrySlug/destinations/:destinationSlug/reviews` | `protect`, `restrictTo("user")` | Add review (Users only, triggers sentiment AI) |
 
-### Canonical Destination Detail (mounted directly on `app`, not on the destinations router)
-| Method | Path | Auth | Notes |
-|--------|------|------|-------|
-| GET | `/api/countries/:countrySlug/destinations/:destinationSlug` | None | Cached 10min. Uses compound unique index `{location.country, slug}`. |
+### 5.5 Standalone Reviews — `/api/reviews`
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| PATCH | `/:reviewId` | `protect`, `restrictTo("user")` | Update own review (re-runs sentiment analysis) |
+| DELETE | `/:reviewId` | `protect` | Delete review (owner or admin) |
 
-### Reviews
-**Nested (uses mergeParams: true):**
-| Method | Path | Auth | Notes |
-|--------|------|------|-------|
-| GET | `/api/countries/:countrySlug/destinations/:destinationSlug/reviews` | None | |
-| POST | `/api/countries/:countrySlug/destinations/:destinationSlug/reviews` | JWT + restrictTo("user") | Admins CANNOT post reviews |
+### 5.6 Admin Catalog Routes — `/api/admin`
+All admin catalog routes are strictly protected by `protect, restrictTo("admin")`.
+| Method | Endpoint | Upload | Description |
+|--------|----------|--------|-------------|
+| GET | `/continents` | None | Admin continent list with counts (Cached 5m) |
+| GET | `/continents/:slug` | None | Single continent detail |
+| POST | `/continents` | `image` (single) | Create continent |
+| PUT | `/continents/:id` | `image` (single) | Update continent |
+| DELETE | `/continents/:id` | None | Transactional delete (fails if countries exist) |
+| GET | `/continents/:continentId/countries` | None | List countries in a continent |
+| GET | `/continents/:continentId/countries/:slug` | None | Single country in a continent |
+| POST | `/continents/:continentId/countries` | `image` (single) | Create country under a continent |
+| PUT | `/countries/:id` | `image` (single) | Update country |
+| DELETE | `/countries/:id` | None | Transactional delete (fails if destinations exist) |
 
-**Standalone:**
-| Method | Path | Auth | Notes |
-|--------|------|------|-------|
-| PATCH | `/api/reviews/:reviewId` | JWT + restrictTo("user") | updateReviewSchema |
-| DELETE | `/api/reviews/:reviewId` | JWT | Owner or admin can delete |
+### 5.7 AI Endpoints — `/api/ai`
+| Method | Endpoint | Auth | Rate Limit | Description |
+|--------|----------|------|------------|-------------|
+| GET | `/destinations/:destinationId/summary` | Public | `aiLimiter` (20/m) | AI review summary (cached/regenerated when eligible) |
+| POST | `/destinations/:destinationId/summary/regenerate` | `protect`, `admin` | None | Force regenerate review summary |
+| GET | `/destinations/:destinationId/tips` | Public | `aiLimiter` (20/m) | AI travel tips (grounded in context hash) |
+| POST | `/destinations/:destinationId/tips/regenerate` | `protect`, `admin` | None | Force regenerate travel tips |
 
-### Admin — Continents — `/api/admin/continents`
-**WARNING: No auth guard at route mount in app.ts — known critical security bug.**
+### 5.8 AI Agents — `/api/ai/agents`
+Mounted **before** `/api/ai`. Both endpoints require authentication.
+| Method | Endpoint | Auth | Rate Limit | Description |
+|--------|----------|------|------------|-------------|
+| POST | `/plan-itinerary` | `protect` | `agentLimiter` (5/m) | Multi-day itinerary generation with tool grounding |
+| POST | `/compare` | `protect` | `agentLimiter` (5/m) | 2–3 destination comparative analysis |
 
-| Method | Path | Upload |
-|--------|------|--------|
-| GET | `/` | — |
-| GET | `/:slug` | — |
-| POST | `/` | image (single, field name: `image`) |
-| PUT | `/:id` | image (single) |
-| DELETE | `/:id` | — |
-
-### Admin — Countries — `/api/admin/continents/:continentId/countries` and `/api/admin/countries`
-**WARNING: No auth guard at route mount — same critical security bug.**
-
-| Method | Path | Router | Upload |
-|--------|------|--------|--------|
-| GET | `/` | continentCountryRoutes | — |
-| GET | `/:slug` | continentCountryRoutes | — |
-| POST | `/` | continentCountryRoutes | image (single) |
-| PUT | `/:id` | countryRoutes | image (single) |
-| DELETE | `/:id` | countryRoutes | — |
-
-### AI — `/api/ai`
-| Method | Path | Auth | Notes |
-|--------|------|------|-------|
-| GET | `/destinations/:destinationId/tips` | None | aiLimiter (20 req/min/IP, Redis-backed) |
-| GET | `/destinations/:destinationId/summary` | None | aiLimiter (20 req/min/IP, Redis-backed) |
-| POST | `/destinations/:destinationId/summary/regenerate` | JWT + admin | Force regenerate |
-
-### AI Agents — `/api/ai/agents`
-| Method | Path | Auth | Rate Limit |
-|--------|------|------|-----------|
-| POST | `/plan-itinerary` | JWT | agentLimiter (5 req/min/IP, Redis-backed) |
-| POST | `/compare` | JWT | agentLimiter (5 req/min/IP, Redis-backed) |
-
-**Route mount order in app.ts:**
-```ts
-app.use("/api/ai/agents", agentRoutes);
-app.use("/api/ai", aiRoutes);
-```
+### 5.9 Health Probes
+- `GET /health` and `GET /api/health` return HTTP 200 (`"healthy"` / `"degraded"`) or 503 (`"unhealthy"`), inspecting MongoDB and Redis states.
 
 ---
 
-## 6. Middleware Stack (Applied in Order in app.ts)
+## 6. Architecture & Services Breakdown
 
-```
-cors({ credentials: true })              // WARNING: no origin whitelist — known security bug
-morgan("combined" | "dev")               // HTTP request logging
-express.json()                           // JSON body parsing
-express.urlencoded({ extended: true })   // URL-encoded body parsing
-cookieParser()                           // Cookie parsing (reads req.cookies.token)
-passport.initialize()                    // Passport — session: false everywhere
-... all route handlers ...
-notFoundHandler                          // Returns 404 for unmatched routes
-globalErrorHandler                       // Centralized error normalizer + responder
-```
+The service layer contains pure business logic and does not touch Express `req` or `res` objects:
 
----
-
-## 7. Key Utilities and Patterns
-
-### `catchAsync(fn)` — `src/utils/catchAsync.ts`
-Wraps an async `RequestHandler`. Thrown errors are forwarded to `next()`.
-Every controller handler is wrapped with `catchAsync`.
-
-```ts
-export const myHandler: RequestHandler = catchAsync(async (req, res) => {
-  // throw new AppError("msg", 404) or let service throw — reaches globalErrorHandler
-});
-```
-
-### `AppError` — `src/utils/AppError.ts`
-Custom error class extending `Error`.
-Fields: `statusCode: number`, `status: "fail" | "error"` (4xx = "fail", 5xx = "error"), `isOperational: true`, `cause?: unknown`.
-
-```ts
-throw new AppError("Not found", 404);
-throw new AppError("Internal error", 500, originalError);
-```
-
-### `validate(schema)` — `src/middleware/validation.middleware.ts`
-Returns a `RequestHandler`. Runs `schema.safeParse(req.body)`.
-On failure: responds `400 { status: "fail", message, errors }` — does not call `next()`.
-On success: replaces `req.body` with the parsed/coerced Zod output.
-
-### `protect` — `src/middleware/auth.middleware.ts`
-Reads JWT from `Authorization: Bearer <token>` header OR `req.cookies.token`.
-Verifies JWT, fetches `User` from DB, attaches to `req.user: IUser`.
-Throws `AppError` 401 on any failure.
-
-### `restrictTo(...roles: string[])` — `src/middleware/auth.middleware.ts`
-Checks `req.user.role` against allowed roles array.
-Returns `AppError` 403 if not in list.
-
-### `withCache<T>(key, ttlSeconds, fn)` — `src/utils/cache.ts`
-Read-through Redis cache.
-- Hit: returns `JSON.parse(cached)` immediately.
-- Miss: calls `fn()`, stores result with `setEx`, returns result.
-- Redis error: falls through to `fn()` (graceful degradation).
-- Known bug: if `fn()` succeeds but `setEx` throws, catch block calls `fn()` a second time.
-
-### `invalidateKeys(...keys)` — `src/utils/cache.ts`
-Deletes exact Redis keys via `redisClient.del(keys)`. Failures silently swallowed.
-
-### `loadAiSdk()` — `src/utils/ai-sdk.ts`
-Lazy singleton. Dynamically imports the ESM-only `ai` and `@ai-sdk/google` packages exactly once.
-Returns `{ ToolLoopAgent, Output, isStepCount, NoOutputGeneratedError, generateText, google }`.
-**Must always be awaited — never top-level import the AI SDK directly (ESM/CJS incompatibility).**
-
-### `uploadSingle(fieldName?)` / `uploadArray(fieldName?, maxCount?)` — `src/middleware/upload.middleware.ts`
-Multer helpers. Memory storage. Max file size: 5 MB. Accepts only `image/*` MIME.
-`req.file` (single) or `req.files: Express.Multer.File[]` (array) contain `{ buffer, mimetype, originalname, ... }`.
-
-### `uploadImageStream(buffer, folder?)` / `uploadMultipleImageStreams(buffers, folder?)` — `src/services/cloudinary.service.ts`
-Streams a `Buffer` to Cloudinary via `upload_stream`. Default folder: `"destino"`.
-Returns `{ url: string, publicId: string }` or throws `AppError` 500 on failure.
-
-### `isValidObjectId(id)` — `src/utils/validation.ts`
-Wrapper around `mongoose.Types.ObjectId.isValid(id)`. Returns boolean.
-
-### `createSendToken(user, res)` — `src/utils/utils.ts`
-Signs JWT with `{ id: user._id }`. Sets `token` cookie (`httpOnly`, `secure` in prod, `sameSite: "none"` in prod / `"lax"` in dev, maxAge: hardcoded 7 days). Returns the token string.
+1. **`destination.service.ts`**: Unified facade delegating to:
+   - `destination-query.service.ts`: Query compilation, full-text search, regex escaping, pagination metadata.
+   - `destination-mutation.service.ts`: Multipart uploads to Cloudinary, database persistence, transactional deletion (`withMongoTransaction`).
+   - `destination-stats.service.ts`: MongoDB aggregation pipelines for continent and country statistics.
+2. **`agent.service.ts`**: Runs the Vercel AI SDK `ToolLoopAgent` using Gemini. Enforces query bounds (1-30 days, 1-20 travellers, 2-3 destinations for comparisons).
+3. **`agent-grounding.service.ts`**: Post-processing filter verifying that every activity in an AI itinerary strictly matches an existing item in the destination's `attractions` array.
+4. **`budget-calculation.service.ts`**: Realistic budget engine combining destination local rates, travel styles (`budget`, `moderate`, `luxury`), intercity transit multipliers, and currency conversion.
+5. **`cost-profile.service.ts` & `country-cost-profiles.ts`**: Country-specific price tiers in local currencies (USD, EUR, JPY, GBP, etc.) converted to INR.
+6. **`currency.service.ts`**: Currency parser, conversion rates to INR, and formatted representations.
+7. **`agent-error.service.ts`**: Classifies SDK, quota, or step exhaustion errors into typed `AgentError` responses.
+8. **`cloudinary.service.ts`**: Streams memory buffers to Cloudinary using `cloudinary.v2.uploader.upload_stream`.
 
 ---
 
-## 8. Auth Flow Detail
+## 7. Middleware & Utilities Reference
 
-### Local Registration
-1. `POST /api/auth/register` with `{ firstName, lastName, username, email, password }`
-2. `validate(registerSchema)` runs — passes data through Zod
-3. `authService.register()` checks for existing email/username, creates `User`, saves (triggers bcrypt hook)
-4. `createSendToken(user, res)` signs JWT, sets cookie
-5. Returns `201 { status: "success", message, data: user }` (password stripped via `toObject()` destructuring)
+### 7.1 Error Handling (`src/middleware/error.middleware.ts`)
+- **`AppError`**: Base operational error with `statusCode`, `status` ("fail" vs "error"), and `isOperational = true`.
+- **`AgentError`**: Extends `AppError` with `code`, `context` (`{ agent, operation }`), and `retryable: boolean`. Formatted into a structured JSON envelope.
+- **`globalErrorHandler`**: Converts `CastError`, `ValidationError`, Mongo duplicate key (11000), `ZodError`, `TokenExpiredError`, and `MulterError` into clean operational errors. In production, hides internal details for non-operational 500 errors.
+- **`catchAsync` / `catchAsyncBody`**: Wraps async Express handlers and forwards rejected promises to `next(err)`.
 
-### Local Login
-1. `POST /api/auth/login` with `{ email, password }`
-2. Finds user with `.select("+password")` (password excluded by default)
-3. Calls `user.comparePassword(password)` (bcrypt.compare)
-4. `createSendToken(user, res)` signs JWT, sets cookie
-5. Returns `200 { status: "success", message, data: user }`
+### 7.2 Validation (`src/middleware/validation.middleware.ts`)
+- **`validate(schema)`**: Middleware for `req.body`. On error, returns `400 { status: "fail", message, errors }`.
+- **`parseQuery(schema)`**: Helper for route handlers to safely parse and type-cast `req.query`.
 
-### OAuth (Google / GitHub)
-1. GET `/api/auth/google` → Passport redirects to Google consent screen
-2. GET `/api/auth/google/callback` → Passport calls `authService.findOrCreateSocialUser()`
-3. `findOrCreateSocialUser` logic:
-   - Find by `authProviders.provider + providerId` → return if found
-   - Find by email → link new provider, save → return
-   - Create new user with unique username (derived from email prefix, uniqueness ensured with counter loop)
-4. `createSendToken(user, res)` sets cookie
-5. `res.redirect(clientUrl/oauth-success)`
+### 7.3 Authentication (`src/middleware/auth.middleware.ts`)
+- **`protect`**: Reads JWT from `Authorization: Bearer <token>` or `req.cookies.token`. Attaches user document to `req.user`.
+- **`restrictTo(...roles)`**: Asserts `req.user.role` matches required roles (e.g. `"admin"` or `"user"`).
 
----
+### 7.4 Redis Caching (`src/utils/cache.ts`)
+- **`withCache(key, ttl, fn)`**: Read-through caching with automatic fallback if Redis is down. If cache write fails, the result is still returned without throwing.
+- **`invalidateKeys(...keys)`**: Deletes specific Redis keys.
+- **`invalidatePattern(pattern)`**: Uses `scanIterator` to safely delete all keys matching a glob pattern (e.g. `api:dest:paginated:*`).
 
-## 9. AI Features
+### 7.5 Database Transactions (`src/utils/mongo-transactions.ts`)
+- **`withMongoTransaction(fn)`**: Manages a MongoDB `ClientSession` with `.withTransaction()`. If the deployment does not support replica set transactions, returns a clean 503 `AppError`.
 
-### 9.1 Sentiment Analysis
-**Function:** `aiService.analyzeSentiment(reviewText: string)`
-**Model:** `google("gemini-3.5-flash-lite")` — **INVALID model ID (known bug; use `gemini-2.0-flash-lite` or `gemini-1.5-flash`)**
-**Output Zod schema:** `{ sentiment: "positive"|"neutral"|"negative", themes: string[] }`
-**Called by:** `review.service.createReview`
-**Known bug:** Throws 500 on AI error — should degrade to neutral and save review anyway.
-
-### 9.2 Travel Tips Generation
-**Function:** `aiService.generateDestinationTips(destinationId: string)`
-**Context hash:** SHA-256 of `{ name, category, city, country, bestTimeToVisit }` stored in `travelTipsContextHash`. Tips are regenerated only when this hash changes.
-**Optimistic save:** `findOneAndUpdate({ _id, updatedAt })` — skips save if document was modified by another process.
-**Output:** `{ tips: string[] }` — saved to `Destination.travelTips`.
-
-### 9.3 Review Summary Generation
-**Function:** `aiService.generateDestinationSummary(destinationId, force?)`
-**Minimum reviews:** 3 (returns `{ summary: null, message }` if fewer)
-**Regeneration condition:** `force=true` OR no existing summary OR `ratingsCount - summaryGeneratedAtRatingCount >= 5`
-**Input:** Last 100 reviews sorted by `createdAt DESC`
-**Optimistic save:** `findOneAndUpdate({ _id, ratingsCount })` — skips if ratingsCount changed during generation.
-
-### 9.4 Planner Agent
-**Entry:** `POST /api/ai/agents/plan-itinerary` → `agentService.planItinerary(query)`
-**System prompt:** `PLANNER_SYSTEM` in `src/agents/planner.agent.ts`
-**Tools available:** `searchDestinations`, `getDestinationReviews`, `estimateTripBudget`
-**Tool call order:** `PLANNER_TOOL_ORDER = ["searchDestinations", "getDestinationReviews", "estimateTripBudget"]`
-**Max steps:** 10 (`isStepCount(10)`)
-**Input bounds (enforced at service and system prompt level):** max 30 days, max 20 travellers
-**Output type:** `ItineraryOutput` (inferred from `itinerarySchema` Zod)
-**Post-processing:** `enforceAttractionGrounding(output)` in `agent-grounding.service.ts` strips any activities not present in the destination's verified `attractions` array.
-
-### 9.5 Comparison Agent
-**Entry:** `POST /api/ai/agents/compare` → `agentService.compareDestinations(query)`
-**System prompt:** `COMPARISON_SYSTEM` in `src/agents/comparison.agent.ts`
-**Tools available:** `searchDestinations`, `getDestinationDetails`, `getDestinationReviews`
-**Tool call order:** `COMPARISON_TOOLS_ORDER = ["searchDestinations", "getDestinationDetails", "getDestinationReviews"]`
-**Max steps:** 10
-**Bounds:** 2–3 destinations only
-**Output type:** `ComparisonOutput` (from `comparisonSchema` Zod)
-**Post-processing:** `validateAndEnforceComparisonGrounding(output)` validates recommendation matches a researched destination name.
+### 7.6 Dynamic AI SDK Loading (`src/utils/ai-sdk.ts`)
+- **`loadAiSdk()`**: Dynamic ESM import singleton. Prevents CommonJS / ESM runtime conflicts with the Vercel AI SDK.
 
 ---
 
-## 10. Agent Tool Definitions
+## 8. Coding Conventions for AI Agents
 
-All tools in `src/tools/` are plain objects:
-```ts
-{ description: string, inputSchema: ZodObject, execute: async (input) => result }
-```
-They return plain objects (NOT AppError — they catch internally and return `{ error: string }`).
-
-| Tool | File | Input Fields |
-|------|------|-------------|
-| `searchDestinations` | destination.tools.ts | `query` (min 2), `category?`, `location?`, `minRating?`, `maxResults?` (default 5, max 10) |
-| `getDestinationDetails` | destination.tools.ts | `destinationId` (ObjectId string) |
-| `getDestinationReviews` | review.tools.ts | `destinationIds[]` (1-3), `maxReviewsPerDestination?` (default 10) |
-| `estimateTripBudget` | budget.tools.ts | `destinationIds[]`, `durationDays` (1-30), `travellers` (1-20), `travelStyle`, `budgetLimit?` (INR) |
-
-**Budget daily rates per person (INR):**
-
-| Style | Accommodation | Food | Local Transport | Activities | Intercity |
-|-------|--------------|------|----------------|------------|----------|
-| budget | 800 | 700 | 300 | 500 | 1500 |
-| moderate | 1800 | 1400 | 700 | 1200 | 2500 |
-| luxury | 5000 | 3500 | 1800 | 3500 | 6000 |
-
-Intercity total = `(destinations.length - 1) * rate.intercityTransport * travellers`.
+1. **Controller Structure**: Always wrap handlers in `catchAsync(async (req, res) => { ... })`. Never send error responses manually inside controllers; throw an `AppError` or `AgentError`.
+2. **Strict Separation of Concerns**: Controllers read HTTP requests and call services. Services perform database and business logic and **never** access Express `req`, `res`, or `next`.
+3. **Id Validation**: Always check `isValidObjectId(id)` from `src/utils/validation.ts` before executing database queries with URL parameters.
+4. **Zod Validation**: Define schemas in `src/validators/`. Export the schema and the TypeScript inferred type (`z.infer<typeof schema>`).
+5. **Exact Optional Properties**: With `"exactOptionalPropertyTypes": true` in `tsconfig.json`, do not pass explicit `undefined` to optional fields. Use conditional spread: `...(val ? { field: val } : {})`.
+6. **No Clamping in AI Prompts**: Prompts and services must strictly enforce bounds (e.g. max 30 days, max 20 travellers). Never silently clamp an invalid request; return `status: "invalid_request"`.
+7. **Cache Invalidation**: On create, update, or delete operations, invalidate both exact detail keys and glob patterns (`DEST_LISTING_PATTERN`, `CONTINENT_AGG_PATTERN`).
+8. **Cloudinary Uploads**: Never write files to disk. Multer keeps uploads in memory buffers; use `uploadImageStream(file.buffer, folder)`.
 
 ---
 
-## 11. Redis Cache Keys Catalog
-
-Defined in `src/utils/cache.ts` as exported constant `CACHE_KEYS` along with `AGG_CACHE_TTL`, `LISTING_CACHE_TTL`, and `DETAIL_CACHE_TTL`.
-
-| Key Pattern | TTL | Invalidated by |
-|-------------|-----|----------------|
-| `agg:continent:stats` | 30 min | Any destination/country/continent write |
-| `agg:continent:{slug}:countries` | 30 min | Continent/country writes |
-| `api:dest:paginated:p{n}:l{n}` | 3 min | Destination create/update/delete, review mutations (pattern: `api:dest:paginated:*`) |
-| `api:dest:slug:{countrySlug}:{destSlug}` | 10 min | Destination update/delete, review create/update/delete |
-| `api:dest:country:{countrySlug}` | 10 min | Destination and country write operations |
-
----
-
-## 12. Error Handling Contract
-
-### `globalErrorHandler` normalizes errors to `AppError`:
-
-| Error Type | Status Code |
-|------------|------------|
-| `mongoose.Error.CastError` | 400 |
-| `mongoose.Error.ValidationError` | 400 |
-| `MongoServerError` (code 11000, duplicate key) | 409 |
-| `ZodError` | 400 |
-| `jwt.TokenExpiredError` | 401 |
-| `jwt.JsonWebTokenError` | 401 |
-| `MulterError LIMIT_FILE_SIZE` | 400 |
-| Other `MulterError` | 400 |
-| Everything else | 500 (non-operational) |
-
-### Standard response shapes
-
-**Success:**
-```json
-{ "status": "success", "data": {} }
-{ "status": "success", "message": "...", "data": {} }
-{ "status": "success", "results": 12, "data": [] }
-```
-
-**Client error (4xx):**
-```json
-{ "status": "fail", "message": "..." }
-```
-
-**Server error (5xx production):**
-```json
-{ "status": "error", "message": "Something went wrong. Please try again later." }
-```
-
-**Validation error (from validate() middleware):**
-```json
-{ "status": "fail", "message": "<first issue message>", "errors": { "fieldName": ["msg"] } }
-```
-
-**Development errors include:** `error` (serialized), `stack`.
-
----
-
-## 13. TypeScript Configuration Highlights (`tsconfig.json`)
-
-| Option | Value | Impact |
-|--------|-------|--------|
-| `module` | `node16` | CommonJS modules with proper ESM interop |
-| `moduleResolution` | `node16` | Required to match `module` |
-| `target` | `es2022` | |
-| `strict` | `true` | All strict checks on |
-| `noUncheckedIndexedAccess` | `true` | Array/object indexed access returns `T or undefined` |
-| `exactOptionalPropertyTypes` | `true` | Cannot assign `undefined` to optional properties explicitly |
-| `types` | `[]` | **KNOWN BUG: disables all @types/* including @types/node** |
-| `isolatedModules` | `true` | Each file treated as standalone module |
-| `skipLibCheck` | `true` | Skips .d.ts type checking |
-| `noImplicitReturns` | commented out | Not enforced |
-| `noUnusedLocals` | commented out | Not enforced |
-
----
-
-## 14. Validation Schemas Reference
-
-### `registerSchema` (auth.validators.ts)
-`{ firstName, lastName, username(3-30), email, password(8-30), role: literal("user") default "user" }`
-
-### `loginSchema` (auth.validators.ts)
-`{ email, password(min 8) }`
-
-### `updateProfileSchema` (user.validators.ts)
-`{ firstName?, lastName?, email? }` — `.strict()`, at least one field required via `.refine()`
-
-### `createDestinationSchema` (destination.validators.ts)
-```
-{
-  name(2-100), description(10-2000),
-  location: { city(min 1), state?, country(min 1) },
-  continent(min 1),   ← ACCEPTED but IGNORED by service (known bug)
-  category: CATEGORIES enum,
-  bestTimeToVisit?,
-  images?: z.url()[], ← existing Cloudinary URLs; uploaded file URLs added in controller
-  attractions?: [{name(2-200), description?, ticketPrice?, suggestedDuration?, openingHours?, category?: ATTRACTION_CATEGORIES}]
-}
-```
-
-### `updateDestinationSchema` (destination.validators.ts)
-All same fields as create but all optional. No `continent` field.
-
-### `createReviewSchema` (review.validators.ts)
-`{ rating: coerce.number(1-5), reviewText(1-500) }`
-
-### `updateReviewSchema` (review.validators.ts)
-`{ rating?: coerce.number(1-5), reviewText?(1-500) }` — at least one required via `.refine()`
-
-### `createContinentSchema` / `updateContinentSchema` (continent.validators.ts)
-`{ name(min 1), description?, imageUrl? }` — imageUrl optional in Zod; controller enforces required
-
-### `createCountrySchema` / `updateCountrySchema` (country.validators.ts)
-Same structure as continent validators.
-
-### `planRequestSchema` / `compareRequestSchema` (ai.validators.ts)
-`{ query: string(10-500) }`
-
----
-
-## 15. Known Bugs — Do Not Repeat These Patterns
-
-| ID | Severity | Summary |
-|----|----------|---------|
-| **SEC-03** | CRITICAL | Admin routes (`/api/admin/*`) have no `protect` or `restrictTo("admin")` guard |
-| **SEC-01** | CRITICAL | `cors({ credentials: true })` with no `origin` whitelist |
-| **SEC-02** | CRITICAL | OAuth env vars use `!` non-null assertions, bypass `config.ts` validation |
-| **CRASH-05** | CRITICAL | `google("gemini-3.5-flash-lite")` is an invalid model name — all AI calls fail |
-| **CRASH-01** | CRITICAL | `redis.ts` reads `process.env.REDIS_URL` directly, bypassing `config.ts` and dotenv |
-| **CRASH-03** | HIGH | `createReview` throws 500 on AI sentiment failure — review is NOT saved |
-| **CRASH-04** | HIGH | `updateReview` does not re-run sentiment analysis when `reviewText` changes |
-| **SEC-04** | HIGH | Cookie `maxAge` hardcoded to 7 days regardless of `JWT_EXPIRATION` env var |
-| **BUG-02** | HIGH | `getDestinationsByRating`, `getDestinationsByLocation`, etc. have no `.limit()` |
-| **BUG-04** | MED | Cache invalidation only clears page 1 variants of paginated keys |
-| **BUG-06** | MED | `compareDestinations` 422 response missing `status` and `message` fields |
-| **BUG-07** | MED | `continent.service` uses string literal `"agg:continent:stats"` not a constant |
-| **TYPE-01** | MED | `config.ts` uses `as string` casts — env vars can silently be `undefined` |
-| **TYPE-04** | MED | `"types": []` in tsconfig disables all `@types/*` |
-| **QUAL-01** | MED | `auth.service` accepts `Response` object — violates SRP, untestable |
-| **QUAL-04** | LOW | `escapeRegex` is duplicated in destination.service.ts and destination.tools.ts |
-| **PERF-01** | MED | `getAllContinents` uses deep nested virtual populate — N+1 DB query risk |
-| **PERF-03** | LOW | `withCache` calls `fn()` twice on Redis write error |
-| **PERF-04** | MED | Mongoose connection pool not configured (default is 5 connections) |
-| **API-01** | MED | `/api/ai` mounted before `/api/ai/agents` in app.ts — should be reversed |
-| **API-03** | LOW | `continent` field in createDestinationSchema is silently ignored by service |
-
----
-
-## 16. Coding Conventions — Follow These When Adding Code
-
-1. **Every controller handler:** `export const handler: RequestHandler = catchAsync(async (req, res) => { ... })`
-2. **Throw errors:** `throw new AppError(message, statusCode)` — never `res.status(...).json(...)` for errors inside catchAsync
-3. **ObjectId validation:** Always call `isValidObjectId(id)` from `src/utils/validation.ts` before passing route params to services
-4. **Service layer:** Services are pure async functions — they do NOT receive `req`, `res`, or `next`. Do not add Express dependencies to services.
-5. **Validators:** Define in `src/validators/`. Export the schema AND the inferred type. Service function signatures use the inferred type.
-6. **Cache keys:** Follow pattern `api:{resource}:{id}`, `api:{resource}:paginated:p{n}:l{n}`, `agg:{resource}:{stat}`
-7. **Image uploads:** Multer stores in memory. Always stream to Cloudinary with `uploadImageStream(req.file.buffer, folder)`. Save returned `.url` to DB.
-8. **Response shape:** All success responses include `status: "success"`. List responses include `results: number`. Match Section 12 patterns.
-9. **Admin routes:** Any route that creates, updates, or deletes data must have `protect, restrictTo("admin")` applied.
-10. **AI SDK import:** Always `const { generateText, google } = await loadAiSdk()`. Never top-level import from `"ai"` or `"@ai-sdk/google"`.
-11. **Slugs:** Never set slugs manually. Pre-validate hooks auto-generate them from `name`. Do not include `slug` in create payloads.
-12. **Password field:** `select: false` on User model. To read it in a query: `.select("+password")`.
-13. **Soft deletes:** Do not exist in this codebase. All deletes are hard (permanent).
-14. **Transactions:** Multi-document deletes must use `withMongoTransaction` and pass its session to every read and write. MongoDB must run as a replica set or sharded cluster for these operations.
-15. **Bulk delete hooks:** `deleteMany()` does NOT trigger Mongoose post hooks. If `refreshDestinationRatings` needs to run, use `findByIdAndDelete` in a loop or run the aggregation manually.
-
----
-
-## 17. Package Scripts
+## 9. Common Commands
 
 ```bash
-npm run dev         # tsx watch src/index.ts — hot reload dev server
-npm run build       # tsc — compile to dist/
-npm run start       # node dist/index.js — production
-npm run type-check  # tsc --noEmit — type check only
-npm run seed        # tsx src/scripts/seed.ts (requires SEED_ALLOW_DESTRUCTIVE=1; disabled in production)
+# Development
+npm run dev           # Start backend with tsx watch on port 3000
+
+# Building & Type Checking
+npm run type-check    # Run tsc --noEmit (strict type checking)
+npm run build         # Compile TypeScript to dist/
+npm run start         # Run compiled production server from dist/index.js
+
+# Code Quality
+npm run lint          # Run ESLint on src/
+npm run format        # Run Prettier write on all files
+npm run format:check  # Check formatting
+
+# Seeding
+npm run seed -- --force   # Wipe & seed local database with sample fixtures
 ```
 
 ---
 
-## 18. Dependencies Quick Reference
-
-```
-express@^5.2.1              Web framework (v5 — NOT v4)
-mongoose@^9.10.2            MongoDB ODM
-redis@^6.3.0                Redis client
-zod@^4.6.5                  Schema validation
-jsonwebtoken@^9.0.3         JWT
-bcryptjs@^3.0.3             Password hashing
-passport@^0.7.0             Auth middleware (session: false always)
-passport-google-oauth20      Google OAuth2 strategy
-passport-github2             GitHub OAuth2 strategy
-cloudinary@^2.11.0          Image CDN (v2 API)
-multer@^2.4.0               Multipart form-data (memory storage)
-ai@^7.0.136                 Vercel AI SDK — ESM-only, loaded via dynamic import
-@ai-sdk/google@^4.0.93      Gemini provider — ESM-only, loaded via dynamic import
-slugify@^1.6.9              Slug generation
-morgan@^1.12.1              HTTP request logging
-cors@^2.8.6                 CORS headers
-cookie-parser@^1.4.7        Cookie parsing
-dotenv@^18.0.4              Env file loading
-express-rate-limit@^8.7.1   Rate limiting (shared Redis-backed store)
-
-DevDependencies:
-typescript@^5.9.3
-tsx@^4.23.15                TypeScript execution without compile step
-@types/node, @types/express, @types/bcryptjs, @types/cors,
-@types/cookie-parser, @types/jsonwebtoken, @types/morgan,
-@types/multer, @types/passport, @types/passport-github2,
-@types/passport-google-oauth20
-```
-
----
-
-*This document was generated from full static analysis of every source file in the backend. Last updated: October 2026.*
+*Last revised: November 2026 — Verified against all active backend routes, services, models, and TypeScript configuration.*
