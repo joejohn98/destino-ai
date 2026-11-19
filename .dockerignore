@@ -1,23 +1,17 @@
-**
-
-# Frontend
-!frontend/
-!frontend/**
-frontend/node_modules
-frontend/.next
-frontend/.env*
-
-# Backend
-!backend/
-!backend/**
-backend/node_modules
-backend/dist
-backend/.env*
-
-# Shared packages
-!packages/
-!packages/shared/
-!packages/shared/**
-packages/shared/node_modules
-packages/shared/dist
-
+.git
+.github
+.vscode
+.idea
+node_modules
+**/node_modules
+dist
+**/dist
+.next
+**/.next
+.env
+.env.*
+!.env.example
+*.log
+**/*.log
+.DS_Store
+Thumbs.db

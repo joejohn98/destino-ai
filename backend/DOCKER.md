@@ -31,11 +31,23 @@ docker compose -f compose.dev.yaml exec api npm run seed -- --force
 
 ## Production image
 
-Build the production image from `backend/`:
+Build the production image from `backend/` (the parent directory is the build context because the Dockerfile also copies `packages/shared/`):
 
 ```sh
-docker build --target production -t destino-backend:production -f Dockerfile ..
+docker buildx build --target production -t destino-backend:production -f Dockerfile ..
 ```
+
+For a multi-platform image, use a Buildx builder that supports multi-platform builds and push the image to a registry:
+
+```sh
+docker buildx build --platform linux/amd64,linux/arm64 \
+  --target production \
+  --push \
+  -t destino/backend:latest \
+  -f Dockerfile ..
+```
+
+Replace `destino/backend:latest` with the image name and tag in your registry. Multi-platform output cannot be loaded directly into the local Docker image store with `--load`; use `--push` to publish it, or build one platform at a time for local use.
 
 The image compiles TypeScript in a build stage, contains production dependencies
 and compiled JavaScript only, and runs as the unprivileged `node` user. It has a

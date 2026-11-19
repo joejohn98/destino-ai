@@ -19,6 +19,7 @@ CMD ["npm", "run", "dev", "--", "--hostname", "0.0.0.0"]
 FROM deps AS builder
 COPY frontend/ ./
 COPY packages/shared/ /app/packages/shared/
+RUN /app/frontend/node_modules/.bin/tsc -p /app/packages/shared/tsconfig.json
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 ENV NODE_ENV=production

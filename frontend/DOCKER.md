@@ -30,6 +30,11 @@ NEXT_PUBLIC_API_URL=https://api.example.com
 HOST_PORT=3000
 ```
 
+The root `.dockerignore` excludes `.env.local` and `.env.production`, so a
+direct Docker build does not read either file automatically. Compose can read
+the file on the host and pass `NEXT_PUBLIC_API_URL` as the Docker build arg, as
+shown below.
+
 Build and start the production container from the repository root:
 
 ```sh
@@ -50,3 +55,9 @@ docker build -f frontend/Dockerfile --target production \
   --build-arg NEXT_PUBLIC_API_URL=https://api.example.com \
   -t destino-frontend:production .
 ```
+
+Replace the example URL with the same public API origin configured in your
+environment file. For a multi-platform Buildx build, use the same
+`--build-arg NEXT_PUBLIC_API_URL=...` option and add `--platform` plus the
+appropriate output option (`--push` for a registry or `--load` for a local,
+single-platform image).

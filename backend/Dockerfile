@@ -10,7 +10,9 @@ COPY backend/package.json backend/package-lock.json ./backend/
 WORKDIR /app/backend
 RUN npm ci
 WORKDIR /app/packages/shared
-RUN npx tsc
+# Use the TypeScript compiler installed by the backend workspace. Running npx
+# here would search the shared package, find no local install, and fetch `tsc`.
+RUN /app/backend/node_modules/.bin/tsc -p /app/packages/shared/tsconfig.json
 WORKDIR /app/backend
 COPY backend/tsconfig.json ./
 COPY backend/src ./src
