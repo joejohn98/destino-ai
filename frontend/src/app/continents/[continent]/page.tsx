@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cacheLife, cacheTag } from "next/cache";
 import { ArrowRight, Globe2, MapPin, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -16,6 +17,23 @@ import { api, ContinentStat, CountryContinentStat } from "@/lib/api";
 type ContinentPageProps = {
   params: Promise<{ continent: string }>;
 };
+
+async function getCachedContinentStats() {
+  "use cache";
+  cacheLife({ stale: 300, revalidate: 1800, expire: 3600 }); // 30 min revalidate, aligns with backend Redis AGG_CACHE_TTL
+  cacheTag("continents");
+  cacheTag("continent-stats");
+  return api.getContinentStats();
+}
+
+async function getCachedCountriesByContinent(continentName: string) {
+  "use cache";
+  cacheLife({ stale: 300, revalidate: 1800, expire: 3600 }); // 30 min revalidate, aligns with backend Redis AGG_CACHE_TTL
+  cacheTag("continents");
+  cacheTag("continent-stats");
+  cacheTag(`continent-${continentName.toLowerCase()}`);
+  return api.getCountriesByContinent(continentName);
+}
 
 export async function generateMetadata({ params }: ContinentPageProps): Promise<Metadata> {
   const { continent } = await params;
@@ -35,7 +53,7 @@ export default async function ContinentDetailPage({ params }: ContinentPageProps
 
   let continentStats: ContinentStat[] = [];
   try {
-    const res = await api.getContinentStats();
+    const res = await getCachedContinentStats();
     continentStats = res.data || [];
   } catch (error) {
     console.error("Failed to fetch continents:", error);
@@ -56,7 +74,7 @@ export default async function ContinentDetailPage({ params }: ContinentPageProps
   // Fetch country statistics for this continent
   let countriesList: CountryContinentStat[] = [];
   try {
-    const statsRes = await api.getCountriesByContinent(continentName);
+    const statsRes = await getCachedCountriesByContinent(continentName);
     countriesList = statsRes.data || [];
   } catch (error) {
     console.error(`Failed to fetch countries for ${continentName}:`, error);

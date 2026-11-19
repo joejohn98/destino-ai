@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cacheLife, cacheTag } from "next/cache";
 import { api, type ContinentStat, type Destination } from "@/lib/api";
 import {
   ContinentsSection,
@@ -8,14 +9,26 @@ import {
   HowItWorksSection,
 } from "./_components";
 
-// Always render with fresh backend data in production as well as in dev.
-export const dynamic = "force-dynamic";
-
 export const metadata: Metadata = {
   title: "Destino AI — Discover & Plan Trips",
   description:
     "Explore verified destinations, discover authentic sights, and shape your next journey.",
 };
+
+async function getCachedFeaturedDestinations() {
+  "use cache";
+  cacheLife({ stale: 60, revalidate: 180, expire: 300 });
+  cacheTag("featured-destinations");
+  cacheTag("destinations");
+  return api.getDestinations({ limit: 6 });
+}
+
+async function getCachedContinentStats() {
+  "use cache";
+  cacheLife({ stale: 300, revalidate: 1800, expire: 3600 });
+  cacheTag("continent-stats");
+  return api.getContinentStats();
+}
 
 export default async function Page() {
   let destinations: Destination[] = [];
@@ -24,7 +37,7 @@ export default async function Page() {
   let continentsError: string | undefined;
 
   try {
-    const destRes = await api.getDestinations({ limit: 6 });
+    const destRes = await getCachedFeaturedDestinations();
     destinations = destRes.data || [];
   } catch (error) {
     console.error("Failed to load featured destinations:", error);
@@ -33,7 +46,7 @@ export default async function Page() {
   }
 
   try {
-    const contRes = await api.getContinentStats();
+    const contRes = await getCachedContinentStats();
     continents = contRes.data || [];
   } catch (error) {
     console.error("Failed to load continents:", error);

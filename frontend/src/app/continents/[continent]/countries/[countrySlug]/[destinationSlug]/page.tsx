@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cacheLife, cacheTag } from "next/cache";
 import { api, type Destination, type Review } from "@/lib/api";
 import { ReviewsSection } from "@/components/reviews/reviews-section";
 import {
@@ -18,12 +19,30 @@ type DestinationDetailPageProps = {
   }>;
 };
 
+// Cached canonical destination query with Next.js Cache Components
+async function getCachedCanonicalDestination(countrySlug: string, destinationSlug: string) {
+  "use cache";
+  cacheLife({ stale: 300, revalidate: 600, expire: 1200 }); // 10 min TTL (aligns with backend Redis DETAIL_CACHE_TTL)
+  cacheTag("destinations");
+  cacheTag(`destination-${destinationSlug}`);
+  return api.getCanonicalDestination(countrySlug, destinationSlug);
+}
+
+// Cached related destinations from the same canonical country
+async function getCachedRelatedDestinations(countrySlug: string) {
+  "use cache";
+  cacheLife({ stale: 300, revalidate: 600, expire: 1200 });
+  cacheTag("destinations");
+  cacheTag(`country-${countrySlug}`);
+  return api.getCountryDestinations(countrySlug);
+}
+
 export async function generateMetadata({
   params,
 }: DestinationDetailPageProps) {
   const { countrySlug, destinationSlug } = await params;
   try {
-    const res = await api.getCanonicalDestination(countrySlug, destinationSlug);
+    const res = await getCachedCanonicalDestination(countrySlug, destinationSlug);
     if (res?.data) {
       return {
         title: `${res.data.name} — Destination Guide | Destino AI`,
@@ -50,7 +69,7 @@ export default async function DestinationDetailPage({
   let relatedDestinations: Destination[] = [];
 
   try {
-    const res = await api.getCanonicalDestination(countrySlug, destinationSlug);
+    const res = await getCachedCanonicalDestination(countrySlug, destinationSlug);
     destination = res.data;
   } catch (error) {
     console.error(`Failed to fetch destination ${countrySlug}/${destinationSlug}:`, error);
@@ -71,7 +90,7 @@ export default async function DestinationDetailPage({
 
   // Fetch related destinations from the same canonical country
   try {
-    const countryRes = await api.getCountryDestinations(countrySlug);
+    const countryRes = await getCachedRelatedDestinations(countrySlug);
     relatedDestinations = (countryRes.data?.destinations || [])
       .filter((d) => d._id !== destination?._id)
       .slice(0, 3);

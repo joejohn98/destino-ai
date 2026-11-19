@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cacheLife, cacheTag } from "next/cache";
 import { ArrowRight, Globe2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -11,19 +12,25 @@ import {
 } from "@/components/ui/card";
 import { api, ContinentStat } from "@/lib/api";
 
-export const dynamic = "force-dynamic";
-
 export const metadata: Metadata = {
   title: "Explore Continents",
   description:
     "Browse continents across the globe and discover verified destinations region by region.",
 };
 
+async function getCachedContinentStats() {
+  "use cache";
+  cacheLife({ stale: 300, revalidate: 1800, expire: 3600 }); // 30 min revalidate, aligns with backend Redis AGG_CACHE_TTL
+  cacheTag("continents");
+  cacheTag("continent-stats");
+  return api.getContinentStats();
+}
+
 export default async function ContinentsPage() {
   let continents: ContinentStat[] = [];
 
   try {
-    const res = await api.getContinentStats();
+    const res = await getCachedContinentStats();
     continents = res.data || [];
   } catch (error) {
     console.error("Failed to load continents:", error);

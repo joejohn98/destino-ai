@@ -6,6 +6,22 @@ const frontendDirectory = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
   /* config options here */
+  cacheComponents: true,
+  partialPrefetching: true,
+  cacheLife: {
+    // Destination listing cache: aligns with backend Redis LISTING_CACHE_TTL (3 minutes)
+    catalog: {
+      stale: 60,
+      revalidate: 180,
+      expire: 300,
+    },
+    // Continent & region aggregation cache: aligns with backend AGG_CACHE_TTL (30 minutes)
+    stats: {
+      stale: 300,
+      revalidate: 1800,
+      expire: 3600,
+    },
+  },
   output: "standalone",
   outputFileTracingRoot: path.join(frontendDirectory, ".."),
   transpilePackages: ["@destino/shared"],

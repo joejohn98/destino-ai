@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cacheLife, cacheTag } from "next/cache";
 import { Compass, Globe2, MapPin } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -17,10 +18,18 @@ type Props = {
   params: Promise<{ continent: string; countrySlug: string }>;
 };
 
+async function getCachedCountryDestinations(countrySlug: string) {
+  "use cache";
+  cacheLife({ stale: 300, revalidate: 600, expire: 1200 }); // 10 min revalidate, aligns with backend Redis DETAIL_CACHE_TTL
+  cacheTag("destinations");
+  cacheTag(`country-${countrySlug}`);
+  return api.getCountryDestinations(countrySlug);
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { countrySlug } = await params;
   try {
-    const res = await api.getCountryDestinations(countrySlug);
+    const res = await getCachedCountryDestinations(countrySlug);
     if (res?.data?.country) {
       return {
         title: `Explore ${res.data.country.name} Destinations | Destino AI`,
@@ -42,7 +51,7 @@ export default async function CountryDestinationsPage({ params }: Props) {
 
   let data = null;
   try {
-    const res = await api.getCountryDestinations(countrySlug);
+    const res = await getCachedCountryDestinations(countrySlug);
     data = res?.data;
   } catch {
     // handled by notFound check below

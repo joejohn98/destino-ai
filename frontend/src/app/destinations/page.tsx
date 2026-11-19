@@ -1,9 +1,8 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { cacheLife, cacheTag } from "next/cache";
 import { DestinationClient } from "@/app/destinations/_components/destination-client";
 import { api, Destination } from "@/lib/api";
-
-export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Explore Destinations",
@@ -25,9 +24,24 @@ function firstSearchParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-export default async function DestinationsPage({
+async function getCachedDestinations(params: {
+  page: number;
+  limit: number;
+  location?: string;
+  category?: string;
+  minRating?: number;
+}) {
+  "use cache";
+  cacheLife({ stale: 60, revalidate: 180, expire: 300 });
+  cacheTag("destinations");
+  return api.getDestinations(params);
+}
+
+async function DestinationSearchResults({
   searchParams,
-}: DestinationsPageProps) {
+}: {
+  searchParams: DestinationsPageProps["searchParams"];
+}) {
   const filters = await searchParams;
   const search = firstSearchParam(filters.q);
   const location = firstSearchParam(filters.location);
@@ -43,17 +57,26 @@ export default async function DestinationsPage({
   let initialTotalDestinations = 0;
   let initialTotalPages = 0;
 
+  const isFreeTextSearch = Boolean(search && search.trim().length >= 2);
+
   try {
-    const res = await api.getDestinations({
-      page,
-      limit: 24,
-      ...(search && search.trim().length >= 2
-        ? { search: search.trim() }
-        : {}),
-      ...(location ? { location } : {}),
-      ...(category ? { category } : {}),
-      ...(minRating !== undefined ? { minRating } : {}),
-    });
+    // Uncached for arbitrary user search strings; cached for standard bounded catalog filters
+    const res = isFreeTextSearch
+      ? await api.getDestinations({
+          page,
+          limit: 24,
+          search: search!.trim(),
+          ...(location ? { location } : {}),
+          ...(category ? { category } : {}),
+          ...(minRating !== undefined ? { minRating } : {}),
+        })
+      : await getCachedDestinations({
+          page,
+          limit: 24,
+          ...(location ? { location } : {}),
+          ...(category ? { category } : {}),
+          ...(minRating !== undefined ? { minRating } : {}),
+        });
     initialDestinations = res.data || [];
     initialTotalDestinations = res.totalDestinations;
     initialTotalPages = res.totalPages;
@@ -61,6 +84,18 @@ export default async function DestinationsPage({
     console.error("Failed to fetch destinations:", error);
   }
 
+  return (
+    <DestinationClient
+      initialDestinations={initialDestinations}
+      initialTotalDestinations={initialTotalDestinations}
+      initialTotalPages={initialTotalPages}
+    />
+  );
+}
+
+export default function DestinationsPage({
+  searchParams,
+}: DestinationsPageProps) {
   return (
     <div className="flex-1 bg-background text-foreground">
       <main className="flex-1">
@@ -87,11 +122,7 @@ export default async function DestinationsPage({
               </div>
             }
           >
-            <DestinationClient
-              initialDestinations={initialDestinations}
-              initialTotalDestinations={initialTotalDestinations}
-              initialTotalPages={initialTotalPages}
-            />
+            <DestinationSearchResults searchParams={searchParams} />
           </Suspense>
         </div>
       </main>
