@@ -3,6 +3,7 @@
 FROM node:22-alpine AS base
 WORKDIR /app
 
+# Stage 1: Build TypeScript and shared packages
 FROM base AS build
 COPY packages/shared ./packages/shared
 COPY backend/package.json backend/package-lock.json ./backend/
@@ -15,9 +16,13 @@ COPY backend/tsconfig.json ./
 COPY backend/src ./src
 RUN npm run build && npm prune --omit=dev
 
+# Stage 2: Production Minimal image
 FROM base AS production
 ENV NODE_ENV=production
 ENV PORT=3000
+
+# Install dumb-init to properly handle PID 1 signal forwarding
+RUN apk add --no-cache dumb-init
 
 COPY --from=build --chown=node:node /app/packages/shared/dist /app/packages/shared/dist
 COPY --from=build --chown=node:node /app/packages/shared/package.json /app/packages/shared/package.json
@@ -31,4 +36,6 @@ USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || 3000) + '/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["node", "dist/index.js"]

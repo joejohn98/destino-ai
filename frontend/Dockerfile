@@ -31,7 +31,8 @@ ENV NODE_ENV=production \
     HOSTNAME=0.0.0.0 \
     PORT=3000
 
-RUN addgroup -S --gid 1001 nextjs \
+RUN apk add --no-cache dumb-init && \
+    addgroup -S --gid 1001 nextjs \
     && adduser -S --uid 1001 --ingroup nextjs nextjs
 
 COPY --from=builder --chown=nextjs:nextjs /app/frontend/.next/standalone ./
@@ -42,4 +43,6 @@ USER nextjs
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || 3000) + '/').then((r) => process.exit(r.ok || r.status < 500 ? 0 : 1)).catch(() => process.exit(1))"
+
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["node", "frontend/server.js"]
