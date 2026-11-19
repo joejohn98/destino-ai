@@ -6,12 +6,12 @@ The frontend client for Destino AI is built with Next.js 16 (App Router) and Rea
 
 ## Tech Stack
 
-* **Framework & Runtime:** Next.js 16 (`next@16.4.6`), React 19 (`react@19.3.0`, `react-dom@19.3.0`), TypeScript
-* **Styling & Design System:** Tailwind CSS v4 (`@tailwindcss/turbopack`), Custom Editorial Theme (`bg-cream`, `text-ink`, `rounded-marketing`), `tw-animate-css`
-* **UI Components & Primitives:** Base UI (`@base-ui/react`) components, Lucide React icons, Embla Carousel (`embla-carousel-react`)
-* **Forms & Validation:** React Hook Form (`react-hook-form`), Zod v4 (`zod`), `@hookform/resolvers`
-* **Notifications & Feedback:** Sonner toast manager
-* **Monorepo Integration:** Consumes shared contracts and DTO types from `@destino/shared`
+- **Framework & Runtime:** Next.js 16 (`next@16.4.6`), React 19 (`react@19.3.0`, `react-dom@19.3.0`), TypeScript
+- **Styling & Design System:** Tailwind CSS v4 (`@tailwindcss/turbopack`), Custom Editorial Theme (`bg-cream`, `text-ink`, `rounded-marketing`), `tw-animate-css`
+- **UI Components & Primitives:** Base UI (`@base-ui/react`) components, Lucide React icons, Embla Carousel (`embla-carousel-react`)
+- **Forms & Validation:** React Hook Form (`react-hook-form`), Zod v4 (`zod`), `@hookform/resolvers`
+- **Notifications & Feedback:** Sonner toast manager
+- **Monorepo Integration:** Consumes shared contracts and DTO types from `@destino/shared`
 
 ---
 
@@ -61,12 +61,14 @@ Create `frontend/.env.local` for local development:
 NEXT_PUBLIC_API_URL=http://localhost:5000
 ```
 
-| Variable | Required | Context | Description | Default / Example |
-| :--- | :---: | :--- | :--- | :--- |
-| `NEXT_PUBLIC_API_URL` | Required in production | Client & Server | The public API base URL reachable by browser clients. Defaults to localhost:5000 in development. | `http://localhost:5000` |
-| `API_INTERNAL_URL` | Optional | Server-side only | Backend URL for server-side requests; overrides the public API URL on the server. | `http://host.docker.internal:5000` in Docker development |
+| Variable              |        Required        | Context          | Description                                                                                      | Default / Example                                        |
+| :-------------------- | :--------------------: | :--------------- | :----------------------------------------------------------------------------------------------- | :------------------------------------------------------- |
+| `NEXT_PUBLIC_API_URL` | Required in production | Client & Server  | The public API base URL reachable by browser clients. Defaults to localhost:5000 in development. | `http://localhost:5000`                                  |
+| `API_INTERNAL_URL`    |        Optional        | Server-side only | Backend URL for server-side requests; overrides the public API URL on the server.                | `http://host.docker.internal:5000` in Docker development |
 
 Set `NEXT_PUBLIC_API_URL` before running a production build; the value is embedded in the browser bundle. The Docker production guide supplies it as a build argument.
+
+> **Note:** `NEXT_PUBLIC_API_URL` is required in production and is baked into the browser bundle at build time.
 
 ---
 
@@ -104,28 +106,28 @@ Review [`DOCKER.md`](DOCKER.md) for details on container-to-host backend communi
 
 ## Features & Routing
 
-* **Editorial Home (`/`)**: Dynamic curated hero banners, featured destination carousels, and quick AI entry points.
-* **Destinations Explorer (`/destinations`)**: Filterable catalog with search, category pills (Beach, Mountain, Historical, City, Adventure, Wildlife), and rating filters.
-* **Canonical Destination Pages (`/continents/[continentSlug]/countries/[countrySlug]/[destinationSlug]`)**: Detailed view with attraction lists, ticket pricing, opening hours, AI review summaries, and community reviews.
-* **AI Trip Planning (`/ai/plan-itinerary`)**: Interactive natural-language prompt interface generating multi-day structured itineraries with day-by-day breakdowns and budget estimates.
-* **AI Destination Comparison (`/ai/compare`)**: Side-by-side criteria evaluation matrix comparing multiple destinations.
-* **Admin Management Portal (`/admin`)**:
-  * `/admin/continents` — Add and edit continents and upload cover imagery.
-  * `/admin/continents/[slug]` — Country management drill-down.
-  * `/admin/destinations` — Destination catalog management with multi-image uploaders and AI summary regeneration controls.
-* **User Accounts & Favorites (`/favorites`, `/profile`)**: Bookmark destinations, review history, and account profile management.
+- **Editorial Home (`/`)**: Dynamic curated hero banners, featured destination carousels, and quick AI entry points.
+- **Destinations Explorer (`/destinations`)**: Filterable catalog with search, category pills (Beach, Mountain, Historical, City, Adventure, Wildlife), and rating filters.
+- **Canonical Destination Pages (`/continents/[continentSlug]/countries/[countrySlug]/[destinationSlug]`)**: Detailed view with attraction lists, ticket pricing, opening hours, AI review summaries, and community reviews.
+- **AI Trip Planning (`/ai/plan-itinerary`)**: Interactive natural-language prompt interface generating multi-day structured itineraries with day-by-day breakdowns and budget estimates.
+- **AI Destination Comparison (`/ai/compare`)**: Side-by-side criteria evaluation matrix comparing multiple destinations.
+- **Admin Management Portal (`/admin`)**:
+  - `/admin/continents` — Add and edit continents and upload cover imagery.
+  - `/admin/continents/[slug]` — Country management drill-down.
+  - `/admin/destinations` — Destination catalog management with multi-image uploaders and AI summary regeneration controls.
+- **User Accounts & Favorites (`/favorites`, `/profile`)**: Bookmark destinations, review history, and account profile management.
 
 ---
 
 ## Development Scripts
 
-| Command | Action |
-| :--- | :--- |
-| `npm run dev` | Starts Next.js development server on port 3000. |
-| `npm run build` | Compiles an optimized production build (standalone mode enabled). |
-| `npm run start` | Runs Next.js using its standard start command. The Docker production image runs the generated standalone `server.js` directly. |
-| `npm run lint` | Runs Next.js ESLint validation. |
-| `npx tsc --noEmit` | Runs full TypeScript verification across the frontend. |
+| Command            | Action                                                                                                                         |
+| :----------------- | :----------------------------------------------------------------------------------------------------------------------------- |
+| `npm run dev`      | Starts Next.js development server on port 3000.                                                                                |
+| `npm run build`    | Compiles an optimized production build (standalone mode enabled).                                                              |
+| `npm run start`    | Runs Next.js using its standard start command. The Docker production image runs the generated standalone `server.js` directly. |
+| `npm run lint`     | Runs Next.js ESLint validation.                                                                                                |
+| `npx tsc --noEmit` | Runs full TypeScript verification across the frontend.                                                                         |
 
 ---
 
@@ -145,6 +147,6 @@ docker build -f frontend/Dockerfile --target production \
 
 ## Related Documentation
 
-* ⬅️ **[Monorepo Root README](../README.md)**
-* ➡️ **[Backend Documentation](../backend/README.md)**
-* 🐳 **[Frontend Docker Guide](DOCKER.md)**
+- ⬅️ **[Monorepo Root README](../README.md)**
+- ➡️ **[Backend Documentation](../backend/README.md)**
+- 🐳 **[Frontend Docker Guide](DOCKER.md)**
