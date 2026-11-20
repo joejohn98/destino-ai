@@ -101,6 +101,13 @@ export async function fetchApi<T>(
 
     return (await res.json()) as T;
   } catch (error) {
+    // If backend is unreachable during "next build", supply an empty fallback so Docker build succeeds
+    if (process.env.NEXT_PHASE === "phase-production-build") {
+      console.warn(
+        `[Build] Backend unreachable at ${url} during pre-render; using build fallback.`,
+      );
+      return { success: false, data: [] } as T;
+    }
     // A 4xx response is a handled API outcome (for example, an invalid
     // comparison request), not a network failure. Keep the payload available
     // to the page without reporting it as an unexpected fetch error.
@@ -110,4 +117,3 @@ export async function fetchApi<T>(
     throw error;
   }
 }
-

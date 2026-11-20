@@ -199,5 +199,15 @@ export const adminEndpoints = {
       },
     );
   },
+
+  async flushCache(): Promise<{ status: string; message: string }> {
+    return fetchApi<{ status: string; message: string }>(
+      "/api/admin/cache/flush",
+      {
+        method: "POST",
+        credentials: "include",
+      },
+    );
+  },
 };
 

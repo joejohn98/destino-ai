@@ -11,6 +11,7 @@ import { authRoutes } from "./routes/auth.routes";
 import { continentRoutes } from "./routes/continent.routes";
 import { continentCountryRoutes, countryRoutes } from "./routes/country.routes";
 import { destinationReviewRoutes, reviewRoutes } from "./routes/review.routes";
+import { adminRoutes } from "./routes/admin.routes";
 import {
   getDestinationBySlug,
   getDestinationsByCountrySlug,
@@ -70,6 +71,7 @@ export function createApp(): express.Express {
   app.use("/api/admin/continents", continentRoutes);
   app.use("/api/admin/continents/:continentId/countries", continentCountryRoutes);
   app.use("/api/admin/countries", countryRoutes);
+  app.use("/api/admin", adminRoutes);
 
   // AI routes
   app.use("/api/ai/agents", agentRoutes);

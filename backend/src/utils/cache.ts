@@ -1,4 +1,5 @@
 import { redisClient } from "../config/redis";
+import { AppError } from "./AppError";
 
 // ─── Cache keys ───────────────────────────────────────────────────────────────
 export const CACHE_KEYS = {
@@ -90,4 +91,14 @@ export const invalidatePattern = async (pattern: string): Promise<void> => {
   } catch {
     // Non-fatal — stale data will expire on its own TTL
   }
+};
+
+/**
+ * Completely flush all keys in the current Redis database.
+ */
+export const flushCache = async (): Promise<void> => {
+  if (!redisClient.isOpen) {
+    throw new AppError("Redis cache is not connected", 503);
+  }
+  await redisClient.flushDb();
 };
