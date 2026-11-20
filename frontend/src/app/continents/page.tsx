@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cacheLife, cacheTag } from "next/cache";
-import { ArrowRight, Globe2 } from "lucide-react";
+import { ArrowRight, Compass, Globe2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
+  CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
@@ -60,50 +61,67 @@ export default async function ContinentsPage() {
             </p>
           </div>
 
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {continents.map((continent) => (
-              <Link
-                key={continent.continent}
-                href={`/continents/${encodeURIComponent(continent.continent.toLowerCase().replace(/\s+/g, "-"))}`}
-                aria-label={`Explore ${continent.continent}`}
-                className="group block rounded-marketing focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
-              >
-                <Card
-                  variant="editorial"
-                  className="h-full gap-0 transition-transform duration-300 group-hover:-translate-y-1 motion-reduce:transition-none"
+          {continents.length === 0 ? (
+            <Card variant="editorial" className="p-6 text-center sm:p-12">
+              <CardContent className="flex flex-col items-center gap-3 p-0">
+                <div className="grid size-14 place-items-center rounded-full bg-cream">
+                  <Compass className="size-7 text-muted-foreground" aria-hidden="true" />
+                </div>
+                <CardTitle className="text-title font-semibold text-ink">
+                  No continents added yet
+                </CardTitle>
+                <CardDescription className="max-w-md text-base">
+                  We&apos;re still building out our world coverage. Check back soon — destinations
+                  are being added regularly.
+                </CardDescription>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {continents.map((continent) => (
+                <Link
+                  key={continent.continent}
+                  href={`/continents/${encodeURIComponent(continent.continent.toLowerCase().replace(/\s+/g, "-"))}`}
+                  aria-label={`Explore ${continent.continent}`}
+                  className="group block rounded-marketing focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
                 >
-                  <CardHeader className="gap-3">
-                    <Globe2
-                      aria-hidden="true"
-                      className="size-7 text-pastel-sky"
-                      strokeWidth={1.5}
-                    />
-                    <CardTitle className="text-title font-semibold text-ink">
-                      {continent.continent}
-                    </CardTitle>
-                    <CardDescription className="text-sm leading-relaxed text-muted-foreground">
-                      {continent.countryCount}{" "}
-                      {continent.countryCount === 1 ? "country" : "countries"}{" "}
-                      · {continent.destinationCount}{" "}
-                      {continent.destinationCount === 1
-                        ? "destination"
-                        : "destinations"}
-                    </CardDescription>
-                  </CardHeader>
-
-                  <CardFooter className="border-0 bg-transparent">
-                    <span className="inline-flex items-center gap-2 text-sm font-medium text-ink underline underline-offset-4">
-                      Explore {continent.continent}
-                      <ArrowRight
+                  <Card
+                    variant="editorial"
+                    className="h-full gap-0 transition-transform duration-300 group-hover:-translate-y-1 motion-reduce:transition-none"
+                  >
+                    <CardHeader className="gap-3">
+                      <Globe2
                         aria-hidden="true"
-                        className="size-4 transition-transform group-hover:translate-x-1"
+                        className="size-7 text-pastel-sky"
+                        strokeWidth={1.5}
                       />
-                    </span>
-                  </CardFooter>
-                </Card>
-              </Link>
-            ))}
-          </div>
+                      <CardTitle className="text-title font-semibold text-ink">
+                        {continent.continent}
+                      </CardTitle>
+                      <CardDescription className="text-sm leading-relaxed text-muted-foreground">
+                        {continent.countryCount}{" "}
+                        {continent.countryCount === 1 ? "country" : "countries"}{" "}
+                        · {continent.destinationCount}{" "}
+                        {continent.destinationCount === 1
+                          ? "destination"
+                          : "destinations"}
+                      </CardDescription>
+                    </CardHeader>
+
+                    <CardFooter className="border-0 bg-transparent">
+                      <span className="inline-flex items-center gap-2 text-sm font-medium text-ink underline underline-offset-4">
+                        Explore {continent.continent}
+                        <ArrowRight
+                          aria-hidden="true"
+                          className="size-4 transition-transform group-hover:translate-x-1"
+                        />
+                      </span>
+                    </CardFooter>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          )}
         </section>
       </main>
     </div>

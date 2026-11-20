@@ -1,3 +1,4 @@
+import { Compass } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,6 +15,7 @@ interface DestinationResultsProps {
   destinations: Destination[];
   totalPages: number;
   currentPage: number;
+  hasActiveFilters?: boolean;
   onPageChange: (newPage: number) => void;
   onReset: () => void;
 }
@@ -24,6 +26,7 @@ export function DestinationResults({
   destinations,
   totalPages,
   currentPage,
+  hasActiveFilters = false,
   onPageChange,
   onReset,
 }: DestinationResultsProps) {
@@ -62,26 +65,35 @@ export function DestinationResults({
   if (destinations.length === 0) {
     return (
       <Card variant="editorial" className="mt-8 p-6 text-center sm:p-12 lg:p-16">
-        <CardContent className="px-0">
+        <CardContent className="flex flex-col items-center gap-3 p-0">
+          <div className="grid size-14 place-items-center rounded-full bg-cream">
+            <Compass className="size-7 text-muted-foreground" aria-hidden="true" />
+          </div>
           <CardTitle
             role="heading"
             aria-level={3}
             className="text-title font-semibold text-ink"
           >
-            No destinations match your search.
+            {hasActiveFilters
+              ? "No destinations match your search."
+              : "No destinations added yet."}
           </CardTitle>
-          <CardDescription className="mt-3 text-base">
-            Try adjusting your search terms or selecting a different category.
+          <CardDescription className="mt-1 max-w-sm text-base">
+            {hasActiveFilters
+              ? "Try adjusting your search terms or selecting a different category."
+              : "We're still building out the destinations database. Check back soon."}
           </CardDescription>
-          <Button
-            type="button"
-            variant="outline"
-            size="pill"
-            onClick={onReset}
-            className="mt-6"
-          >
-            Show all destinations
-          </Button>
+          {hasActiveFilters && (
+            <Button
+              type="button"
+              variant="outline"
+              size="pill"
+              onClick={onReset}
+              className="mt-4"
+            >
+              Show all destinations
+            </Button>
+          )}
         </CardContent>
       </Card>
     );

@@ -84,6 +84,7 @@ export function DestinationClient(props: DestinationClientProps) {
         currentPage={currentPage}
         onPageChange={handlePageChange}
         onReset={handleReset}
+        hasActiveFilters={hasActiveFilters}
       />
     </section>
   );

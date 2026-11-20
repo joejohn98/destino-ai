@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { MapPin, Plus } from "lucide-react";
 
 import { EntityForm } from "@/components/admin/entity-form";
 import { AdminCountryCard } from "@/components/admin/admin-country-card";
@@ -161,12 +161,27 @@ export function AdminContinentCountries({ slug }: { slug: string }) {
       {state.countries.length === 0 ? (
         <Card variant="editorial" className="p-6 text-center sm:p-10">
           <CardContent className="flex flex-col items-center gap-3 p-0">
-            <CardTitle className="text-base text-ink">
+            <div className="grid size-14 place-items-center rounded-full bg-cream">
+              <MapPin className="size-7 text-muted-foreground" aria-hidden="true" />
+            </div>
+            <CardTitle className="text-title font-semibold text-ink">
               No countries in {state.continent.name} yet
             </CardTitle>
-            <CardDescription>
-              Add a country to start associating destinations.
+            <CardDescription className="max-w-md text-base">
+              Add the first country to begin associating destinations with this continent.
             </CardDescription>
+            <Button
+              variant="outline"
+              size="pill"
+              className="mt-2"
+              onClick={() => {
+                setCountryFormInstance((instance) => instance + 1);
+                setShowCountryForm(true);
+              }}
+            >
+              <Plus aria-hidden="true" />
+              Add first country
+            </Button>
           </CardContent>
         </Card>
       ) : (

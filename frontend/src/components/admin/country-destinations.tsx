@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft, Compass, Plus } from "lucide-react";
 
 import { AdminDestinationDialogs } from "@/components/admin/admin-destination-dialogs";
 import { AdminDestinationRow } from "@/components/admin/admin-destination-row";
@@ -239,12 +239,27 @@ export function AdminCountryDestinations({
       {destinations.length === 0 ? (
         <Card variant="editorial" className="p-6 text-center sm:p-10">
           <CardContent className="flex flex-col items-center gap-3 p-0">
-            <CardTitle className="text-base text-ink">
-              No destinations in this country
+            <div className="grid size-14 place-items-center rounded-full bg-cream">
+              <Compass className="size-7 text-muted-foreground" aria-hidden="true" />
+            </div>
+            <CardTitle className="text-title font-semibold text-ink">
+              No destinations in {country.country?.name ?? "this country"} yet
             </CardTitle>
-            <CardDescription>
-              Add a destination to start curating this country.
+            <CardDescription className="max-w-md text-base">
+              Add the first destination to start curating this country&apos;s catalog.
             </CardDescription>
+            <Button
+              variant="outline"
+              size="pill"
+              className="mt-2"
+              onClick={() => {
+                setEditing(null);
+                setFormOpen(true);
+              }}
+            >
+              <Plus aria-hidden="true" />
+              Add first destination
+            </Button>
           </CardContent>
         </Card>
       ) : (

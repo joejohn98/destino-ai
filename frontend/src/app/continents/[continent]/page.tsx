@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cacheLife, cacheTag } from "next/cache";
-import { ArrowRight, Globe2, MapPin, Star } from "lucide-react";
+import { ArrowRight, Compass, Globe2, MapPin, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -13,7 +13,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { api, ContinentStat, CountryContinentStat } from "@/lib/api";
-
 type ContinentPageProps = {
   params: Promise<{ continent: string }>;
 };
@@ -81,7 +80,7 @@ export default async function ContinentDetailPage({ params }: ContinentPageProps
   }
 
   if (countriesList.length === 0) {
-    notFound();
+    // Show a friendly empty state instead of a 404 — the continent exists, it just has no countries yet.
   }
 
   return (
@@ -130,64 +129,87 @@ export default async function ContinentDetailPage({ params }: ContinentPageProps
           </div>
 
           {/* Country Cards Grid */}
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {countriesList.map((countryItem) => {
-              const countrySlug =
-                countryItem.slug ||
-                countryItem.country.toLowerCase().replace(/\s+/g, "-");
-              return (
+          {countriesList.length === 0 ? (
+            <Card variant="editorial" className="p-6 text-center sm:p-12">
+              <CardContent className="flex flex-col items-center gap-3 p-0">
+                <div className="grid size-14 place-items-center rounded-full bg-cream">
+                  <Compass className="size-7 text-muted-foreground" aria-hidden="true" />
+                </div>
+                <CardTitle className="text-title font-semibold text-ink">
+                  No countries added yet
+                </CardTitle>
+                <CardDescription className="max-w-md text-base">
+                  We haven&apos;t added countries for {continentName} yet. Check back soon —
+                  we&apos;re expanding our coverage regularly.
+                </CardDescription>
                 <Link
-                  key={countryItem.country}
-                  href={`/continents/${encodeURIComponent(continent)}/countries/${encodeURIComponent(countrySlug)}`}
-                  className="group block rounded-marketing focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+                  href="/continents"
+                  className="mt-2 text-sm font-medium text-ink underline underline-offset-4"
                 >
-                <Card
-                  variant="editorial"
-                  className="h-full transition-transform duration-300 group-hover:-translate-y-1 motion-reduce:transition-none"
-                >
-                  <CardHeader className="gap-3 p-6 pb-2">
-                    <div className="flex items-center justify-between">
-                      <div className="grid size-10 place-items-center rounded-control bg-background text-ink shadow-2xs">
-                        <MapPin className="size-5 text-pastel-sky" />
-                      </div>
-                      {countryItem.averageRating > 0 && (
-                        <div className="flex items-center gap-1 text-xs font-semibold text-ink">
-                          <Star className="size-3.5 fill-pastel-peach text-pastel-peach" />
-                          <span>{countryItem.averageRating.toFixed(1)}</span>
+                  Browse all continents
+                </Link>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {countriesList.map((countryItem) => {
+                const countrySlug =
+                  countryItem.slug ||
+                  countryItem.country.toLowerCase().replace(/\s+/g, "-");
+                return (
+                  <Link
+                    key={countryItem.country}
+                    href={`/continents/${encodeURIComponent(continent)}/countries/${encodeURIComponent(countrySlug)}`}
+                    className="group block rounded-marketing focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+                  >
+                  <Card
+                    variant="editorial"
+                    className="h-full transition-transform duration-300 group-hover:-translate-y-1 motion-reduce:transition-none"
+                  >
+                    <CardHeader className="gap-3 p-6 pb-2">
+                      <div className="flex items-center justify-between">
+                        <div className="grid size-10 place-items-center rounded-control bg-background text-ink shadow-2xs">
+                          <MapPin className="size-5 text-pastel-sky" />
                         </div>
-                      )}
-                    </div>
-                    <CardTitle className="text-title font-semibold text-ink">
-                      {countryItem.country}
-                    </CardTitle>
-                  </CardHeader>
+                        {countryItem.averageRating > 0 && (
+                          <div className="flex items-center gap-1 text-xs font-semibold text-ink">
+                            <Star className="size-3.5 fill-pastel-peach text-pastel-peach" />
+                            <span>{countryItem.averageRating.toFixed(1)}</span>
+                          </div>
+                        )}
+                      </div>
+                      <CardTitle className="text-title font-semibold text-ink">
+                        {countryItem.country}
+                      </CardTitle>
+                    </CardHeader>
 
-                  <CardContent className="px-6 py-2">
-                    <CardDescription className="text-sm">
-                      {countryItem.destinationCount > 0
-                        ? `${countryItem.destinationCount} verified ${
-                            countryItem.destinationCount === 1
-                              ? "destination"
-                              : "destinations"
-                          } in database.`
-                        : `Browse destination listings in ${countryItem.country}.`}
-                    </CardDescription>
-                  </CardContent>
+                    <CardContent className="px-6 py-2">
+                      <CardDescription className="text-sm">
+                        {countryItem.destinationCount > 0
+                          ? `${countryItem.destinationCount} verified ${
+                              countryItem.destinationCount === 1
+                                ? "destination"
+                                : "destinations"
+                            } in database.`
+                          : `Browse destination listings in ${countryItem.country}.`}
+                      </CardDescription>
+                    </CardContent>
 
-                  <CardFooter className="border-0 bg-transparent p-6 pt-2">
-                    <span className="inline-flex items-center gap-2 text-sm font-medium text-ink underline underline-offset-4">
-                      View destinations
-                      <ArrowRight
-                        aria-hidden="true"
-                        className="size-4 transition-transform group-hover:translate-x-1"
-                      />
-                    </span>
-                  </CardFooter>
-                </Card>
-              </Link>
-              );
-            })}
-          </div>
+                    <CardFooter className="border-0 bg-transparent p-6 pt-2">
+                      <span className="inline-flex items-center gap-2 text-sm font-medium text-ink underline underline-offset-4">
+                        View destinations
+                        <ArrowRight
+                          aria-hidden="true"
+                          className="size-4 transition-transform group-hover:translate-x-1"
+                        />
+                      </span>
+                    </CardFooter>
+                  </Card>
+                </Link>
+                );
+              })}
+            </div>
+          )}
         </section>
       </main>
     </div>

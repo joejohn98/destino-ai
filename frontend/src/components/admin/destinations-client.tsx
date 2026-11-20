@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Compass, Plus } from "lucide-react";
 
 import { AdminDestinationRow } from "@/components/admin/admin-destination-row";
 import { AdminDeleteDialog } from "@/components/admin/admin-delete-dialog";
@@ -245,8 +245,11 @@ export function AdminDestinationsHome() {
 
       {!loading && destinations.length === 0 && (
         <Card variant="editorial" className="p-8 text-center">
-          <CardContent className="flex flex-col items-center px-0">
-            <CardTitle role="heading" aria-level={3} className="text-base font-semibold text-ink">
+          <CardContent className="flex flex-col items-center gap-3 px-0">
+            <div className="grid size-14 place-items-center rounded-full bg-cream">
+              <Compass className="size-7 text-muted-foreground" aria-hidden="true" />
+            </div>
+            <CardTitle role="heading" aria-level={3} className="text-title font-semibold text-ink">
               No destinations found
             </CardTitle>
             <CardDescription className="mt-1 text-sm">

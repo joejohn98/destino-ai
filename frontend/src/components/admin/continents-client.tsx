@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Pencil, Plus } from "lucide-react";
+import { ArrowRight, Globe2, Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { EntityForm } from "@/components/admin/entity-form";
@@ -103,10 +103,27 @@ export function AdminContinentsHome() {
       ) : continents.length === 0 ? (
         <Card variant="editorial" className="p-6 text-center sm:p-10">
           <CardContent className="flex flex-col items-center gap-3 p-0">
-            <CardTitle className="text-base text-ink">No continents yet</CardTitle>
-            <CardDescription>
-              Create a continent to start building your catalog.
+            <div className="grid size-14 place-items-center rounded-full bg-cream">
+              <Globe2 className="size-7 text-muted-foreground" aria-hidden="true" />
+            </div>
+            <CardTitle className="text-title font-semibold text-ink">
+              No continents yet
+            </CardTitle>
+            <CardDescription className="max-w-md text-base">
+              Create your first continent to start building the destination catalog.
             </CardDescription>
+            <Button
+              variant="outline"
+              size="pill"
+              className="mt-2"
+              onClick={() => {
+                setContinentFormInstance((instance) => instance + 1);
+                setShowContinentForm(true);
+              }}
+            >
+              <Plus aria-hidden="true" />
+              Add first continent
+            </Button>
           </CardContent>
         </Card>
       ) : (
