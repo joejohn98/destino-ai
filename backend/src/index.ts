@@ -1,5 +1,4 @@
 import { Server } from "http";
-import type { Express } from "express";
 
 // An uncaught exception leaves the process in an unknown state; log it and exit.
 process.on("uncaughtException", (error: Error) => {
@@ -10,6 +9,7 @@ process.on("uncaughtException", (error: Error) => {
 import connectDB, { disconnectDB } from "./config/db";
 import { connectRedis, disconnectRedis } from "./config/redis";
 import { config } from "./config/config";
+import { createApp } from "./app";
 
 const PORT = config.port || 3000;
 const SHUTDOWN_TIMEOUT_MS = 10_000;
@@ -97,10 +97,9 @@ const startServer = async () => {
       );
     }
 
-    // Importing the app creates rate-limit stores. Do it only after Redis has
-    // connected (or conclusively fallen back to the in-memory store).
-    const appModule = await import("./app.js");
-    const app = appModule.default as unknown as Express;
+    // Create the Express application with all routes and middleware
+    // after database and Redis connection attempts have finished.
+    const app = createApp();
 
     server = app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);

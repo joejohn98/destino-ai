@@ -7,7 +7,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 FROM base AS deps
 WORKDIR /app/frontend
 COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci
+RUN npm ci --foreground-scripts --loglevel verbose
 
 FROM deps AS dev
 ENV NODE_ENV=development

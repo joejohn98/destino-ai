@@ -26,12 +26,17 @@ ENV PORT=3000
 # Install dumb-init to properly handle PID 1 signal forwarding
 RUN apk add --no-cache dumb-init
 
-COPY --from=build --chown=node:node /app/packages/shared/dist /app/packages/shared/dist
-COPY --from=build --chown=node:node /app/packages/shared/package.json /app/packages/shared/package.json
+# Copy backend application and dependencies
 COPY --from=build --chown=node:node /app/backend/package.json /app/backend/package.json
 COPY --from=build --chown=node:node /app/backend/package-lock.json /app/backend/package-lock.json
 COPY --from=build --chown=node:node /app/backend/node_modules /app/backend/node_modules
 COPY --from=build --chown=node:node /app/backend/dist /app/backend/dist
+
+# Copy compiled shared package into /app/packages/shared AND directly into backend's node_modules/@destino/shared
+COPY --from=build --chown=node:node /app/packages/shared/dist /app/packages/shared/dist
+COPY --from=build --chown=node:node /app/packages/shared/package.json /app/packages/shared/package.json
+COPY --from=build --chown=node:node /app/packages/shared/dist /app/backend/node_modules/@destino/shared/dist
+COPY --from=build --chown=node:node /app/packages/shared/package.json /app/backend/node_modules/@destino/shared/package.json
 
 WORKDIR /app/backend
 USER node
